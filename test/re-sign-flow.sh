@@ -9,6 +9,7 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 STUB_BIN="${TMP_DIR}/bin"
 MARKER_FILE="${TMP_DIR}/codesign.log"
 GUARDED_CONTENT='const label="settings.agent.speed.label";function demo(){let cache=(0,Q.c)(35),fmt=j(),x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";return {cache,fmt,view,y,z};}'
+SLASH_COMMAND_GUARDED_CONTENT='const label="composer.speedSlashCommand.title";function OG(){let e=(0,Q.c)(24),t=ea(),n=Lf(),{serviceTierSettings:r,setServiceTier:i}=Zf(),a;e[0]===r.serviceTier?a=e[1]:(a=N(r.serviceTier),e[0]=r.serviceTier,e[1]=a);let o=a===`fast`,s;e[2]===o?s=e[3]:(s=e=>{let{className:t}=e;return(0,$.jsx)(o?Wv:EG,{className:X(t,o?`text-token-link-foreground`:void 0)})},e[2]=o,e[3]=s);let c=s,l;e[4]===t?l=e[5]:(l=t.formatMessage(DG.title),e[4]=t,e[5]=l);let u;e[6]!==t||e[7]!==o?(u=t.formatMessage(o?DG.disableDescription:DG.commandDescription),e[6]=t,e[7]=o,e[8]=u):u=e[8];let d;e[9]!==o||e[10]!==i?(d=async()=>{await i(o?null:`fast`,`slash_command`)},e[9]=o,e[10]=i,e[11]=d):d=e[11];let f;e[12]!==n||e[13]!==o||e[14]!==r.isLoading||e[15]!==i?(f=[n,o,r.isLoading,i],e[12]=n,e[13]=o,e[14]=r.isLoading,e[15]=i,e[16]=f):f=e[16];let p;return e[17]!==c||e[18]!==n||e[19]!==l||e[20]!==u||e[21]!==d||e[22]!==f?(p={id:`speed`,title:l,description:u,requiresEmptyComposer:!1,enabled:n,Icon:c,onSelect:d,dependencies:f},e[17]=c,e[18]=n,e[19]=l,e[20]=u,e[21]=d,e[22]=f,e[23]=p):p=e[23],DI(p),null}'
 
 mkdir -p "${STUB_BIN}"
 
@@ -60,37 +61,78 @@ const headerBufferSize = archive.readUInt32LE(4);
 const headerStringSize = archive.readUInt32LE(12);
 const headerString = archive.subarray(16, 16 + headerStringSize).toString("utf8");
 const header = JSON.parse(headerString);
-const relativePath = "webview/assets/general-settings.js";
-const fileInfo = header.files.webview.files.assets.files["general-settings.js"];
-const fileOffset = 8 + headerBufferSize + Number(fileInfo.offset);
-const fileBuffer = archive.subarray(fileOffset, fileOffset + fileInfo.size);
+const files = [];
 
-fs.mkdirSync(path.join(outputDir, "webview/assets"), { recursive: true });
-fs.writeFileSync(path.join(outputDir, relativePath), fileBuffer);
+function walk(node, segments = []) {
+  for (const [name, value] of Object.entries(node.files ?? {})) {
+    const nextSegments = [...segments, name];
+    if (value.files) {
+      walk(value, nextSegments);
+      continue;
+    }
+    files.push({
+      relativePath: nextSegments.join("/"),
+      offset: Number(value.offset),
+      size: value.size,
+    });
+  }
+}
+
+walk(header);
+
+for (const file of files) {
+  const fileOffset = 8 + headerBufferSize + file.offset;
+  const fileBuffer = archive.subarray(fileOffset, fileOffset + file.size);
+  const destination = path.join(outputDir, file.relativePath);
+  fs.mkdirSync(path.dirname(destination), { recursive: true });
+  fs.writeFileSync(destination, fileBuffer);
+}
 NODE
     ;;
   p)
-    node - "${source_path}/webview/assets/general-settings.js" "${target_path}" <<'NODE'
+    node - "${source_path}" "${target_path}" <<'NODE'
 const fs = require("fs");
+const path = require("path");
 
-const [, , sourceFilePath, archivePath] = process.argv;
-const fileBuffer = fs.readFileSync(sourceFilePath);
-const headerString = JSON.stringify({
-  files: {
-    webview: {
-      files: {
-        assets: {
-          files: {
-            "general-settings.js": {
-              size: fileBuffer.length,
-              offset: "0",
-            },
-          },
-        },
-      },
-    },
-  },
-});
+const [, , sourcePath, archivePath] = process.argv;
+const files = [];
+
+function walk(dir, segments = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walk(fullPath, [...segments, entry.name]);
+      continue;
+    }
+    if (!entry.isFile()) {
+      continue;
+    }
+    files.push({
+      segments: [...segments, entry.name],
+      buffer: fs.readFileSync(fullPath),
+    });
+  }
+}
+
+walk(sourcePath);
+
+let nextOffset = 0;
+const headerRoot = { files: {} };
+
+for (const file of files) {
+  let current = headerRoot;
+  for (const segment of file.segments.slice(0, -1)) {
+    current.files[segment] ??= { files: {} };
+    current = current.files[segment];
+  }
+  current.files[file.segments[file.segments.length - 1]] = {
+    size: file.buffer.length,
+    offset: String(nextOffset),
+  };
+  nextOffset += file.buffer.length;
+}
+
+const headerString = JSON.stringify(headerRoot);
 
 const align4 = (value) => value + ((4 - (value % 4)) % 4);
 const headerStringBuffer = Buffer.from(headerString, "utf8");
@@ -104,7 +146,7 @@ const sizeBuffer = Buffer.alloc(8);
 sizeBuffer.writeUInt32LE(4, 0);
 sizeBuffer.writeUInt32LE(headerBuffer.length, 4);
 
-fs.writeFileSync(archivePath, Buffer.concat([sizeBuffer, headerBuffer, fileBuffer]));
+fs.writeFileSync(archivePath, Buffer.concat([sizeBuffer, headerBuffer, ...files.map((file) => file.buffer)]));
 NODE
     ;;
 esac
@@ -202,30 +244,60 @@ read_info_plist_hash() {
 }
 
 write_fake_asar() {
-  local source_file="$1"
+  local source_path="$1"
   local archive_path="$2"
 
-  node - "${source_file}" "${archive_path}" <<'NODE'
+  node - "${source_path}" "${archive_path}" <<'NODE'
 const fs = require("fs");
+const path = require("path");
 
-const [, , sourceFilePath, archivePath] = process.argv;
-const fileBuffer = fs.readFileSync(sourceFilePath);
-const headerString = JSON.stringify({
-  files: {
-    webview: {
-      files: {
-        assets: {
-          files: {
-            "general-settings.js": {
-              size: fileBuffer.length,
-              offset: "0",
-            },
-          },
-        },
-      },
-    },
-  },
-});
+const [, , sourcePath, archivePath] = process.argv;
+const sourceStat = fs.statSync(sourcePath);
+const files = [];
+
+function walk(dir, segments = []) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      walk(fullPath, [...segments, entry.name]);
+      continue;
+    }
+    if (!entry.isFile()) {
+      continue;
+    }
+    files.push({
+      segments: [...segments, entry.name],
+      buffer: fs.readFileSync(fullPath),
+    });
+  }
+}
+
+if (sourceStat.isDirectory()) {
+  walk(sourcePath);
+} else {
+  files.push({
+    segments: ["webview", "assets", "general-settings.js"],
+    buffer: fs.readFileSync(sourcePath),
+  });
+}
+
+let nextOffset = 0;
+const headerRoot = { files: {} };
+
+for (const file of files) {
+  let current = headerRoot;
+  for (const segment of file.segments.slice(0, -1)) {
+    current.files[segment] ??= { files: {} };
+    current = current.files[segment];
+  }
+  current.files[file.segments[file.segments.length - 1]] = {
+    size: file.buffer.length,
+    offset: String(nextOffset),
+  };
+  nextOffset += file.buffer.length;
+}
+
+const headerString = JSON.stringify(headerRoot);
 
 const align4 = (value) => value + ((4 - (value % 4)) % 4);
 const headerStringBuffer = Buffer.from(headerString, "utf8");
@@ -239,23 +311,31 @@ const sizeBuffer = Buffer.alloc(8);
 sizeBuffer.writeUInt32LE(4, 0);
 sizeBuffer.writeUInt32LE(headerBuffer.length, 4);
 
-fs.writeFileSync(archivePath, Buffer.concat([sizeBuffer, headerBuffer, fileBuffer]));
+fs.writeFileSync(archivePath, Buffer.concat([sizeBuffer, headerBuffer, ...files.map((file) => file.buffer)]));
 NODE
 }
 
 read_fake_asar_file() {
   local archive_path="$1"
+  local relative_path="${2:-webview/assets/general-settings.js}"
 
-  node - "${archive_path}" <<'NODE'
+  node - "${archive_path}" "${relative_path}" <<'NODE'
 const fs = require("fs");
 
-const [, , archivePath] = process.argv;
+const [, , archivePath, relativePath] = process.argv;
 const archive = fs.readFileSync(archivePath);
 const headerBufferSize = archive.readUInt32LE(4);
 const headerStringSize = archive.readUInt32LE(12);
 const headerString = archive.subarray(16, 16 + headerStringSize).toString("utf8");
 const header = JSON.parse(headerString);
-const fileInfo = header.files.webview.files.assets.files["general-settings.js"];
+
+const segments = relativePath.split("/");
+let current = header;
+for (const segment of segments) {
+  current = current.files[segment];
+}
+
+const fileInfo = current;
 const fileOffset = 8 + headerBufferSize + Number(fileInfo.offset);
 process.stdout.write(archive.subarray(fileOffset, fileOffset + fileInfo.size).toString("utf8"));
 NODE
@@ -289,36 +369,72 @@ const headerBufferSize = archive.readUInt32LE(4);
 const headerStringSize = archive.readUInt32LE(12);
 const headerString = archive.subarray(16, 16 + headerStringSize).toString("utf8");
 const header = JSON.parse(headerString);
-const fileInfo = header.files.webview.files.assets.files["general-settings.js"];
-const fileOffset = 8 + headerBufferSize + Number(fileInfo.offset);
-const source = archive.subarray(fileOffset, fileOffset + fileInfo.size).toString("utf8");
-new vm.Script(source);
+
+function walk(node) {
+  for (const value of Object.values(node.files ?? {})) {
+    if (value.files) {
+      walk(value);
+      continue;
+    }
+    const fileOffset = 8 + headerBufferSize + Number(value.offset);
+    const source = archive.subarray(fileOffset, fileOffset + value.size).toString("utf8");
+    new vm.Script(source);
+  }
+}
+
+walk(header);
 NODE
 }
 
 FAKE_APP_EXISTING="${TMP_DIR}/Existing.app"
 FAKE_RESOURCES_EXISTING="${FAKE_APP_EXISTING}/Contents/Resources"
-OUTPUT_EXISTING="${TMP_DIR}/apply-restore-output.txt"
+OUTPUT_EXISTING_APPLY="${TMP_DIR}/apply-output.txt"
+OUTPUT_EXISTING_RESTORE="${TMP_DIR}/restore-output.txt"
 
 mkdir -p "${FAKE_RESOURCES_EXISTING}"
-printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/existing-general-settings.js"
-write_fake_asar "${TMP_DIR}/existing-general-settings.js" "${FAKE_RESOURCES_EXISTING}/app.asar"
+mkdir -p "${TMP_DIR}/existing-assets/webview/assets"
+printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/general-settings.js"
+printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/index.js"
+write_fake_asar "${TMP_DIR}/existing-assets" "${FAKE_RESOURCES_EXISTING}/app.asar"
 write_info_plist "${FAKE_APP_EXISTING}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_EXISTING}/app.asar")"
 
-run_script "${FAKE_APP_EXISTING}" '2\n\n3\n\nq\n' "${OUTPUT_EXISTING}"
-assert_codesign_calls 2 "${OUTPUT_EXISTING}"
-assert_no_persistent_unpack_dir "${FAKE_RESOURCES_EXISTING}" "${OUTPUT_EXISTING}"
+run_script "${FAKE_APP_EXISTING}" '2\n\nq\n' "${OUTPUT_EXISTING_APPLY}"
+assert_codesign_calls 1 "${OUTPUT_EXISTING_APPLY}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_EXISTING}" "${OUTPUT_EXISTING_APPLY}"
 assert_fake_asar_js_parses "${FAKE_RESOURCES_EXISTING}/app.asar"
 
 if [ ! -f "${FAKE_RESOURCES_EXISTING}/app.asar1" ]; then
   echo "expected archive backup to be created on apply"
-  cat "${OUTPUT_EXISTING}"
+  cat "${OUTPUT_EXISTING_APPLY}"
   exit 1
 fi
+
+if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" | grep -q 'let view="general";'; then
+  echo "expected apply to remove the guarded Speed settings return"
+  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar"
+  exit 1
+fi
+
+if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/index.js" | grep -q 'enabled:!0'; then
+  echo "expected apply to enable the Fast slash command"
+  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/index.js"
+  exit 1
+fi
+
+run_script "${FAKE_APP_EXISTING}" '3\n\nq\n' "${OUTPUT_EXISTING_RESTORE}"
+assert_codesign_calls 2 "${OUTPUT_EXISTING_RESTORE}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_EXISTING}" "${OUTPUT_EXISTING_RESTORE}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_EXISTING}/app.asar"
 
 if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" | grep -q 'if(!x)return null;'; then
   echo "expected restore to bring app.asar back to the guarded state"
   read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar"
+  exit 1
+fi
+
+if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/index.js" | grep -q 'enabled:n'; then
+  echo "expected restore to bring the Fast slash command back to its guarded state"
+  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/index.js"
   exit 1
 fi
 
@@ -337,8 +453,11 @@ OUTPUT_LEGACY="${TMP_DIR}/legacy-output.txt"
 
 mkdir -p "${FAKE_APP_DIR_LEGACY}"
 printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/general-settings.js"
-printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/legacy-general-settings.js"
-write_fake_asar "${TMP_DIR}/legacy-general-settings.js" "${FAKE_RESOURCES_LEGACY}/app.asar1"
+printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/index.js"
+mkdir -p "${TMP_DIR}/legacy-assets/webview/assets"
+printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/general-settings.js"
+printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/index.js"
+write_fake_asar "${TMP_DIR}/legacy-assets" "${FAKE_RESOURCES_LEGACY}/app.asar1"
 write_info_plist "${FAKE_APP_LEGACY}" "legacy-placeholder-hash"
 
 run_script "${FAKE_APP_LEGACY}" '1\n\nq\n' "${OUTPUT_LEGACY}"
@@ -358,6 +477,12 @@ if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" | grep -q 'if(!x)re
   exit 1
 fi
 
+if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/index.js" | grep -q 'enabled:n'; then
+  echo "expected repacked app.asar to preserve the Fast slash command content"
+  read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/index.js"
+  exit 1
+fi
+
 if [ "$(read_info_plist_hash "${FAKE_APP_LEGACY}")" != "$(read_fake_asar_header_hash "${FAKE_RESOURCES_LEGACY}/app.asar")" ]; then
   echo "expected ElectronAsarIntegrity hash to match migrated app.asar header"
   cat "${FAKE_APP_LEGACY}/Contents/Info.plist"
@@ -371,8 +496,10 @@ FAKE_RESOURCES_FAILING="${FAKE_APP_FAILING}/Contents/Resources"
 OUTPUT_FAILING="${TMP_DIR}/failing-output.txt"
 
 mkdir -p "${FAKE_RESOURCES_FAILING}"
-printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/failing-general-settings.js"
-write_fake_asar "${TMP_DIR}/failing-general-settings.js" "${FAKE_RESOURCES_FAILING}/app.asar"
+mkdir -p "${TMP_DIR}/failing-assets/webview/assets"
+printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/failing-assets/webview/assets/general-settings.js"
+printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/failing-assets/webview/assets/index.js"
+write_fake_asar "${TMP_DIR}/failing-assets" "${FAKE_RESOURCES_FAILING}/app.asar"
 write_info_plist "${FAKE_APP_FAILING}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_FAILING}/app.asar")"
 
 run_script_with_codesign_failure "${FAKE_APP_FAILING}" '2\n\nq\n' "${OUTPUT_FAILING}"

@@ -394,12 +394,40 @@ const path = require("path");
 const [, , command, assetsDirArg, backupSuffix] = process.argv;
 const assetsDir = path.resolve(assetsDirArg);
 const SPEED_LABEL_NEEDLE = "settings.agent.speed.label";
+const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
 const GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=_e\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ce\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ce\(\);)let /;
 const NORMALIZED_PATCHED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=_e\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ce\(\);)let /;
+const SLASH_COMMAND_GUARDED_SIGNATURE =
+  /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)([A-Za-z_$][\w$]*)(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\w$]*})/;
+const SLASH_COMMAND_PATCHED_SIGNATURE =
+  /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)!0(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\w$]*})/;
+
+const TARGET_SPECS = [
+  {
+    id: "speed-setting",
+    label: "Speed setting",
+    needle: SPEED_LABEL_NEEDLE,
+    guardedSignature: GUARDED_SIGNATURE,
+    patchedSignature: NORMALIZED_PATCHED_SIGNATURE,
+    legacyPatchedSignature: PATCHED_SIGNATURE,
+    applyReplacement: "$1=_e(),$2",
+    normalizeReplacement: "$1=_e(),$2let ",
+    restoreReplacement: "$1=_e(),$2if(!$1)return null;let ",
+  },
+  {
+    id: "fast-slash-command",
+    label: "Fast slash command",
+    needle: SPEED_SLASH_COMMAND_NEEDLE,
+    guardedSignature: SLASH_COMMAND_GUARDED_SIGNATURE,
+    patchedSignature: SLASH_COMMAND_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1!0$3",
+  },
+];
 
 function walkJsFiles(dir) {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
@@ -419,17 +447,32 @@ function walkJsFiles(dir) {
   return results;
 }
 
-function inspectFile(filePath) {
-  const content = fs.readFileSync(filePath, "utf8");
-  if (!content.includes(SPEED_LABEL_NEEDLE)) {
+function inspectSpec(content, spec) {
+  if (!content.includes(spec.needle)) {
     return null;
   }
 
-  const guarded = GUARDED_SIGNATURE.test(content);
-  const patched = NORMALIZED_PATCHED_SIGNATURE.test(content);
-  const legacyPatched = PATCHED_SIGNATURE.test(content);
+  const guarded = spec.guardedSignature.test(content);
+  const patched = spec.patchedSignature.test(content);
+  const legacyPatched = spec.legacyPatchedSignature?.test(content) ?? false;
 
   if (!guarded && !patched && !legacyPatched) {
+    return null;
+  }
+
+  return {
+    spec,
+    guarded,
+    patched,
+    legacyPatched,
+  };
+}
+
+function inspectFile(filePath) {
+  const content = fs.readFileSync(filePath, "utf8");
+  const matches = TARGET_SPECS.map((spec) => inspectSpec(content, spec)).filter(Boolean);
+
+  if (matches.length === 0) {
     return null;
   }
 
@@ -437,9 +480,7 @@ function inspectFile(filePath) {
     filePath,
     backupPath: `${filePath}${backupSuffix}`,
     content,
-    guarded,
-    patched,
-    legacyPatched,
+    matches,
   };
 }
 
@@ -447,21 +488,26 @@ function findTargets(dir) {
   return walkJsFiles(dir).map(inspectFile).filter(Boolean);
 }
 
-function describeState(target) {
-  if (target.guarded) {
-    return "Speed setting disabled";
+function describeState(match) {
+  if (match.guarded) {
+    return `${match.spec.label} disabled`;
   }
-  if (target.patched || target.legacyPatched) {
-    return "Speed setting enabled";
+  if (match.patched || match.legacyPatched) {
+    return `${match.spec.label} enabled`;
   }
   return "Unknown state";
 }
 
-function writeBackupIfNeeded(target) {
-  if (fs.existsSync(target.backupPath)) {
+function writeBackupIfNeeded(fileTarget) {
+  if (fs.existsSync(fileTarget.backupPath)) {
     return;
   }
-  fs.writeFileSync(target.backupPath, target.content, "utf8");
+  fs.writeFileSync(fileTarget.backupPath, fileTarget.content, "utf8");
+}
+
+function resolveSlashCommandEnabledVariable(content) {
+  const match = content.match(/function OG\(\)\{let [^;]*?,([A-Za-z_$][\w$]*)=Lf\(\),/);
+  return match?.[1] ?? "n";
 }
 
 function status() {
@@ -472,11 +518,14 @@ function status() {
   }
 
   for (const target of targets) {
-    console.log(`Current state: ${describeState(target)}`);
-    console.log(`Target file: ${path.relative(process.cwd(), target.filePath)}`);
-    console.log(
-      `Backup file: ${fs.existsSync(target.backupPath) ? path.relative(process.cwd(), target.backupPath) : "missing"}`,
-    );
+    for (const match of target.matches) {
+      console.log(`Current state: ${describeState(match)}`);
+      console.log(`Target: ${match.spec.label}`);
+      console.log(`Target file: ${path.relative(process.cwd(), target.filePath)}`);
+      console.log(
+        `Backup file: ${fs.existsSync(target.backupPath) ? path.relative(process.cwd(), target.backupPath) : "missing"}`,
+      );
+    }
   }
 
   return 0;
@@ -493,26 +542,35 @@ function apply() {
   let alreadyPatched = 0;
 
   for (const target of targets) {
-    if (target.guarded) {
-      writeBackupIfNeeded(target);
-      const next = target.content.replace(GUARDED_SIGNATURE, "$1=_e(),$2");
-      fs.writeFileSync(target.filePath, next, "utf8");
-      console.log(`patched: ${path.relative(process.cwd(), target.filePath)}`);
-      changed += 1;
-      continue;
+    let next = target.content;
+    let updated = false;
+
+    for (const match of target.matches) {
+      if (match.guarded) {
+        writeBackupIfNeeded(target);
+        next = next.replace(match.spec.guardedSignature, match.spec.applyReplacement);
+        console.log(`patched: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
+        changed += 1;
+        updated = true;
+        continue;
+      }
+
+      if (match.legacyPatched) {
+        next = next.replace(match.spec.legacyPatchedSignature, match.spec.normalizeReplacement);
+        console.log(`normalized: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
+        changed += 1;
+        updated = true;
+        continue;
+      }
+
+      if (match.patched) {
+        console.log(`already patched: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
+        alreadyPatched += 1;
+      }
     }
 
-    if (target.legacyPatched) {
-      const next = target.content.replace(PATCHED_SIGNATURE, "$1=_e(),$2let ");
+    if (updated) {
       fs.writeFileSync(target.filePath, next, "utf8");
-      console.log(`normalized: ${path.relative(process.cwd(), target.filePath)}`);
-      changed += 1;
-      continue;
-    }
-
-    if (target.patched) {
-      console.log(`already patched: ${path.relative(process.cwd(), target.filePath)}`);
-      alreadyPatched += 1;
     }
   }
 
@@ -532,19 +590,38 @@ function restore() {
   for (const target of targets) {
     if (fs.existsSync(target.backupPath)) {
       fs.writeFileSync(target.filePath, fs.readFileSync(target.backupPath, "utf8"), "utf8");
-      console.log(`restored backup: ${path.relative(process.cwd(), target.filePath)}`);
-      restored += 1;
+      for (const match of target.matches) {
+        console.log(`restored backup: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
+        restored += 1;
+      }
       continue;
     }
 
-    if (target.patched || target.legacyPatched) {
-      const next = target.content.replace(
-        target.patched ? NORMALIZED_PATCHED_SIGNATURE : PATCHED_SIGNATURE,
-        "$1=_e(),$2if(!$1)return null;let ",
-      );
-      fs.writeFileSync(target.filePath, next, "utf8");
-      console.log(`restored inline: ${path.relative(process.cwd(), target.filePath)}`);
+    let next = target.content;
+    let updated = false;
+
+    for (const match of target.matches) {
+      if (!(match.patched || match.legacyPatched)) {
+        continue;
+      }
+
+      if (match.spec.id === "fast-slash-command") {
+        const enabledVariable = resolveSlashCommandEnabledVariable(next);
+        next = next.replace(match.spec.patchedSignature, `$1${enabledVariable}$2`);
+      } else {
+        next = next.replace(
+          match.patched ? match.spec.patchedSignature : match.spec.legacyPatchedSignature,
+          match.spec.restoreReplacement,
+        );
+      }
+
+      console.log(`restored inline: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
       restored += 1;
+      updated = true;
+    }
+
+    if (updated) {
+      fs.writeFileSync(target.filePath, next, "utf8");
     }
   }
 
