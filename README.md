@@ -19,207 +19,68 @@ Verified for `Codex.app` `26.415.40636` (`build 1799`). Feature scope: [`docs/fe
 
 ## What It Does
 
-The script inspects the frontend assets inside `Codex.app`, verifies that the installed version still matches known hidden custom-API feature paths, and provides three actions:
+Three menu actions on the installed app:
 
-- View current status
-- Enable custom API features
-- Restore the original state
+1. **View current status** — detect version, target files, and whether patching is safe
+2. **Enable custom API features** — restore the feature set above
+3. **Restore original state** — roll back to the vendor bundle
 
-When enabled on a compatible bundle, `codexfast` restores the current feature set described in [`docs/feature-scope.md`](./docs/feature-scope.md).
-
-After patching the installed app bundle, it repacks the modified files back into `app.asar`, updates Electron's `Info.plist` ASAR header integrity hash, and performs a local ad-hoc re-sign so `Codex.app` can still launch on macOS.
-
-The script is fully self-contained in one file, so it can be shared, audited, and run on its own.
-
-## Intended Audience
-
-This project is for Codex users who run with a custom API setup and want feature access that is present in the app bundle but hidden behind frontend gates.
-
-It is not primarily aimed at users who only use the default hosted configuration without any custom API-related setup.
-
-## Platform Support
-
-Current support:
-
-- macOS: supported
-- Windows: not supported
-
-This script currently targets the macOS app layout at `/Applications/Codex.app/Contents/Resources` and assumes a Bash-based local execution flow.
-
-Windows users are not supported by this version yet.
+Patching unpacks `app.asar`, rewrites the frontend assets, repacks, updates the `ElectronAsarIntegrity` hash in `Info.plist`, and ad-hoc re-signs so `Codex.app` still launches.
 
 ## Usage
 
-Requirements:
-
-- `Codex.app` is installed at `/Applications/Codex.app`
-- `node` is available in the shell
-- `npm` is available in the shell
-- macOS built-in `codesign` is available
-
-Use from npm:
+macOS only. Requires `Codex.app` at `/Applications`, plus `node`, `npm`, and the built-in `codesign`.
 
 ```bash
 npx codexfast
 ```
 
-That is the recommended entrypoint for most users.
-
-Run locally from this repository:
+Or from a clone of this repo:
 
 ```bash
-chmod +x ./codexfast.sh
 ./codexfast.sh
 ```
 
-Run it from a shell.
+Always run **View current status** first. Only enable when compatibility is `supported`.
 
-If you are using the repository directly, the local script path is the source of truth.
+## Compatibility
 
-## Self-Check Mode
+The script does not use an official API — it matches code signatures in frontend build output, so it can break after a Codex update.
 
-The script already includes its own self-check flow. No manual file edits are required.
+- Verified on `Codex.app` `26.415.40636` (`build 1799`)
+- **Enable** is blocked unless the installed version/build is whitelisted
+- **View status** and **Restore** work on any version
+- For Plugins, the script only removes the custom-API sidebar gate — actual plugin availability can still depend on connectors, plugin state, or admin restrictions
 
-Important behavior:
-
-- The script uses a temporary workspace when it needs to inspect or patch `app.asar`
-- It repacks the modified files back into `app.asar` instead of leaving a persistent `Resources/app` directory behind
-- It also updates `ElectronAsarIntegrity` in `Info.plist` to match the rebuilt `app.asar` header hash
-- After apply, restore, or legacy-layout migration, the script automatically performs a local ad-hoc re-sign
-- This local re-sign replaces the original vendor signature on your installed app copy
-
-Menu items:
-
-- `1) View current status`
-- `2) Enable custom API features`
-- `3) Restore original state`
-
-Recommended flow:
-
-1. Run `View current status` first.
-2. Only run `Enable custom API features` if the target files are detected successfully and the app version is reported as `supported`.
-
-`View current status` checks:
-
-- Whether the detected `Codex.app` version and build can be read from `Info.plist`
-- Whether that version/build pair is currently on the script's verified compatibility whitelist
-- Whether the `Codex.app` resources directory exists
-- Whether `app.asar` can be found and inspected through the temporary workspace
-- Whether the target directory `app/webview/assets` exists inside the unpacked archive
-- Whether the current frontend bundle still contains recognizable hidden-feature targets
-- Whether the current state is "disabled" or "enabled"
-- Whether a backup file already exists
-
-If the script detects the legacy unpacked `Resources/app` layout from an older script version, it repacks that directory back into `app.asar`, removes `Resources/app`, and then re-signs the app bundle automatically.
-
-If the script prints `Feature target file not found`, the current Codex build has likely changed and the patch should not be applied blindly.
-
-If the script prints `Compatibility: unsupported`, `Enable custom API features` is blocked on purpose. This is a strict safety gate to avoid patching unverified Codex builds.
-
-## Version Compatibility
-
-Version verified directly during inspection:
-
-- `Codex.app` version: `26.415.40636`
-- build: `1799`
-
-This version is compatible with the script because:
-
-- `app/webview/assets` still exists inside the current `app.asar`
-- the hidden Fast and Plugins text keys are still present
-- the script's target regexes still match the current bundle
-- the current guarded states can still be transformed into enabled states
-
-Observed validation result on this version:
-
-- the Settings-side Fast target was found
-- the composer `/fast` target was found
-- the add-context `Speed` menu target was found
-- the Plugins sidebar gate target was found
-- simulated replacements successfully moved those targets from guarded state to patched state
-
-That means the script is compatible with the version above.
-
-## Compatibility Limits
-
-This script does not use an official API. It patches frontend build output by matching code signatures, so compatibility can break after a Codex update.
-
-Recommended practice:
-
-- Run `View current status` after every Codex update
-- Only run `Enable custom API features` when the script still detects the target files and reports `Compatibility: supported`
-- If bundle structure, variable names, or minified output changes, the regex may need to be updated
-
-For Plugins specifically, this script removes the custom-API sidebar auth-method gate. Actual plugin availability can still depend on connector availability, plugin package state, or admin-side restrictions inside the app.
-
-Compatibility policy:
-
-- The script reads `CFBundleShortVersionString` and `CFBundleVersion` from `Codex.app/Contents/Info.plist`
-- `Enable custom API features` is allowed only for version/build pairs that are explicitly whitelisted in the script
-- `View current status` and `Restore original state` remain available even when the current version is unsupported
+Re-run **View current status** after every Codex update.
 
 ## Backup and Restore
 
-On the first modification, the script creates a same-name file-level backup with this suffix:
+First apply creates two backups:
 
-```text
-.speed-setting.bak
-```
+- `app.asar1` — archive-level backup of the original bundle
+- `*.speed-setting.bak` — file-level fallback
 
-Restore first prefers the archive-level `app.asar1` backup when it exists. If no archive backup exists, it falls back to the file-level `.speed-setting.bak` backup. If neither backup exists but a patched state is detected, the script still tries to restore inline.
+**Restore** prefers `app.asar1`, falls back to `.bak`, then inline restoration. A future Codex auto-update may overwrite the patched state.
 
-After apply or restore, the script keeps the installed app in the packed `app.asar` layout and re-signs the modified app bundle automatically.
-
-## Notes
-
-- On first apply, the script creates `app.asar1` as an archive-level backup of the original app bundle
-- When the script needs to inspect or patch the app, it unpacks `app.asar` into a temporary directory and repacks the result back into `app.asar`
-- After rebuilding or changing files under `Codex.app`, the script runs `codesign --force --deep --sign - /Applications/Codex.app`
-- This script directly modifies the installed local app resources
-- A future Codex auto-update may overwrite the patched state
-- A local ad-hoc re-sign is enough for `codesign` integrity checks, but it does not preserve the original notarized vendor signature
+> The local ad-hoc re-sign passes `codesign` integrity checks but replaces the vendor notarization. `spctl --assess` returning `rejected` is expected — use `codesign --verify --deep --strict /Applications/Codex.app` to verify instead.
 
 ## Troubleshooting
 
-If the script fails immediately, check:
+**Script fails immediately** — check `/Applications/Codex.app` exists, plus `node -v`, `npm -v`, `codesign -h`.
 
-- Whether `/Applications/Codex.app` exists
-- `node -v`
-- `npm -v`
-- `codesign -h`
-
-If the automatic re-sign step fails because macOS refuses the write, the script now prints the exact manual fallback command:
+**Re-sign step fails (macOS refused write)** — run manually:
 
 ```bash
 codesign --force --deep --sign - /Applications/Codex.app
 ```
 
-If the script says it cannot find the target file:
+**Target not found / version unsupported** — do not continue, do not hand-patch. The build likely needs a new adaptation.
 
-- Do not continue with the enable action
-- The current Codex build likely needs a new adaptation
+**Plugins visible but still unusable** — not caused by this script. Check connector availability, plugin state, or admin-side restrictions.
 
-If the script says the current version is unsupported:
-
-- Do not force manual edits into the app bundle
-- Update the script only after validating the new Codex version against all supported feature paths
-
-If Plugins becomes visible but a plugin still cannot be installed or used:
-
-- Check whether the connector or app integration is available in your environment
-- Check whether the plugin itself is disabled by admin or unavailable upstream
-- Do not assume that every plugin failure is caused by the auth-method gate
-
-If `Codex.app` no longer opens after using an older broken script version that left `Resources/app` behind or wrote the wrong `ElectronAsarIntegrity` hash:
+**`Codex.app` won't open after an old broken run** (left `Resources/app` behind or wrote a bad integrity hash):
 
 1. Delete `/Applications/Codex.app/Contents/Resources/app`
-2. Rename `/Applications/Codex.app/Contents/Resources/app.asar1` back to `app.asar`
+2. Rename `app.asar1` back to `app.asar`
 3. Reopen `Codex.app`
-
-If you want to inspect the local signature state after running this script, prefer:
-
-```bash
-codesign --verify --deep --strict /Applications/Codex.app
-```
-
-Do not treat `spctl --assess` as a failure signal after the script's local ad-hoc re-sign. A locally re-signed app can be launchable while `spctl` still reports `rejected`.
