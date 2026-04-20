@@ -2,9 +2,16 @@
 
 [中文说明](./README.zh-CN.md)
 
-This repository contains a single-file macOS script for exposing and toggling the Speed setting inside `Codex.app`.
+This repository contains a single-file macOS script for exposing hidden custom-API features inside `Codex.app`.
 
 This script is intended for Codex users who run with a custom API configuration.
+
+Current feature coverage:
+
+- Settings-side Fast control
+- Composer `/fast` slash command
+- `Add files and more / +` Speed submenu
+- Plugins access for custom API users
 
 It automatically re-signs the local app bundle after rebuilding or modifying app resources.
 
@@ -24,11 +31,18 @@ This launches the interactive menu.
 
 ## What It Does
 
-The script locates the frontend assets inside `Codex.app`, checks whether the current app version still contains the expected Speed-setting code path, and provides three actions:
+The script locates the frontend assets inside `Codex.app`, checks whether the current app version still contains the expected hidden custom-API feature paths, and provides three actions:
 
 - View current status
-- Enable the Speed setting
+- Enable custom API features
 - Restore the original state
+
+When enabled on a compatible bundle, the script currently exposes:
+
+- the Settings-side Fast control
+- the composer `/fast` slash command
+- the add-context `Speed` submenu in the composer menu
+- the Plugins sidebar/page access path for custom API users
 
 After the script changes the installed app bundle, it repacks the modified files back into `app.asar`, updates Electron's `Info.plist` ASAR header integrity hash, and performs a local ad-hoc re-sign so `Codex.app` can still launch on macOS.
 
@@ -92,26 +106,30 @@ Important behavior:
 Menu items:
 
 - `1) View current status`
-- `2) Enable Speed setting`
+- `2) Enable custom API features`
 - `3) Restore original state`
 
 Recommended flow:
 
 1. Run `View current status` first.
-2. Only run `Enable Speed setting` if the target file is detected successfully.
+2. Only run `Enable custom API features` if the target files are detected successfully and the app version is reported as `supported`.
 
 `View current status` checks:
 
+- Whether the detected `Codex.app` version and build can be read from `Info.plist`
+- Whether that version/build pair is currently on the script's verified compatibility whitelist
 - Whether the `Codex.app` resources directory exists
 - Whether `app.asar` can be found and inspected through the temporary workspace
 - Whether the target directory `app/webview/assets` exists inside the unpacked archive
-- Whether the current frontend bundle still contains a recognizable Speed-setting target
+- Whether the current frontend bundle still contains recognizable hidden-feature targets
 - Whether the current state is "disabled" or "enabled"
 - Whether a backup file already exists
 
 If the script detects the legacy unpacked `Resources/app` layout from an older script version, it repacks that directory back into `app.asar`, removes `Resources/app`, and then re-signs the app bundle automatically.
 
-If the script prints `Speed setting target file not found`, the current Codex build has likely changed and the patch should not be applied blindly.
+If the script prints `Feature target file not found`, the current Codex build has likely changed and the patch should not be applied blindly.
+
+If the script prints `Compatibility: unsupported`, `Enable custom API features` is blocked on purpose. This is a strict safety gate to avoid patching unverified Codex builds.
 
 ## Version Compatibility
 
@@ -123,16 +141,17 @@ Version verified directly during inspection:
 This version is compatible with the script because:
 
 - `app/webview/assets` still exists inside the current `app.asar`
-- Speed-setting text keys are still present
-- The script's target regex still matches the current bundle
-- The matched target file is `general-settings-BZQqrI-r.js`
-- The current "disabled" state can still be transformed into the "enabled" state
+- the hidden Fast and Plugins text keys are still present
+- the script's target regexes still match the current bundle
+- the current guarded states can still be transformed into enabled states
 
 Observed validation result on this version:
 
-- Target file was found
-- Current state was identified as disabled
-- A simulated replacement successfully moved the code from guarded to patched state
+- the Settings-side Fast target was found
+- the composer `/fast` target was found
+- the add-context `Speed` menu target was found
+- the Plugins sidebar gate target was found
+- simulated replacements successfully moved those targets from guarded state to patched state
 
 That means the script is compatible with the version above.
 
@@ -143,8 +162,16 @@ This script does not use an official API. It patches frontend build output by ma
 Recommended practice:
 
 - Run `View current status` after every Codex update
-- Only run `Enable Speed setting` when the script still detects the target file
+- Only run `Enable custom API features` when the script still detects the target files and reports `Compatibility: supported`
 - If bundle structure, variable names, or minified output changes, the regex may need to be updated
+
+For Plugins specifically, this script removes the custom-API sidebar auth-method gate. Actual plugin availability can still depend on connector availability, plugin package state, or admin-side restrictions inside the app.
+
+Compatibility policy:
+
+- The script reads `CFBundleShortVersionString` and `CFBundleVersion` from `Codex.app/Contents/Info.plist`
+- `Enable custom API features` is allowed only for version/build pairs that are explicitly whitelisted in the script
+- `View current status` and `Restore original state` remain available even when the current version is unsupported
 
 ## Backup and Restore
 
@@ -186,6 +213,17 @@ If the script says it cannot find the target file:
 
 - Do not continue with the enable action
 - The current Codex build likely needs a new adaptation
+
+If the script says the current version is unsupported:
+
+- Do not force manual edits into the app bundle
+- Update the script only after validating the new Codex version against all supported feature paths
+
+If Plugins becomes visible but a plugin still cannot be installed or used:
+
+- Check whether the connector or app integration is available in your environment
+- Check whether the plugin itself is disabled by admin or unavailable upstream
+- Do not assume that every plugin failure is caused by the auth-method gate
 
 If `Codex.app` no longer opens after using an older broken script version that left `Resources/app` behind or wrote the wrong `ElectronAsarIntegrity` hash:
 

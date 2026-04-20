@@ -9,10 +9,16 @@ APP_ASAR="${APP_RESOURCES}/app.asar"
 APP_ASAR_BACKUP="${APP_RESOURCES}/app.asar1"
 APP_INFO_PLIST="${APP_BUNDLE}/Contents/Info.plist"
 BACKUP_SUFFIX=".speed-setting.bak"
+SUPPORTED_APP_VERSION_KEYS="26.415.40636+1799"
 NPM_BIN=""
 TEMP_ROOT=""
 TEMP_APP_DIR=""
 TEMP_ASSETS_DIR=""
+APP_VERSION="unknown"
+APP_BUILD="unknown"
+APP_VERSION_KEY="unknown"
+APP_COMPATIBILITY="unsupported"
+APP_VERSION_SUPPORTED=0
 
 print_line() {
   printf '%s\n' "$1"
@@ -62,6 +68,49 @@ resolve_plistbuddy() {
 print_manual_resign_guidance() {
   print_line "If the failure was caused by write permissions, run this command manually in Terminal:"
   print_line "codesign --force --deep --sign - ${APP_BUNDLE}"
+}
+
+read_bundle_plist_value() {
+  local key="$1"
+
+  "${PLIST_BUDDY_BIN}" -c "Print :${key}" "${APP_INFO_PLIST}" 2>/dev/null
+}
+
+load_app_compatibility_metadata() {
+  local detected_version=""
+  local detected_build=""
+
+  APP_VERSION="unknown"
+  APP_BUILD="unknown"
+  APP_VERSION_KEY="unknown"
+  APP_COMPATIBILITY="unsupported"
+  APP_VERSION_SUPPORTED=0
+
+  if [ ! -f "${APP_INFO_PLIST}" ]; then
+    return 0
+  fi
+
+  detected_version="$(read_bundle_plist_value "CFBundleShortVersionString")" || detected_version=""
+  detected_build="$(read_bundle_plist_value "CFBundleVersion")" || detected_build=""
+
+  if [ -n "${detected_version}" ]; then
+    APP_VERSION="${detected_version}"
+  fi
+
+  if [ -n "${detected_build}" ]; then
+    APP_BUILD="${detected_build}"
+  fi
+
+  if [ -n "${detected_version}" ] && [ -n "${detected_build}" ]; then
+    APP_VERSION_KEY="${detected_version}+${detected_build}"
+  fi
+
+  case " ${SUPPORTED_APP_VERSION_KEYS} " in
+    *" ${APP_VERSION_KEY} "*)
+      APP_COMPATIBILITY="supported"
+      APP_VERSION_SUPPORTED=1
+      ;;
+  esac
 }
 
 cleanup_temp_workspace() {
@@ -363,6 +412,8 @@ check_requirements() {
     return 1
   fi
 
+  load_app_compatibility_metadata
+
   return 0
 }
 
@@ -373,8 +424,20 @@ run_embedded_tool() {
   print_line ""
   print_line "Action: ${action}"
   print_line "Resources: ${APP_RESOURCES}"
+  print_line "Detected version: ${APP_VERSION}"
+  print_line "Detected build: ${APP_BUILD}"
+  print_line "Compatibility: ${APP_COMPATIBILITY}"
   print_line "Mode: self-contained single file"
   print_line ""
+
+  if [ "${action}" = "apply" ] && [ "${APP_VERSION_SUPPORTED}" -ne 1 ]; then
+    print_line "Enable custom API features is blocked for this Codex.app version."
+    print_line "This script only allows apply on verified compatible builds."
+    print_line "Supported versions: ${SUPPORTED_APP_VERSION_KEYS}"
+    print_line ""
+    print_line "Exit code: 1"
+    return 1
+  fi
 
   if [ "${action}" = "restore" ] && [ -f "${APP_ASAR_BACKUP}" ]; then
     restore_from_archive_backup
@@ -396,6 +459,7 @@ const assetsDir = path.resolve(assetsDirArg);
 const SPEED_LABEL_NEEDLE = "settings.agent.speed.label";
 const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
 const ADD_CONTEXT_SPEED_NEEDLE = "composer.addContext.speed.option.fast.description";
+const PLUGINS_SIDEBAR_NEEDLE = "sidebarElectron.pluginsDisabledTooltip";
 const GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=_e\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ce\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
@@ -410,6 +474,10 @@ const ADD_CONTEXT_SPEED_GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=Cr\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ir\([^)]+\)[;,])/;
 const ADD_CONTEXT_SPEED_PATCHED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ir\([^)]+\)[;,])/;
+const PLUGINS_SIDEBAR_GUARDED_SIGNATURE =
+  /(cf\(`533078438`\),)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)===`apikey`,/;
+const PLUGINS_SIDEBAR_PATCHED_SIGNATURE =
+  /(cf\(`533078438`\),)([A-Za-z_$][\w$]*)=!1,/;
 
 const TARGET_SPECS = [
   {
@@ -441,6 +509,16 @@ const TARGET_SPECS = [
     legacyPatchedSignature: null,
     applyReplacement: "$1=!0,$2",
     restoreReplacement: "$1=Cr(),$2",
+  },
+  {
+    id: "plugins-access",
+    label: "Plugins access",
+    needle: PLUGINS_SIDEBAR_NEEDLE,
+    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE,
+    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1$2=!1,",
+    restoreReplacement: "$1$2=$3===`apikey`,",
   },
 ];
 
@@ -528,7 +606,7 @@ function resolveSlashCommandEnabledVariable(content) {
 function status() {
   const targets = findTargets(assetsDir);
   if (targets.length === 0) {
-    console.log(`Speed setting target file not found: ${assetsDir}`);
+    console.log(`Feature target file not found: ${assetsDir}`);
     return 1;
   }
 
@@ -549,7 +627,7 @@ function status() {
 function apply() {
   const targets = findTargets(assetsDir);
   if (targets.length === 0) {
-    console.log(`Speed setting target file not found: ${assetsDir}`);
+    console.log(`Feature target file not found: ${assetsDir}`);
     return 1;
   }
 
@@ -596,7 +674,7 @@ function apply() {
 function restore() {
   const targets = findTargets(assetsDir);
   if (targets.length === 0) {
-    console.log(`Speed setting target file not found: ${assetsDir}`);
+    console.log(`Feature target file not found: ${assetsDir}`);
     return 1;
   }
 
@@ -710,7 +788,7 @@ show_menu() {
   print_line "A local ad-hoc re-sign runs automatically after resource changes."
   print_line ""
   print_line "1) View current status"
-  print_line "2) Enable Speed setting"
+  print_line "2) Enable custom API features"
   print_line "3) Restore original state"
   print_line "q) Quit"
   print_line ""

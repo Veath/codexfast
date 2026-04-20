@@ -30,17 +30,26 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
 - Confirm the Settings entry still exists in the target bundle and the Speed setting patch signature still matches.
 - Confirm the composer slash command entry still exists in the target bundle and the Fast slash command patch signature still matches.
 - Confirm the `Add files and more / +` panel entry still exists in the target bundle and the Add-context Speed menu patch signature still matches.
+- Confirm the Plugins sidebar gate still exists in the target bundle and the Plugins-access patch signature still matches.
+- Confirm the target `CFBundleShortVersionString` + `CFBundleVersion` pair has been validated and added to the strict compatibility whitelist before allowing apply for that build.
 - Verify `bash test/re-sign-flow.sh` still covers all targets:
   - apply enables the Settings-side Fast control
   - apply enables the composer `/fast` slash command
   - apply enables the add-context `Speed` submenu in the composer menu
+  - apply removes the Plugins sidebar auth-method gate for custom API users
+  - apply is blocked for unsupported app versions before unpacking, backup creation, or re-signing
   - restore returns all patched paths to their original guarded state
-- Verify status output can report both targets independently:
+- Verify status output can report all targets independently:
   - `Speed setting`
   - `Fast slash command`
--  `Add-context Speed menu`
+- `Add-context Speed menu`
+- `Plugins access`
+- Verify status output also reports:
+  - detected app version
+  - detected build
+  - compatibility state
 - If patch logic changes, make sure restore logic remains symmetrical for all targets.
-- Do not ship a change that only enables one path. `Settings > Fast`, composer `/fast`, and the add-context `Speed` menu must be treated as one combined Fast feature set.
+- Do not ship a change that only enables one path. `Settings > Fast`, composer `/fast`, and the add-context `Speed` menu must be treated as one combined Fast feature set, and Plugins access must not be described as supported if the sidebar gate no longer patches cleanly.
 - After any real-app validation, manually smoke-test these behaviors on the installed app copy:
   - `Codex.app` launches successfully after patching
   - opening Settings does not crash or show an error
@@ -50,7 +59,10 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - selecting `Standard` or `Fast` from the add-context menu does not break the UI
   - typing `/fast` in the composer shows the slash command item
   - selecting `/fast` can enable and disable Fast mode without breaking the UI
-- If a new Codex build removes or renames either path, update the README compatibility notes and do not describe the release as fully compatible until both paths work.
+  - the `Plugins` sidebar entry is visible for custom API users
+  - opening `Plugins` does not fail only because of the auth-method gate
+  - at least one plugin install or connect flow is not blocked solely by `authMethod === "apikey"`
+- If a new Codex build removes or renames any target path, update the README compatibility notes and do not describe the release as fully compatible until all supported paths work.
 
 ## Release Notes
 

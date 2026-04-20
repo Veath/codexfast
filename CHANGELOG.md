@@ -4,6 +4,20 @@ All notable changes to `codexfast` will be documented in this file.
 
 This project follows a simple release-oriented changelog format.
 
+## [0.4.0] - 2026-04-20
+
+### Added
+
+- Added patch support for the custom-API `Plugins` sidebar gate so the Plugins entry can be exposed for API-key users on compatible Codex builds.
+- Added maintenance checklist coverage for Plugins access alongside the existing Fast-related feature paths.
+- Added strict app-version compatibility gating based on `CFBundleShortVersionString` and `CFBundleVersion`.
+
+### Changed
+
+- Expanded the shell regression test flow to cover apply and restore behavior for the Plugins sidebar gate target.
+- Updated README documentation to describe the broader custom-API feature set and the Plugins availability boundary.
+- `Enable custom API features` now refuses to run on unsupported `Codex.app` versions, while status and restore remain available.
+
 ## [0.3.0] - 2026-04-20
 
 ### Added

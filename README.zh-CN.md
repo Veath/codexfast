@@ -2,9 +2,16 @@
 
 [English README](./README.md)
 
-这个仓库包含一个单文件 macOS 脚本，用于在 `Codex.app` 中显示并切换 Speed 设置项。
+这个仓库包含一个单文件 macOS 脚本，用于在 `Codex.app` 中开启 custom API 用户相关的隐藏能力。
 
 这个脚本主要面向使用 custom API 配置的 Codex 用户。
+
+当前覆盖的能力包括：
+
+- Settings 里的 Fast 控制项
+- 输入框里的 `/fast` slash command
+- `Add files and more / +` 菜单里的 `Speed` 子菜单
+- custom API 用户的 Plugins 入口访问能力
 
 脚本在重建或修改应用资源后，会自动对本地 `Codex.app` 执行重新签名。
 
@@ -24,11 +31,18 @@ npx codexfast
 
 ## 作用
 
-这个脚本会定位 `Codex.app` 的前端资源，检查当前版本是否仍然包含可识别的 Speed 设置项代码，并提供 3 个动作：
+这个脚本会定位 `Codex.app` 的前端资源，检查当前版本是否仍然包含可识别的隐藏 custom API 能力路径，并提供 3 个动作：
 
 - 查看当前状态
-- 开启 Speed 设置项
+- 开启 custom API 相关能力
 - 恢复原始状态
+
+在兼容版本上启用后，当前会恢复这些能力：
+
+- Settings 里的 Fast 控制项
+- 输入框中的 `/fast`
+- composer 菜单中的 `Speed` 子菜单
+- custom API 用户的 Plugins 侧边栏/页面访问路径
 
 当脚本改动本地安装应用后，它会把修改后的内容重新打包回 `app.asar`，同步更新 `Info.plist` 里的 Electron ASAR header integrity hash，再自动执行一次本地 ad-hoc 重签名，避免 `Codex.app` 因完整性校验或签名失效而无法启动。
 
@@ -92,26 +106,30 @@ chmod +x ./codexfast.sh
 菜单项：
 
 - `1) 查看当前状态`
-- `2) 开启 Speed 设置项`
+- `2) 开启 custom API 相关能力`
 - `3) 恢复原始状态`
 
 推荐流程：
 
 1. 先执行 `查看当前状态`
-2. 只有在成功识别目标文件时，再执行 `开启 Speed 设置项`
+2. 只有在成功识别目标文件、并且版本显示为 `supported` 时，再执行 `开启 custom API 相关能力`
 
 `查看当前状态` 会检查：
 
+- 是否能从 `Info.plist` 读取当前 `Codex.app` 的版本号和 build 号
+- 当前版本/build 组合是否在脚本内置的已验证兼容白名单里
 - 是否存在 `Codex.app` 资源目录
 - 是否能找到 `app.asar`，并通过临时工作区完成检查
 - 解包后的归档内容里是否存在目标目录 `app/webview/assets`
-- 当前前端 bundle 中是否还能识别出 Speed 设置项的目标代码
+- 当前前端 bundle 中是否还能识别出这些隐藏能力对应的目标代码
 - 当前状态是“未开启”还是“已开启”
 - 是否已经存在备份文件
 
 如果脚本发现旧版脚本留下的 `Resources/app` 解包布局，它会先把这个目录重新打包回 `app.asar`，删除 `Resources/app`，然后自动重签应用。
 
-如果脚本输出 `Speed setting target file not found`，通常说明当前 Codex 构建已经变化，不应该继续盲目打补丁。
+如果脚本输出 `Feature target file not found`，通常说明当前 Codex 构建已经变化，不应该继续盲目打补丁。
+
+如果脚本输出 `Compatibility: unsupported`，那么 `开启 custom API 相关能力` 会被故意拦截。这是一个严格的安全门禁，用来避免对未验证版本直接打补丁。
 
 ## 版本兼容说明
 
@@ -123,16 +141,17 @@ chmod +x ./codexfast.sh
 这个版本与脚本兼容，原因是：
 
 - 当前 `app.asar` 内仍然存在 `app/webview/assets`
-- Speed 设置项相关文案仍然存在
+- Fast 和 Plugins 相关文案仍然存在
 - 脚本使用的目标正则仍能命中当前 bundle
-- 当前命中的目标文件是 `general-settings-BZQqrI-r.js`
-- 当前“未开启”状态仍然可以被改写成“已开启”状态
+- 当前这些 guarded 状态仍然可以被改写成 enabled 状态
 
 在这个版本上的实际验证结果：
 
-- 能找到目标文件
-- 能识别当前状态为未开启
-- 模拟替换后，可以把代码从 guarded 状态切换到 patched 状态
+- 能找到 Settings 里的 Fast 目标
+- 能找到 `/fast` 目标
+- 能找到 `Add files and more / +` 里的 `Speed` 菜单目标
+- 能找到 Plugins 侧边栏 gate 目标
+- 模拟替换后，可以把这些代码从 guarded 状态切换到 patched 状态
 
 这说明脚本对上述版本是兼容的。
 
@@ -143,8 +162,16 @@ chmod +x ./codexfast.sh
 建议：
 
 - 每次 Codex 更新后先运行一次 `查看当前状态`
-- 只有在脚本仍能识别目标文件时，再执行 `开启 Speed 设置项`
+- 只有在脚本仍能识别目标文件、并且显示 `Compatibility: supported` 时，再执行 `开启 custom API 相关能力`
 - 如果 bundle 结构、变量名或压缩结果变化，正则可能需要更新
+
+对 Plugins 来说，这个脚本做的是移除 custom API 用户的侧边栏鉴权 gate。插件最终是否真的可安装、可使用，仍然可能取决于连接器可用性、插件自身状态、或者应用内部的管理侧限制。
+
+兼容策略：
+
+- 脚本会从 `Codex.app/Contents/Info.plist` 读取 `CFBundleShortVersionString` 和 `CFBundleVersion`
+- 只有命中脚本内显式白名单的版本/build 组合，才允许执行 `开启 custom API 相关能力`
+- 即使当前版本不受支持，`查看当前状态` 和 `恢复原始状态` 仍然可以使用
 
 ## 备份与恢复
 
@@ -186,6 +213,17 @@ codesign --force --deep --sign - /Applications/Codex.app
 
 - 不要继续执行开启动作
 - 说明当前 Codex 构建很可能需要重新适配
+
+如果脚本提示当前版本不受支持：
+
+- 不要手动强行修改应用 bundle
+- 只有在完成新版本全链路验证后，再更新脚本里的兼容版本列表
+
+如果 Plugins 已经显示出来，但某个插件仍然不能安装或使用：
+
+- 检查你当前环境里的 connector / app integration 是否可用
+- 检查该插件是否被 admin 禁用，或者上游本身不可用
+- 不要把所有插件问题都归因到 auth-method gate
 
 如果你之前运行的是会遗留 `Resources/app` 或错误写入 `ElectronAsarIntegrity` 的旧版异常脚本，导致 `Codex.app` 打不开，可以这样恢复：
 

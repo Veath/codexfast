@@ -11,6 +11,7 @@ MARKER_FILE="${TMP_DIR}/codesign.log"
 GUARDED_CONTENT='const label="settings.agent.speed.label";function demo(){let cache=(0,Q.c)(35),fmt=j(),x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";return {cache,fmt,view,y,z};}'
 SLASH_COMMAND_GUARDED_CONTENT='const label="composer.speedSlashCommand.title";function OG(){let e=(0,Q.c)(24),t=ea(),n=Lf(),{serviceTierSettings:r,setServiceTier:i}=Zf(),a;e[0]===r.serviceTier?a=e[1]:(a=N(r.serviceTier),e[0]=r.serviceTier,e[1]=a);let o=a===`fast`,s;e[2]===o?s=e[3]:(s=e=>{let{className:t}=e;return(0,$.jsx)(o?Wv:EG,{className:X(t,o?`text-token-link-foreground`:void 0)})},e[2]=o,e[3]=s);let c=s,l;e[4]===t?l=e[5]:(l=t.formatMessage(DG.title),e[4]=t,e[5]=l);let u;e[6]!==t||e[7]!==o?(u=t.formatMessage(o?DG.disableDescription:DG.commandDescription),e[6]=t,e[7]=o,e[8]=u):u=e[8];let d;e[9]!==o||e[10]!==i?(d=async()=>{await i(o?null:`fast`,`slash_command`)},e[9]=o,e[10]=i,e[11]=d):d=e[11];let f;e[12]!==n||e[13]!==o||e[14]!==r.isLoading||e[15]!==i?(f=[n,o,r.isLoading,i],e[12]=n,e[13]=o,e[14]=r.isLoading,e[15]=i,e[16]=f):f=e[16];let p;return e[17]!==c||e[18]!==n||e[19]!==l||e[20]!==u||e[21]!==d||e[22]!==f?(p={id:`speed`,title:l,description:u,requiresEmptyComposer:!1,enabled:n,Icon:c,onSelect:d,dependencies:f},e[17]=c,e[18]=n,e[19]=l,e[20]=u,e[21]=d,e[22]=f,e[23]=p):p=e[23],DI(p),null}'
 ADD_CONTEXT_SPEED_GUARDED_CONTENT='const label="composer.addContext.speed.option.fast.description";const IE=[];function zE(){let l=Sn(),D=Cr(),{serviceTierSettings:O,setServiceTier:k}=Ir(r);return D?(0,q.jsx)(Qa.FlyoutSubmenuItem,{LeftIcon:Coe,label:(0,q.jsx)(W,{...FE.label}),contentClassName:`min-w-[160px]`,disabled:O.isLoading,children:IE.map(e=>{let t=e.value===O.serviceTier;return(0,q.jsx)(Qa.Item,{disabled:O.isLoading,RightIcon:t?to:void 0,SubText:(0,q.jsx)(`span`,{className:`text-token-description-foreground`,children:(0,q.jsx)(W,{...FE[e.description]})}),onSelect:()=>{k(e.value,`composer_menu`),x()},children:(0,q.jsx)(W,{...FE[e.label]})},e.label)})}):null}'
+PLUGINS_SIDEBAR_GUARDED_CONTENT='const label="sidebarElectron.pluginsDisabledTooltip";function sidebar(){let e=ea(),{authMethod:T}=Nf(),D=Gf(),O=Hl(),k=cf(`533078438`),j=T===`apikey`,M=k&&j,N=O&&!j;return {e,D,O,k,j,M,N};}'
 
 mkdir -p "${STUB_BIN}"
 
@@ -184,6 +185,20 @@ run_script_with_codesign_failure() {
     }
 }
 
+run_script_expect_failure() {
+  local app_dir="$1"
+  local input="$2"
+  local output_file="$3"
+
+  printf '%b' "${input}" | \
+    PATH="${STUB_BIN}:$PATH" \
+    CODEXFAST_APP_BUNDLE="${app_dir}" \
+    "${ROOT_DIR}/codexfast.sh" > "${output_file}" 2>&1 || {
+    cat "${output_file}"
+    exit 1
+  }
+}
+
 assert_codesign_calls() {
   local expected_min="$1"
   local output_file="$2"
@@ -218,6 +233,8 @@ assert_no_persistent_unpack_dir() {
 write_info_plist() {
   local app_dir="$1"
   local hash_value="$2"
+  local app_version="${3:-26.415.40636}"
+  local app_build="${4:-1799}"
 
   mkdir -p "${app_dir}/Contents"
   cat > "${app_dir}/Contents/Info.plist" <<EOF
@@ -225,6 +242,10 @@ write_info_plist() {
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+  <key>CFBundleShortVersionString</key>
+  <string>${app_version}</string>
+  <key>CFBundleVersion</key>
+  <string>${app_build}</string>
   <key>ElectronAsarIntegrity</key>
   <dict>
     <key>Resources/app.asar</key>
@@ -397,6 +418,7 @@ mkdir -p "${TMP_DIR}/existing-assets/webview/assets"
 printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/general-settings.js"
 printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/index.js"
 printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/use-model-settings.js"
+printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/sidebar.js"
 write_fake_asar "${TMP_DIR}/existing-assets" "${FAKE_RESOURCES_EXISTING}/app.asar"
 write_info_plist "${FAKE_APP_EXISTING}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_EXISTING}/app.asar")"
 
@@ -429,6 +451,12 @@ if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/u
   exit 1
 fi
 
+if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/sidebar.js" | grep -q 'j=!1'; then
+  echo "expected apply to remove the Plugins sidebar api-key gate"
+  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/sidebar.js"
+  exit 1
+fi
+
 run_script "${FAKE_APP_EXISTING}" '3\n\nq\n' "${OUTPUT_EXISTING_RESTORE}"
 assert_codesign_calls 2 "${OUTPUT_EXISTING_RESTORE}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_EXISTING}" "${OUTPUT_EXISTING_RESTORE}"
@@ -452,6 +480,12 @@ if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/u
   exit 1
 fi
 
+if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/sidebar.js" | grep -q 'j=T===`apikey`'; then
+  echo "expected restore to re-apply the Plugins sidebar api-key gate"
+  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/sidebar.js"
+  exit 1
+fi
+
 if [ "$(read_info_plist_hash "${FAKE_APP_EXISTING}")" != "$(read_fake_asar_header_hash "${FAKE_RESOURCES_EXISTING}/app.asar")" ]; then
   echo "expected ElectronAsarIntegrity hash to match restored app.asar header"
   cat "${FAKE_APP_EXISTING}/Contents/Info.plist"
@@ -469,10 +503,12 @@ mkdir -p "${FAKE_APP_DIR_LEGACY}"
 printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/general-settings.js"
 printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/index.js"
 printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/use-model-settings.js"
+printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/sidebar.js"
 mkdir -p "${TMP_DIR}/legacy-assets/webview/assets"
 printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/general-settings.js"
 printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/index.js"
 printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/use-model-settings.js"
+printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/sidebar.js"
 write_fake_asar "${TMP_DIR}/legacy-assets" "${FAKE_RESOURCES_LEGACY}/app.asar1"
 write_info_plist "${FAKE_APP_LEGACY}" "legacy-placeholder-hash"
 
@@ -505,9 +541,63 @@ if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/use
   exit 1
 fi
 
+if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/sidebar.js" | grep -q 'j=T===`apikey`'; then
+  echo "expected repacked app.asar to preserve the Plugins sidebar gate"
+  read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/sidebar.js"
+  exit 1
+fi
+
 if [ "$(read_info_plist_hash "${FAKE_APP_LEGACY}")" != "$(read_fake_asar_header_hash "${FAKE_RESOURCES_LEGACY}/app.asar")" ]; then
   echo "expected ElectronAsarIntegrity hash to match migrated app.asar header"
   cat "${FAKE_APP_LEGACY}/Contents/Info.plist"
+  exit 1
+fi
+
+rm -f "${MARKER_FILE}"
+
+FAKE_APP_UNSUPPORTED="${TMP_DIR}/Unsupported.app"
+FAKE_RESOURCES_UNSUPPORTED="${FAKE_APP_UNSUPPORTED}/Contents/Resources"
+OUTPUT_UNSUPPORTED="${TMP_DIR}/unsupported-output.txt"
+
+mkdir -p "${FAKE_RESOURCES_UNSUPPORTED}"
+mkdir -p "${TMP_DIR}/unsupported-assets/webview/assets"
+printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/unsupported-assets/webview/assets/general-settings.js"
+printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/unsupported-assets/webview/assets/index.js"
+printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${TMP_DIR}/unsupported-assets/webview/assets/use-model-settings.js"
+printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT}" > "${TMP_DIR}/unsupported-assets/webview/assets/sidebar.js"
+write_fake_asar "${TMP_DIR}/unsupported-assets" "${FAKE_RESOURCES_UNSUPPORTED}/app.asar"
+write_info_plist "${FAKE_APP_UNSUPPORTED}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_UNSUPPORTED}/app.asar")" "99.0.0" "9999"
+
+run_script_expect_failure "${FAKE_APP_UNSUPPORTED}" '2\n\nq\n' "${OUTPUT_UNSUPPORTED}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_UNSUPPORTED}" "${OUTPUT_UNSUPPORTED}"
+
+if grep -q 'Running local ad-hoc re-sign' "${OUTPUT_UNSUPPORTED}"; then
+  echo "expected unsupported versions to be blocked before re-signing"
+  cat "${OUTPUT_UNSUPPORTED}"
+  exit 1
+fi
+
+if [ -f "${FAKE_RESOURCES_UNSUPPORTED}/app.asar1" ]; then
+  echo "expected unsupported versions to be blocked before creating app.asar1"
+  cat "${OUTPUT_UNSUPPORTED}"
+  exit 1
+fi
+
+if ! grep -q 'Compatibility: unsupported' "${OUTPUT_UNSUPPORTED}"; then
+  echo "expected unsupported compatibility status in output"
+  cat "${OUTPUT_UNSUPPORTED}"
+  exit 1
+fi
+
+if ! grep -q 'Enable custom API features is blocked for this Codex.app version.' "${OUTPUT_UNSUPPORTED}"; then
+  echo "expected apply to be blocked for unsupported versions"
+  cat "${OUTPUT_UNSUPPORTED}"
+  exit 1
+fi
+
+if ! read_fake_asar_file "${FAKE_RESOURCES_UNSUPPORTED}/app.asar" | grep -q 'if(!x)return null;'; then
+  echo "expected unsupported version to leave app.asar unchanged"
+  read_fake_asar_file "${FAKE_RESOURCES_UNSUPPORTED}/app.asar"
   exit 1
 fi
 
