@@ -408,19 +408,112 @@ walk(header);
 NODE
 }
 
+write_standard_assets() {
+  local assets_dir="$1"
+
+  mkdir -p "${assets_dir}"
+  printf '%s\n' "${GUARDED_CONTENT}" > "${assets_dir}/general-settings.js"
+  printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${assets_dir}/index.js"
+  printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${assets_dir}/use-model-settings.js"
+  printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT}" > "${assets_dir}/sidebar.js"
+}
+
+prepare_archived_fake_app() {
+  local app_dir="$1"
+  local assets_root="$2"
+  local app_version="${3:-26.415.40636}"
+  local app_build="${4:-1799}"
+  local resources_dir="${app_dir}/Contents/Resources"
+  local archive_path="${resources_dir}/app.asar"
+
+  mkdir -p "${resources_dir}"
+  write_standard_assets "${assets_root}/webview/assets"
+  write_fake_asar "${assets_root}" "${archive_path}"
+  write_info_plist "${app_dir}" "$(read_fake_asar_header_hash "${archive_path}")" "${app_version}" "${app_build}"
+}
+
+prepare_legacy_fake_app() {
+  local app_dir="$1"
+  local unpacked_assets_dir="$2"
+  local archived_assets_root="$3"
+  local app_build_hash_placeholder="$4"
+  local resources_dir="${app_dir}/Contents/Resources"
+  local unpacked_root="${resources_dir}/app/webview/assets"
+
+  mkdir -p "${unpacked_root}"
+  write_standard_assets "${unpacked_assets_dir}"
+  cp "${unpacked_assets_dir}/general-settings.js" "${unpacked_root}/general-settings.js"
+  cp "${unpacked_assets_dir}/index.js" "${unpacked_root}/index.js"
+  cp "${unpacked_assets_dir}/use-model-settings.js" "${unpacked_root}/use-model-settings.js"
+  cp "${unpacked_assets_dir}/sidebar.js" "${unpacked_root}/sidebar.js"
+  write_standard_assets "${archived_assets_root}/webview/assets"
+  write_fake_asar "${archived_assets_root}" "${resources_dir}/app.asar1"
+  write_info_plist "${app_dir}" "${app_build_hash_placeholder}"
+}
+
+assert_apply_state() {
+  local archive_path="$1"
+
+  if ! read_fake_asar_file "${archive_path}" | grep -q 'let view="general";'; then
+    echo "expected apply to remove the guarded Speed settings return"
+    read_fake_asar_file "${archive_path}"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index.js" | grep -q 'enabled:!0'; then
+    echo "expected apply to enable the Fast slash command"
+    read_fake_asar_file "${archive_path}" "webview/assets/index.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/use-model-settings.js" | grep -q 'D=!0'; then
+    echo "expected apply to enable the add-context Speed menu"
+    read_fake_asar_file "${archive_path}" "webview/assets/use-model-settings.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/sidebar.js" | grep -q 'j=!1'; then
+    echo "expected apply to remove the Plugins sidebar api-key gate"
+    read_fake_asar_file "${archive_path}" "webview/assets/sidebar.js"
+    exit 1
+  fi
+}
+
+assert_guarded_state() {
+  local archive_path="$1"
+  local context="$2"
+
+  if ! read_fake_asar_file "${archive_path}" | grep -q 'if(!x)return null;'; then
+    echo "expected ${context} to preserve the guarded Speed settings state"
+    read_fake_asar_file "${archive_path}"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index.js" | grep -q 'enabled:n'; then
+    echo "expected ${context} to preserve the guarded Fast slash command state"
+    read_fake_asar_file "${archive_path}" "webview/assets/index.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/use-model-settings.js" | grep -q 'D=Cr()'; then
+    echo "expected ${context} to preserve the guarded add-context Speed menu state"
+    read_fake_asar_file "${archive_path}" "webview/assets/use-model-settings.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/sidebar.js" | grep -q 'j=T===`apikey`'; then
+    echo "expected ${context} to preserve the guarded Plugins sidebar state"
+    read_fake_asar_file "${archive_path}" "webview/assets/sidebar.js"
+    exit 1
+  fi
+}
+
 FAKE_APP_EXISTING="${TMP_DIR}/Existing.app"
 FAKE_RESOURCES_EXISTING="${FAKE_APP_EXISTING}/Contents/Resources"
 OUTPUT_EXISTING_APPLY="${TMP_DIR}/apply-output.txt"
 OUTPUT_EXISTING_RESTORE="${TMP_DIR}/restore-output.txt"
 
-mkdir -p "${FAKE_RESOURCES_EXISTING}"
-mkdir -p "${TMP_DIR}/existing-assets/webview/assets"
-printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/general-settings.js"
-printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/index.js"
-printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/use-model-settings.js"
-printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/sidebar.js"
-write_fake_asar "${TMP_DIR}/existing-assets" "${FAKE_RESOURCES_EXISTING}/app.asar"
-write_info_plist "${FAKE_APP_EXISTING}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_EXISTING}/app.asar")"
+prepare_archived_fake_app "${FAKE_APP_EXISTING}" "${TMP_DIR}/existing-assets"
 
 run_script "${FAKE_APP_EXISTING}" '2\n\nq\n' "${OUTPUT_EXISTING_APPLY}"
 assert_codesign_calls 1 "${OUTPUT_EXISTING_APPLY}"
@@ -433,58 +526,14 @@ if [ ! -f "${FAKE_RESOURCES_EXISTING}/app.asar1" ]; then
   exit 1
 fi
 
-if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" | grep -q 'let view="general";'; then
-  echo "expected apply to remove the guarded Speed settings return"
-  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar"
-  exit 1
-fi
-
-if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/index.js" | grep -q 'enabled:!0'; then
-  echo "expected apply to enable the Fast slash command"
-  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/index.js"
-  exit 1
-fi
-
-if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/use-model-settings.js" | grep -q 'D=!0'; then
-  echo "expected apply to enable the add-context Speed menu"
-  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/use-model-settings.js"
-  exit 1
-fi
-
-if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/sidebar.js" | grep -q 'j=!1'; then
-  echo "expected apply to remove the Plugins sidebar api-key gate"
-  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/sidebar.js"
-  exit 1
-fi
+assert_apply_state "${FAKE_RESOURCES_EXISTING}/app.asar"
 
 run_script "${FAKE_APP_EXISTING}" '3\n\nq\n' "${OUTPUT_EXISTING_RESTORE}"
 assert_codesign_calls 2 "${OUTPUT_EXISTING_RESTORE}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_EXISTING}" "${OUTPUT_EXISTING_RESTORE}"
 assert_fake_asar_js_parses "${FAKE_RESOURCES_EXISTING}/app.asar"
 
-if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" | grep -q 'if(!x)return null;'; then
-  echo "expected restore to bring app.asar back to the guarded state"
-  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar"
-  exit 1
-fi
-
-if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/index.js" | grep -q 'enabled:n'; then
-  echo "expected restore to bring the Fast slash command back to its guarded state"
-  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/index.js"
-  exit 1
-fi
-
-if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/use-model-settings.js" | grep -q 'D=Cr()'; then
-  echo "expected restore to hide the add-context Speed menu again"
-  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/use-model-settings.js"
-  exit 1
-fi
-
-if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/sidebar.js" | grep -q 'j=T===`apikey`'; then
-  echo "expected restore to re-apply the Plugins sidebar api-key gate"
-  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/sidebar.js"
-  exit 1
-fi
+assert_guarded_state "${FAKE_RESOURCES_EXISTING}/app.asar" "restore"
 
 if [ "$(read_info_plist_hash "${FAKE_APP_EXISTING}")" != "$(read_fake_asar_header_hash "${FAKE_RESOURCES_EXISTING}/app.asar")" ]; then
   echo "expected ElectronAsarIntegrity hash to match restored app.asar header"
@@ -499,18 +548,7 @@ FAKE_RESOURCES_LEGACY="${FAKE_APP_LEGACY}/Contents/Resources"
 FAKE_APP_DIR_LEGACY="${FAKE_RESOURCES_LEGACY}/app/webview/assets"
 OUTPUT_LEGACY="${TMP_DIR}/legacy-output.txt"
 
-mkdir -p "${FAKE_APP_DIR_LEGACY}"
-printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/general-settings.js"
-printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/index.js"
-printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/use-model-settings.js"
-printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/sidebar.js"
-mkdir -p "${TMP_DIR}/legacy-assets/webview/assets"
-printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/general-settings.js"
-printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/index.js"
-printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/use-model-settings.js"
-printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/sidebar.js"
-write_fake_asar "${TMP_DIR}/legacy-assets" "${FAKE_RESOURCES_LEGACY}/app.asar1"
-write_info_plist "${FAKE_APP_LEGACY}" "legacy-placeholder-hash"
+prepare_legacy_fake_app "${FAKE_APP_LEGACY}" "${TMP_DIR}/legacy-unpacked-assets" "${TMP_DIR}/legacy-assets" "legacy-placeholder-hash"
 
 run_script "${FAKE_APP_LEGACY}" '1\n\nq\n' "${OUTPUT_LEGACY}"
 assert_codesign_calls 1 "${OUTPUT_LEGACY}"
@@ -523,29 +561,7 @@ if [ ! -f "${FAKE_RESOURCES_LEGACY}/app.asar" ]; then
   exit 1
 fi
 
-if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" | grep -q 'if(!x)return null;'; then
-  echo "expected repacked app.asar to preserve the current JS content"
-  read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar"
-  exit 1
-fi
-
-if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/index.js" | grep -q 'enabled:n'; then
-  echo "expected repacked app.asar to preserve the Fast slash command content"
-  read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/index.js"
-  exit 1
-fi
-
-if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/use-model-settings.js" | grep -q 'D=Cr()'; then
-  echo "expected repacked app.asar to preserve the add-context Speed menu gate"
-  read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/use-model-settings.js"
-  exit 1
-fi
-
-if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/sidebar.js" | grep -q 'j=T===`apikey`'; then
-  echo "expected repacked app.asar to preserve the Plugins sidebar gate"
-  read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/sidebar.js"
-  exit 1
-fi
+assert_guarded_state "${FAKE_RESOURCES_LEGACY}/app.asar" "legacy repack"
 
 if [ "$(read_info_plist_hash "${FAKE_APP_LEGACY}")" != "$(read_fake_asar_header_hash "${FAKE_RESOURCES_LEGACY}/app.asar")" ]; then
   echo "expected ElectronAsarIntegrity hash to match migrated app.asar header"
@@ -559,14 +575,7 @@ FAKE_APP_UNSUPPORTED="${TMP_DIR}/Unsupported.app"
 FAKE_RESOURCES_UNSUPPORTED="${FAKE_APP_UNSUPPORTED}/Contents/Resources"
 OUTPUT_UNSUPPORTED="${TMP_DIR}/unsupported-output.txt"
 
-mkdir -p "${FAKE_RESOURCES_UNSUPPORTED}"
-mkdir -p "${TMP_DIR}/unsupported-assets/webview/assets"
-printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/unsupported-assets/webview/assets/general-settings.js"
-printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/unsupported-assets/webview/assets/index.js"
-printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${TMP_DIR}/unsupported-assets/webview/assets/use-model-settings.js"
-printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT}" > "${TMP_DIR}/unsupported-assets/webview/assets/sidebar.js"
-write_fake_asar "${TMP_DIR}/unsupported-assets" "${FAKE_RESOURCES_UNSUPPORTED}/app.asar"
-write_info_plist "${FAKE_APP_UNSUPPORTED}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_UNSUPPORTED}/app.asar")" "99.0.0" "9999"
+prepare_archived_fake_app "${FAKE_APP_UNSUPPORTED}" "${TMP_DIR}/unsupported-assets" "99.0.0" "9999"
 
 run_script_expect_failure "${FAKE_APP_UNSUPPORTED}" '2\n\nq\n' "${OUTPUT_UNSUPPORTED}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_UNSUPPORTED}" "${OUTPUT_UNSUPPORTED}"
@@ -607,13 +616,7 @@ FAKE_APP_FAILING="${TMP_DIR}/Failing.app"
 FAKE_RESOURCES_FAILING="${FAKE_APP_FAILING}/Contents/Resources"
 OUTPUT_FAILING="${TMP_DIR}/failing-output.txt"
 
-mkdir -p "${FAKE_RESOURCES_FAILING}"
-mkdir -p "${TMP_DIR}/failing-assets/webview/assets"
-printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/failing-assets/webview/assets/general-settings.js"
-printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/failing-assets/webview/assets/index.js"
-printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${TMP_DIR}/failing-assets/webview/assets/use-model-settings.js"
-write_fake_asar "${TMP_DIR}/failing-assets" "${FAKE_RESOURCES_FAILING}/app.asar"
-write_info_plist "${FAKE_APP_FAILING}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_FAILING}/app.asar")"
+prepare_archived_fake_app "${FAKE_APP_FAILING}" "${TMP_DIR}/failing-assets"
 
 run_script_with_codesign_failure "${FAKE_APP_FAILING}" '2\n\nq\n' "${OUTPUT_FAILING}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_FAILING}" "${OUTPUT_FAILING}"

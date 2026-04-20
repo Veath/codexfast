@@ -417,9 +417,8 @@ check_requirements() {
   return 0
 }
 
-run_embedded_tool() {
+print_action_header() {
   local action="$1"
-  local exit_code=1
 
   print_line ""
   print_line "Action: ${action}"
@@ -429,6 +428,10 @@ run_embedded_tool() {
   print_line "Compatibility: ${APP_COMPATIBILITY}"
   print_line "Mode: self-contained single file"
   print_line ""
+}
+
+validate_action_request() {
+  local action="$1"
 
   if [ "${action}" = "apply" ] && [ "${APP_VERSION_SUPPORTED}" -ne 1 ]; then
     print_line "Enable custom API features is blocked for this Codex.app version."
@@ -439,14 +442,11 @@ run_embedded_tool() {
     return 1
   fi
 
-  if [ "${action}" = "restore" ] && [ -f "${APP_ASAR_BACKUP}" ]; then
-    restore_from_archive_backup
-    return $?
-  fi
+  return 0
+}
 
-  if ! unpack_app_asar_to_temp; then
-    return 1
-  fi
+run_embedded_patcher() {
+  local action="$1"
 
   "${NODE_BIN}" - "${action}" "${TEMP_ASSETS_DIR}" "${BACKUP_SUFFIX}" <<'NODE'
 "use strict";
@@ -745,32 +745,61 @@ switch (command) {
 
 process.exit(exitCode);
 NODE
+}
+
+finalize_modified_archive() {
+  local action="$1"
+
+  case "${action}" in
+    apply)
+      if ! ensure_archive_backup; then
+        return 1
+      fi
+      ;;
+  esac
+
+  if ! pack_temp_app_to_asar; then
+    return 1
+  fi
+
+  if ! update_asar_integrity_metadata; then
+    return 1
+  fi
+
+  if ! resign_app_bundle "Codex.app resources were modified. Re-signing now."; then
+    return 1
+  fi
+
+  return 0
+}
+
+run_embedded_tool() {
+  local action="$1"
+  local exit_code=1
+
+  print_action_header "${action}"
+
+  if ! validate_action_request "${action}"; then
+    return 1
+  fi
+
+  if [ "${action}" = "restore" ] && [ -f "${APP_ASAR_BACKUP}" ]; then
+    restore_from_archive_backup
+    return $?
+  fi
+
+  if ! unpack_app_asar_to_temp; then
+    return 1
+  fi
+
+  run_embedded_patcher "${action}"
 
   exit_code=$?
 
-  if [ "${exit_code}" -eq 0 ]; then
-    case "${action}" in
-      apply)
-        if ! ensure_archive_backup; then
-          exit_code=1
-        elif ! pack_temp_app_to_asar; then
-          exit_code=1
-        elif ! update_asar_integrity_metadata; then
-          exit_code=1
-        elif ! resign_app_bundle "Codex.app resources were modified. Re-signing now."; then
-          exit_code=1
-        fi
-        ;;
-      restore)
-        if ! pack_temp_app_to_asar; then
-          exit_code=1
-        elif ! update_asar_integrity_metadata; then
-          exit_code=1
-        elif ! resign_app_bundle "Codex.app resources were modified. Re-signing now."; then
-          exit_code=1
-        fi
-        ;;
-    esac
+  if [ "${exit_code}" -eq 0 ] && [ "${action}" != "status" ]; then
+    if ! finalize_modified_archive "${action}"; then
+      exit_code=1
+    fi
   fi
 
   cleanup_temp_workspace
