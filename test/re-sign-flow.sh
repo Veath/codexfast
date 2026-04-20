@@ -50,11 +50,62 @@ target_path="$4"
 
 case "${mode}" in
   e)
-    mkdir -p "${target_path}/webview/assets"
-    cat "${source_path}" > "${target_path}/webview/assets/general-settings.js"
+    node - "${source_path}" "${target_path}" <<'NODE'
+const fs = require("fs");
+const path = require("path");
+
+const [, , archivePath, outputDir] = process.argv;
+const archive = fs.readFileSync(archivePath);
+const headerBufferSize = archive.readUInt32LE(4);
+const headerStringSize = archive.readUInt32LE(12);
+const headerString = archive.subarray(16, 16 + headerStringSize).toString("utf8");
+const header = JSON.parse(headerString);
+const relativePath = "webview/assets/general-settings.js";
+const fileInfo = header.files.webview.files.assets.files["general-settings.js"];
+const fileOffset = 8 + headerBufferSize + Number(fileInfo.offset);
+const fileBuffer = archive.subarray(fileOffset, fileOffset + fileInfo.size);
+
+fs.mkdirSync(path.join(outputDir, "webview/assets"), { recursive: true });
+fs.writeFileSync(path.join(outputDir, relativePath), fileBuffer);
+NODE
     ;;
   p)
-    cat "${source_path}/webview/assets/general-settings.js" > "${target_path}"
+    node - "${source_path}/webview/assets/general-settings.js" "${target_path}" <<'NODE'
+const fs = require("fs");
+
+const [, , sourceFilePath, archivePath] = process.argv;
+const fileBuffer = fs.readFileSync(sourceFilePath);
+const headerString = JSON.stringify({
+  files: {
+    webview: {
+      files: {
+        assets: {
+          files: {
+            "general-settings.js": {
+              size: fileBuffer.length,
+              offset: "0",
+            },
+          },
+        },
+      },
+    },
+  },
+});
+
+const align4 = (value) => value + ((4 - (value % 4)) % 4);
+const headerStringBuffer = Buffer.from(headerString, "utf8");
+const headerPayloadSize = align4(4 + headerStringBuffer.length);
+const headerBuffer = Buffer.alloc(4 + headerPayloadSize);
+headerBuffer.writeUInt32LE(headerPayloadSize, 0);
+headerBuffer.writeUInt32LE(headerStringBuffer.length, 4);
+headerStringBuffer.copy(headerBuffer, 8);
+
+const sizeBuffer = Buffer.alloc(8);
+sizeBuffer.writeUInt32LE(4, 0);
+sizeBuffer.writeUInt32LE(headerBuffer.length, 4);
+
+fs.writeFileSync(archivePath, Buffer.concat([sizeBuffer, headerBuffer, fileBuffer]));
+NODE
     ;;
 esac
 EOF
@@ -150,13 +201,89 @@ read_info_plist_hash() {
   /usr/libexec/PlistBuddy -c 'Print :ElectronAsarIntegrity:Resources/app.asar:hash' "$1/Contents/Info.plist"
 }
 
+write_fake_asar() {
+  local source_file="$1"
+  local archive_path="$2"
+
+  node - "${source_file}" "${archive_path}" <<'NODE'
+const fs = require("fs");
+
+const [, , sourceFilePath, archivePath] = process.argv;
+const fileBuffer = fs.readFileSync(sourceFilePath);
+const headerString = JSON.stringify({
+  files: {
+    webview: {
+      files: {
+        assets: {
+          files: {
+            "general-settings.js": {
+              size: fileBuffer.length,
+              offset: "0",
+            },
+          },
+        },
+      },
+    },
+  },
+});
+
+const align4 = (value) => value + ((4 - (value % 4)) % 4);
+const headerStringBuffer = Buffer.from(headerString, "utf8");
+const headerPayloadSize = align4(4 + headerStringBuffer.length);
+const headerBuffer = Buffer.alloc(4 + headerPayloadSize);
+headerBuffer.writeUInt32LE(headerPayloadSize, 0);
+headerBuffer.writeUInt32LE(headerStringBuffer.length, 4);
+headerStringBuffer.copy(headerBuffer, 8);
+
+const sizeBuffer = Buffer.alloc(8);
+sizeBuffer.writeUInt32LE(4, 0);
+sizeBuffer.writeUInt32LE(headerBuffer.length, 4);
+
+fs.writeFileSync(archivePath, Buffer.concat([sizeBuffer, headerBuffer, fileBuffer]));
+NODE
+}
+
+read_fake_asar_file() {
+  local archive_path="$1"
+
+  node - "${archive_path}" <<'NODE'
+const fs = require("fs");
+
+const [, , archivePath] = process.argv;
+const archive = fs.readFileSync(archivePath);
+const headerBufferSize = archive.readUInt32LE(4);
+const headerStringSize = archive.readUInt32LE(12);
+const headerString = archive.subarray(16, 16 + headerStringSize).toString("utf8");
+const header = JSON.parse(headerString);
+const fileInfo = header.files.webview.files.assets.files["general-settings.js"];
+const fileOffset = 8 + headerBufferSize + Number(fileInfo.offset);
+process.stdout.write(archive.subarray(fileOffset, fileOffset + fileInfo.size).toString("utf8"));
+NODE
+}
+
+read_fake_asar_header_hash() {
+  local archive_path="$1"
+
+  node - "${archive_path}" <<'NODE'
+const crypto = require("crypto");
+const fs = require("fs");
+
+const [, , archivePath] = process.argv;
+const archive = fs.readFileSync(archivePath);
+const headerStringSize = archive.readUInt32LE(12);
+const headerString = archive.subarray(16, 16 + headerStringSize).toString("utf8");
+process.stdout.write(crypto.createHash("sha256").update(headerString).digest("hex"));
+NODE
+}
+
 FAKE_APP_EXISTING="${TMP_DIR}/Existing.app"
 FAKE_RESOURCES_EXISTING="${FAKE_APP_EXISTING}/Contents/Resources"
 OUTPUT_EXISTING="${TMP_DIR}/apply-restore-output.txt"
 
 mkdir -p "${FAKE_RESOURCES_EXISTING}"
-printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_RESOURCES_EXISTING}/app.asar"
-write_info_plist "${FAKE_APP_EXISTING}" "$(shasum -a 256 "${FAKE_RESOURCES_EXISTING}/app.asar" | awk '{print $1}')"
+printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/existing-general-settings.js"
+write_fake_asar "${TMP_DIR}/existing-general-settings.js" "${FAKE_RESOURCES_EXISTING}/app.asar"
+write_info_plist "${FAKE_APP_EXISTING}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_EXISTING}/app.asar")"
 
 run_script "${FAKE_APP_EXISTING}" '2\n\n3\n\nq\n' "${OUTPUT_EXISTING}"
 assert_codesign_calls 2 "${OUTPUT_EXISTING}"
@@ -168,14 +295,14 @@ if [ ! -f "${FAKE_RESOURCES_EXISTING}/app.asar1" ]; then
   exit 1
 fi
 
-if ! grep -q 'if(!x)return null;' "${FAKE_RESOURCES_EXISTING}/app.asar"; then
+if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" | grep -q 'if(!x)return null;'; then
   echo "expected restore to bring app.asar back to the guarded state"
-  cat "${FAKE_RESOURCES_EXISTING}/app.asar"
+  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar"
   exit 1
 fi
 
-if [ "$(read_info_plist_hash "${FAKE_APP_EXISTING}")" != "$(shasum -a 256 "${FAKE_RESOURCES_EXISTING}/app.asar" | awk '{print $1}')" ]; then
-  echo "expected ElectronAsarIntegrity hash to match restored app.asar"
+if [ "$(read_info_plist_hash "${FAKE_APP_EXISTING}")" != "$(read_fake_asar_header_hash "${FAKE_RESOURCES_EXISTING}/app.asar")" ]; then
+  echo "expected ElectronAsarIntegrity hash to match restored app.asar header"
   cat "${FAKE_APP_EXISTING}/Contents/Info.plist"
   exit 1
 fi
@@ -189,7 +316,8 @@ OUTPUT_LEGACY="${TMP_DIR}/legacy-output.txt"
 
 mkdir -p "${FAKE_APP_DIR_LEGACY}"
 printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/general-settings.js"
-printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_RESOURCES_LEGACY}/app.asar1"
+printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/legacy-general-settings.js"
+write_fake_asar "${TMP_DIR}/legacy-general-settings.js" "${FAKE_RESOURCES_LEGACY}/app.asar1"
 write_info_plist "${FAKE_APP_LEGACY}" "legacy-placeholder-hash"
 
 run_script "${FAKE_APP_LEGACY}" '1\n\nq\n' "${OUTPUT_LEGACY}"
@@ -202,14 +330,14 @@ if [ ! -f "${FAKE_RESOURCES_LEGACY}/app.asar" ]; then
   exit 1
 fi
 
-if ! grep -q 'if(!x)return null;' "${FAKE_RESOURCES_LEGACY}/app.asar"; then
+if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" | grep -q 'if(!x)return null;'; then
   echo "expected repacked app.asar to preserve the current JS content"
-  cat "${FAKE_RESOURCES_LEGACY}/app.asar"
+  read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar"
   exit 1
 fi
 
-if [ "$(read_info_plist_hash "${FAKE_APP_LEGACY}")" != "$(shasum -a 256 "${FAKE_RESOURCES_LEGACY}/app.asar" | awk '{print $1}')" ]; then
-  echo "expected ElectronAsarIntegrity hash to match migrated app.asar"
+if [ "$(read_info_plist_hash "${FAKE_APP_LEGACY}")" != "$(read_fake_asar_header_hash "${FAKE_RESOURCES_LEGACY}/app.asar")" ]; then
+  echo "expected ElectronAsarIntegrity hash to match migrated app.asar header"
   cat "${FAKE_APP_LEGACY}/Contents/Info.plist"
   exit 1
 fi
@@ -221,8 +349,9 @@ FAKE_RESOURCES_FAILING="${FAKE_APP_FAILING}/Contents/Resources"
 OUTPUT_FAILING="${TMP_DIR}/failing-output.txt"
 
 mkdir -p "${FAKE_RESOURCES_FAILING}"
-printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_RESOURCES_FAILING}/app.asar"
-write_info_plist "${FAKE_APP_FAILING}" "$(shasum -a 256 "${FAKE_RESOURCES_FAILING}/app.asar" | awk '{print $1}')"
+printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/failing-general-settings.js"
+write_fake_asar "${TMP_DIR}/failing-general-settings.js" "${FAKE_RESOURCES_FAILING}/app.asar"
+write_info_plist "${FAKE_APP_FAILING}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_FAILING}/app.asar")"
 
 run_script_with_codesign_failure "${FAKE_APP_FAILING}" '2\n\nq\n' "${OUTPUT_FAILING}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_FAILING}" "${OUTPUT_FAILING}"

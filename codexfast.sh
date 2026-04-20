@@ -50,15 +50,6 @@ resolve_codesign() {
   return 1
 }
 
-resolve_shasum() {
-  if command -v shasum >/dev/null 2>&1; then
-    command -v shasum
-    return 0
-  fi
-
-  return 1
-}
-
 resolve_plistbuddy() {
   if [ -x /usr/libexec/PlistBuddy ]; then
     printf '%s\n' /usr/libexec/PlistBuddy
@@ -106,6 +97,43 @@ read_asar_integrity_hash() {
   "${PLIST_BUDDY_BIN}" -c "Print :ElectronAsarIntegrity:Resources/app.asar:hash" "${APP_INFO_PLIST}" 2>/dev/null
 }
 
+calculate_asar_header_hash() {
+  "${NODE_BIN}" - "${APP_ASAR}" <<'NODE'
+"use strict";
+
+const crypto = require("crypto");
+const fs = require("fs");
+
+const [, , asarPath] = process.argv;
+const fd = fs.openSync(asarPath, "r");
+
+try {
+  const sizeBuffer = Buffer.alloc(8);
+  if (fs.readSync(fd, sizeBuffer, 0, sizeBuffer.length, 0) !== sizeBuffer.length) {
+    throw new Error("Unable to read ASAR header size.");
+  }
+
+  const headerBufferSize = sizeBuffer.readUInt32LE(4);
+  const headerBuffer = Buffer.alloc(headerBufferSize);
+  if (fs.readSync(fd, headerBuffer, 0, headerBuffer.length, 8) !== headerBuffer.length) {
+    throw new Error("Unable to read ASAR header.");
+  }
+
+  const headerStringSize = headerBuffer.readUInt32LE(4);
+  const headerStart = 8;
+  const headerEnd = headerStart + headerStringSize;
+  if (headerEnd > headerBuffer.length) {
+    throw new Error("Invalid ASAR header length.");
+  }
+
+  const headerString = headerBuffer.subarray(headerStart, headerEnd).toString("utf8");
+  process.stdout.write(crypto.createHash("sha256").update(headerString).digest("hex"));
+} finally {
+  fs.closeSync(fd);
+}
+NODE
+}
+
 update_asar_integrity_metadata() {
   local current_hash=""
 
@@ -114,9 +142,12 @@ update_asar_integrity_metadata() {
     return 1
   fi
 
-  current_hash="$("${SHASUM_BIN}" -a 256 "${APP_ASAR}" | awk '{print $1}')"
+  current_hash="$(calculate_asar_header_hash)" || {
+    print_line "Failed to calculate the Electron ASAR header hash for app.asar."
+    return 1
+  }
   if [ -z "${current_hash}" ]; then
-    print_line "Failed to calculate the SHA256 hash for app.asar."
+    print_line "Failed to calculate the Electron ASAR header hash for app.asar."
     return 1
   fi
 
@@ -314,12 +345,6 @@ check_requirements() {
   CODESIGN_BIN="$(resolve_codesign)" || {
     print_line "codesign not found."
     print_line "This macOS environment cannot perform local re-signing."
-    return 1
-  }
-
-  SHASUM_BIN="$(resolve_shasum)" || {
-    print_line "shasum not found."
-    print_line "This macOS environment cannot calculate app.asar integrity hashes."
     return 1
   }
 

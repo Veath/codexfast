@@ -30,7 +30,7 @@ The script locates the frontend assets inside `Codex.app`, checks whether the cu
 - Enable the Speed setting
 - Restore the original state
 
-After the script changes the installed app bundle, it repacks the modified files back into `app.asar`, updates Electron's `Info.plist` ASAR integrity hash, and performs a local ad-hoc re-sign so `Codex.app` can still launch on macOS.
+After the script changes the installed app bundle, it repacks the modified files back into `app.asar`, updates Electron's `Info.plist` ASAR header integrity hash, and performs a local ad-hoc re-sign so `Codex.app` can still launch on macOS.
 
 The script is fully self-contained in one file, so it can be shared and run on its own.
 
@@ -85,7 +85,7 @@ Important behavior:
 
 - The script uses a temporary workspace when it needs to inspect or patch `app.asar`
 - It repacks the modified files back into `app.asar` instead of leaving a persistent `Resources/app` directory behind
-- It also updates `ElectronAsarIntegrity` in `Info.plist` to match the rebuilt `app.asar`
+- It also updates `ElectronAsarIntegrity` in `Info.plist` to match the rebuilt `app.asar` header hash
 - After apply, restore, or legacy-layout migration, the script automatically performs a local ad-hoc re-sign
 - This local re-sign replaces the original vendor signature on your installed app copy
 
@@ -187,7 +187,7 @@ If the script says it cannot find the target file:
 - Do not continue with the enable action
 - The current Codex build likely needs a new adaptation
 
-If `Codex.app` no longer opens after using an older broken script version that left `Resources/app` behind:
+If `Codex.app` no longer opens after using an older broken script version that left `Resources/app` behind or wrote the wrong `ElectronAsarIntegrity` hash:
 
 1. Delete `/Applications/Codex.app/Contents/Resources/app`
 2. Rename `/Applications/Codex.app/Contents/Resources/app.asar1` back to `app.asar`
