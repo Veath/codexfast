@@ -12,6 +12,7 @@ Repository guidance for `codexfast`.
 ## Docs Index
 
 - Start with [`docs/README.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/README.md) for the long-lived docs index.
+- Read [`docs/feature-scope.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/feature-scope.md) when you need the current supported feature paths before diving into bundle-specific implementation details.
 - Read [`docs/compatibility-matrix.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/compatibility-matrix.md) before changing the whitelist or describing a Codex build as supported.
 - Read [`docs/release-process.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/release-process.md) when preparing a version bump, release commit, or npm publish.
 - Read the relevant file under [`docs/bundle-notes/`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/bundle-notes/) when adapting to a Codex bundle or investigating a gate/signature change.

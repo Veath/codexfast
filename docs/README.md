@@ -6,6 +6,8 @@ Use these docs for decisions, troubleshooting, and bundle adaptations that futur
 
 ## Documents
 
+- [`feature-scope.md`](./feature-scope.md)
+  - The current user-facing feature paths exposed by `codexfast`.
 - [`compatibility-matrix.md`](./compatibility-matrix.md)
   - Verified `Codex.app` version/build pairs, support status, and supported feature paths.
 - [`release-process.md`](./release-process.md)
