@@ -9,6 +9,14 @@ Repository guidance for `codexfast`.
 - The npm shim is [`bin/codexfast`](/Users/veath/abc/code/github.com/Veath/codexfast/bin/codexfast).
 - The main regression test is [`test/re-sign-flow.sh`](/Users/veath/abc/code/github.com/Veath/codexfast/test/re-sign-flow.sh).
 
+## Docs Index
+
+- Start with [`docs/README.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/README.md) for the long-lived docs index.
+- Read [`docs/compatibility-matrix.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/compatibility-matrix.md) before changing the whitelist or describing a Codex build as supported.
+- Read [`docs/release-process.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/release-process.md) when preparing a version bump, release commit, or npm publish.
+- Read the relevant file under [`docs/bundle-notes/`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/bundle-notes/) when adapting to a Codex bundle or investigating a gate/signature change.
+- Keep `docs/` focused on reusable conclusions. Do not store raw conversation transcripts or throwaway debugging logs there.
+
 ## Working Rules
 
 - Keep the script self-contained. New runtime dependencies should be avoided unless they are required.
@@ -22,6 +30,7 @@ Repository guidance for `codexfast`.
 - Run `bash test/re-sign-flow.sh` after changing patch, restore, archive, integrity-hash, or re-sign logic.
 - If npm packaging changes, also check `package.json` and `bin/codexfast`.
 - Do not claim macOS app behavior is fixed unless the shell test passes and the real-world limitation is stated clearly.
+- Update the relevant files under `docs/` when compatibility knowledge, bundle notes, or release process knowledge changes.
 
 ## Maintenance Checklist
 
