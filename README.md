@@ -13,6 +13,8 @@ Current feature coverage:
 - `Add files and more / +` Speed submenu
 - Plugins access for custom API users
 
+For feature definitions and scope boundaries, see [`docs/feature-scope.md`](./docs/feature-scope.md).
+
 It automatically re-signs the local app bundle after rebuilding or modifying app resources.
 
 Script file:
@@ -37,12 +39,7 @@ The script locates the frontend assets inside `Codex.app`, checks whether the cu
 - Enable custom API features
 - Restore the original state
 
-When enabled on a compatible bundle, the script currently exposes:
-
-- the Settings-side Fast control
-- the composer `/fast` slash command
-- the add-context `Speed` submenu in the composer menu
-- the Plugins sidebar/page access path for custom API users
+When enabled on a compatible bundle, the script exposes the current `codexfast` feature set described in [`docs/feature-scope.md`](./docs/feature-scope.md).
 
 After the script changes the installed app bundle, it repacks the modified files back into `app.asar`, updates Electron's `Info.plist` ASAR header integrity hash, and performs a local ad-hoc re-sign so `Codex.app` can still launch on macOS.
 

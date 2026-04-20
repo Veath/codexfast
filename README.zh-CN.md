@@ -13,6 +13,8 @@
 - `Add files and more / +` 菜单里的 `Speed` 子菜单
 - custom API 用户的 Plugins 入口访问能力
 
+这些能力的定义和边界，见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
+
 脚本在重建或修改应用资源后，会自动对本地 `Codex.app` 执行重新签名。
 
 脚本文件：
@@ -37,12 +39,7 @@ npx codexfast
 - 开启 custom API 相关能力
 - 恢复原始状态
 
-在兼容版本上启用后，当前会恢复这些能力：
-
-- Settings 里的 Fast 控制项
-- 输入框中的 `/fast`
-- composer 菜单中的 `Speed` 子菜单
-- custom API 用户的 Plugins 侧边栏/页面访问路径
+在兼容版本上启用后，脚本会恢复当前 `codexfast` 支持的能力集合；具体定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
 
 当脚本改动本地安装应用后，它会把修改后的内容重新打包回 `app.asar`，同步更新 `Info.plist` 里的 Electron ASAR header integrity hash，再自动执行一次本地 ad-hoc 重签名，避免 `Codex.app` 因完整性校验或签名失效而无法启动。
 
