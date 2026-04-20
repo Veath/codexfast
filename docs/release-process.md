@@ -37,6 +37,8 @@ This document describes the release flow for `codexfast`.
 8. Create or update the GitHub release.
    - Use `gh release create` or `gh release edit`.
    - Keep the release title and notes aligned with the changelog entry.
+   - Default behavior: do not upload extra release assets.
+   - If an asset must be uploaded, prefer the `npm pack` tarball for that exact version and confirm it matches the npm package contents first.
 
 9. Verify the publish result.
    - `npm view codexfast version versions --json`
@@ -56,6 +58,11 @@ This document describes the release flow for `codexfast`.
 - If the tag exists but the GitHub release is missing or empty:
   - Confirm the tag points to the right commit.
   - Create or edit the GitHub release for that tag instead of silently moving the tag.
+
+- If a manual release asset is being uploaded:
+  - Do not upload an arbitrary local file.
+  - Prefer the `npm pack` tarball for the same version.
+  - Confirm the version and checksum expectations before attaching it to the GitHub release.
 
 - If npm returns `E403` because of 2FA or token policy:
   - Fix auth first.

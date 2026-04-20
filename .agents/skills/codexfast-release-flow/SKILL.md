@@ -55,6 +55,8 @@ Do not use this skill for feature implementation. Use `codexfast-development-flo
    - Use `gh release create` or `gh release edit`.
    - Make sure every published tag has release notes on GitHub, not just a tag with no release body.
    - Keep the GitHub release title and notes aligned with the changelog entry for that version.
+   - Default behavior: do not upload extra release assets.
+   - If release assets are needed, prefer the `npm pack` tarball for that exact version and confirm it matches the published npm artifact before uploading.
 
 8. Verify the publish result.
    - Re-check `npm view codexfast version versions --json`.
@@ -93,12 +95,14 @@ Do not use this skill for feature implementation. Use `codexfast-development-flo
 - Registry state is verified after publish.
 - The expected `vx.y.z` tag exists on `origin`.
 - The GitHub release entry exists and contains notes.
+- If any manual release asset was uploaded, it matches the exact package version and artifact checksum expectations.
 
 ## Common Mistakes
 
 - Publishing without checking whether the target version already exists.
 - Publishing to npm but forgetting to push the release tag.
 - Having GitHub tags without corresponding GitHub release notes.
+- Uploading a manual GitHub release asset that does not match the npm package for the same version.
 - Forgetting to move `Unreleased` notes into a concrete version section.
 - Claiming publish success from `npm publish` start logs instead of registry confirmation.
 - Forgetting that docs and changelog are part of the release payload, not optional cleanup.
