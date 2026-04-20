@@ -23,6 +23,29 @@ Repository guidance for `codexfast`.
 - If npm packaging changes, also check `package.json` and `bin/codexfast`.
 - Do not claim macOS app behavior is fixed unless the shell test passes and the real-world limitation is stated clearly.
 
+## Maintenance Checklist
+
+Use this checklist for every future Codex bundle adaptation or patch-signature update.
+
+- Confirm the Settings entry still exists in the target bundle and the Speed setting patch signature still matches.
+- Confirm the composer slash command entry still exists in the target bundle and the Fast slash command patch signature still matches.
+- Verify `bash test/re-sign-flow.sh` still covers both targets:
+  - apply enables the Settings-side Fast control
+  - apply enables the composer `/fast` slash command
+  - restore returns both paths to their original guarded state
+- Verify status output can report both targets independently:
+  - `Speed setting`
+  - `Fast slash command`
+- If patch logic changes, make sure restore logic remains symmetrical for both targets.
+- Do not ship a change that only enables one path. `Settings > Fast` and composer `/fast` must be treated as one combined feature set.
+- After any real-app validation, manually smoke-test these behaviors on the installed app copy:
+  - `Codex.app` launches successfully after patching
+  - opening Settings does not crash or show an error
+  - the Fast-related Settings control is visible and usable
+  - typing `/fast` in the composer shows the slash command item
+  - selecting `/fast` can enable and disable Fast mode without breaking the UI
+- If a new Codex build removes or renames either path, update the README compatibility notes and do not describe the release as fully compatible until both paths work.
+
 ## Release Notes
 
 - The published package name is `codexfast`.
