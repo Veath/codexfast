@@ -10,6 +10,16 @@ Script file:
 
 - `codexfast.sh`
 
+## Quick Start
+
+Run directly with npm:
+
+```bash
+npx codexfast
+```
+
+This launches the existing interactive menu.
+
 ## What It Does
 
 The script locates the frontend assets inside `Codex.app`, checks whether the current app version still contains the expected Speed-setting code path, and provides three actions:
@@ -53,6 +63,8 @@ chmod +x ./codexfast.sh
 ```
 
 Run it from a shell.
+
+You can also run it locally from this repository:
 
 ## Self-Check Mode
 

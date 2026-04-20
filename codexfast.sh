@@ -8,6 +8,7 @@ APP_ASAR="${APP_RESOURCES}/app.asar"
 APP_ASAR_BACKUP="${APP_RESOURCES}/app.asar1"
 ASSETS_DIR="${APP_DIR}/webview/assets"
 BACKUP_SUFFIX=".speed-setting.bak"
+NPM_BIN=""
 
 print_line() {
   printf '%s\n' "$1"
@@ -21,6 +22,15 @@ pause() {
 resolve_node() {
   if command -v node >/dev/null 2>&1; then
     command -v node
+    return 0
+  fi
+
+  return 1
+}
+
+resolve_npm() {
+  if command -v npm >/dev/null 2>&1; then
+    command -v npm
     return 0
   fi
 
@@ -51,14 +61,14 @@ prepare_app_resources() {
     return 1
   fi
 
-  if ! command -v npx >/dev/null 2>&1; then
-    print_line "未找到 npx，无法解压 app.asar。"
+  if [ -z "${NPM_BIN}" ]; then
+    print_line "未找到 npm，无法解压 app.asar。"
     return 1
   fi
 
   (
     cd "${APP_RESOURCES}" || exit 1
-    npx @electron/asar e ./app.asar app || exit 1
+    "${NPM_BIN}" exec --yes --package @electron/asar -- asar e ./app.asar app || exit 1
     mv ./app.asar ./app.asar1
   ) || {
     print_line "解压或重命名 app.asar 失败。"
@@ -75,6 +85,18 @@ check_requirements() {
     return 1
   fi
 
+  NODE_BIN="$(resolve_node)" || {
+    print_line "未找到外部 Node 运行时。"
+    print_line "请先确保命令行里的 node 可用。"
+    return 1
+  }
+
+  NPM_BIN="$(resolve_npm)" || {
+    print_line "未找到 npm。"
+    print_line "请先确保命令行里的 npm 可用。"
+    return 1
+  }
+
   if ! prepare_app_resources; then
     return 1
   fi
@@ -83,12 +105,6 @@ check_requirements() {
     print_line "未找到资源目录：${ASSETS_DIR}"
     return 1
   fi
-
-  NODE_BIN="$(resolve_node)" || {
-    print_line "未找到外部 Node 运行时。"
-    print_line "请先确保命令行里的 node 可用。"
-    return 1
-  }
 
   return 0
 }

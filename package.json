@@ -1,0 +1,33 @@
+{
+  "name": "codexfast",
+  "version": "0.1.0",
+  "description": "Expose and toggle the Speed setting in Codex.app for custom API users on macOS.",
+  "bin": {
+    "codexfast": "bin/codexfast"
+  },
+  "files": [
+    "bin/codexfast",
+    "codexfast.sh",
+    "README.md",
+    "README.zh-CN.md"
+  ],
+  "os": [
+    "darwin"
+  ],
+  "keywords": [
+    "codex",
+    "codex-app",
+    "speed",
+    "custom-api",
+    "macos"
+  ],
+  "homepage": "https://github.com/Veath/codexfast",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Veath/codexfast.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Veath/codexfast/issues"
+  },
+  "license": "UNLICENSED"
+}
