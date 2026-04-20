@@ -8,7 +8,7 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 
 STUB_BIN="${TMP_DIR}/bin"
 MARKER_FILE="${TMP_DIR}/codesign.log"
-GUARDED_CONTENT='const label="settings.agent.speed.label";x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";'
+GUARDED_CONTENT='const label="settings.agent.speed.label";function demo(){let cache=(0,Q.c)(35),fmt=j(),x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";return {cache,fmt,view,y,z};}'
 
 mkdir -p "${STUB_BIN}"
 
@@ -276,6 +276,26 @@ process.stdout.write(crypto.createHash("sha256").update(headerString).digest("he
 NODE
 }
 
+assert_fake_asar_js_parses() {
+  local archive_path="$1"
+
+  node - "${archive_path}" <<'NODE'
+const fs = require("fs");
+const vm = require("vm");
+
+const [, , archivePath] = process.argv;
+const archive = fs.readFileSync(archivePath);
+const headerBufferSize = archive.readUInt32LE(4);
+const headerStringSize = archive.readUInt32LE(12);
+const headerString = archive.subarray(16, 16 + headerStringSize).toString("utf8");
+const header = JSON.parse(headerString);
+const fileInfo = header.files.webview.files.assets.files["general-settings.js"];
+const fileOffset = 8 + headerBufferSize + Number(fileInfo.offset);
+const source = archive.subarray(fileOffset, fileOffset + fileInfo.size).toString("utf8");
+new vm.Script(source);
+NODE
+}
+
 FAKE_APP_EXISTING="${TMP_DIR}/Existing.app"
 FAKE_RESOURCES_EXISTING="${FAKE_APP_EXISTING}/Contents/Resources"
 OUTPUT_EXISTING="${TMP_DIR}/apply-restore-output.txt"
@@ -288,6 +308,7 @@ write_info_plist "${FAKE_APP_EXISTING}" "$(read_fake_asar_header_hash "${FAKE_RE
 run_script "${FAKE_APP_EXISTING}" '2\n\n3\n\nq\n' "${OUTPUT_EXISTING}"
 assert_codesign_calls 2 "${OUTPUT_EXISTING}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_EXISTING}" "${OUTPUT_EXISTING}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_EXISTING}/app.asar"
 
 if [ ! -f "${FAKE_RESOURCES_EXISTING}/app.asar1" ]; then
   echo "expected archive backup to be created on apply"
@@ -323,6 +344,7 @@ write_info_plist "${FAKE_APP_LEGACY}" "legacy-placeholder-hash"
 run_script "${FAKE_APP_LEGACY}" '1\n\nq\n' "${OUTPUT_LEGACY}"
 assert_codesign_calls 1 "${OUTPUT_LEGACY}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_LEGACY}" "${OUTPUT_LEGACY}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_LEGACY}/app.asar"
 
 if [ ! -f "${FAKE_RESOURCES_LEGACY}/app.asar" ]; then
   echo "expected legacy unpacked layout to be repacked into app.asar"
@@ -355,6 +377,7 @@ write_info_plist "${FAKE_APP_FAILING}" "$(read_fake_asar_header_hash "${FAKE_RES
 
 run_script_with_codesign_failure "${FAKE_APP_FAILING}" '2\n\nq\n' "${OUTPUT_FAILING}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_FAILING}" "${OUTPUT_FAILING}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_FAILING}/app.asar"
 
 if ! grep -q 'codesign --force --deep --sign - '"${FAKE_APP_FAILING}" "${OUTPUT_FAILING}"; then
   echo "expected manual re-sign guidance in failure output"

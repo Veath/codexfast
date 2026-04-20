@@ -495,7 +495,7 @@ function apply() {
   for (const target of targets) {
     if (target.guarded) {
       writeBackupIfNeeded(target);
-      const next = target.content.replace(GUARDED_SIGNATURE, "$1=_e(),$2let ");
+      const next = target.content.replace(GUARDED_SIGNATURE, "$1=_e(),$2");
       fs.writeFileSync(target.filePath, next, "utf8");
       console.log(`patched: ${path.relative(process.cwd(), target.filePath)}`);
       changed += 1;
