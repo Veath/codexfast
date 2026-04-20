@@ -17,7 +17,7 @@ print_line() {
 }
 
 pause() {
-  printf '\n按 Enter 返回菜单...'
+  printf '\nPress Enter to return to the menu...'
   read -r _
 }
 
@@ -56,22 +56,22 @@ resign_app_bundle() {
     print_line "${reason}"
   fi
 
-  print_line "执行本地 ad-hoc 重新签名：${APP_BUNDLE}"
+  print_line "Running local ad-hoc re-sign: ${APP_BUNDLE}"
 
   if ! "${CODESIGN_BIN}" --force --deep --sign - "${APP_BUNDLE}" >/dev/null 2>&1; then
-    print_line "重新签名失败。"
-    print_line "请恢复原始 app.asar，或重新安装 Codex.app。"
+    print_line "Re-sign failed."
+    print_line "Restore the original app.asar or reinstall Codex.app."
     return 1
   fi
 
   if ! "${CODESIGN_BIN}" --verify --deep --strict --verbose=2 "${APP_BUNDLE}" >/dev/null 2>&1; then
-    print_line "重新签名后的 codesign 校验失败。"
-    print_line "请恢复原始 app.asar，或重新安装 Codex.app。"
+    print_line "codesign verification failed after re-signing."
+    print_line "Restore the original app.asar or reinstall Codex.app."
     return 1
   fi
 
-  print_line "重新签名完成，codesign 校验通过。"
-  print_line "提示：本地 ad-hoc 签名会替换原始厂商签名，spctl 可能显示 rejected，这是预期现象。"
+  print_line "Re-sign complete. codesign verification passed."
+  print_line "Note: local ad-hoc signing replaces the original vendor signature. spctl may report rejected, which is expected."
   return 0
 }
 
@@ -84,7 +84,7 @@ prepare_app_resources() {
         cd "${APP_RESOURCES}" || exit 1
         mv ./app.asar ./app.asar1
       ) || {
-        print_line "重命名 app.asar 失败。"
+        print_line "Failed to rename app.asar."
         return 1
       }
       APP_STRUCTURE_CHANGED=1
@@ -93,17 +93,17 @@ prepare_app_resources() {
   fi
 
   if [ -f "${APP_ASAR_BACKUP}" ]; then
-    print_line "未找到解压后的目录：${APP_DIR}"
+    print_line "Unpacked directory not found: ${APP_DIR}"
     return 1
   fi
 
   if [ ! -f "${APP_ASAR}" ]; then
-    print_line "未找到 app.asar：${APP_ASAR}"
+    print_line "app.asar not found: ${APP_ASAR}"
     return 1
   fi
 
   if [ -z "${NPM_BIN}" ]; then
-    print_line "未找到 npm，无法解压 app.asar。"
+    print_line "npm not found. Cannot unpack app.asar."
     return 1
   fi
 
@@ -112,7 +112,7 @@ prepare_app_resources() {
     "${NPM_BIN}" exec --yes --package @electron/asar -- asar e ./app.asar app || exit 1
     mv ./app.asar ./app.asar1
   ) || {
-    print_line "解压或重命名 app.asar 失败。"
+    print_line "Failed to unpack or rename app.asar."
     return 1
   }
 
@@ -122,26 +122,26 @@ prepare_app_resources() {
 
 check_requirements() {
   if [ ! -d "${APP_RESOURCES}" ]; then
-    print_line "未找到 Codex 资源目录：${APP_RESOURCES}"
-    print_line "请确认 Codex.app 安装在 ${APP_BUNDLE}。"
+    print_line "Codex resources directory not found: ${APP_RESOURCES}"
+    print_line "Make sure Codex.app is installed at ${APP_BUNDLE}."
     return 1
   fi
 
   NODE_BIN="$(resolve_node)" || {
-    print_line "未找到外部 Node 运行时。"
-    print_line "请先确保命令行里的 node 可用。"
+    print_line "External Node runtime not found."
+    print_line "Make sure node is available in your shell."
     return 1
   }
 
   NPM_BIN="$(resolve_npm)" || {
-    print_line "未找到 npm。"
-    print_line "请先确保命令行里的 npm 可用。"
+    print_line "npm not found."
+    print_line "Make sure npm is available in your shell."
     return 1
   }
 
   CODESIGN_BIN="$(resolve_codesign)" || {
-    print_line "未找到 codesign。"
-    print_line "当前 macOS 环境无法完成本地重新签名。"
+    print_line "codesign not found."
+    print_line "This macOS environment cannot perform local re-signing."
     return 1
   }
 
@@ -150,13 +150,13 @@ check_requirements() {
   fi
 
   if [ "${APP_STRUCTURE_CHANGED}" -eq 1 ]; then
-    if ! resign_app_bundle "检测到应用资源结构发生变化，先执行一次本地重签名。"; then
+    if ! resign_app_bundle "App bundle resources changed. Running an initial local re-sign first."; then
       return 1
     fi
   fi
 
   if [ ! -d "${ASSETS_DIR}" ]; then
-    print_line "未找到资源目录：${ASSETS_DIR}"
+    print_line "Assets directory not found: ${ASSETS_DIR}"
     return 1
   fi
 
@@ -167,9 +167,9 @@ run_embedded_tool() {
   local action="$1"
 
   print_line ""
-  print_line "执行：${action}"
-  print_line "资源目录：${APP_RESOURCES}"
-  print_line "模式：单文件自包含"
+  print_line "Action: ${action}"
+  print_line "Resources: ${APP_RESOURCES}"
+  print_line "Mode: self-contained single file"
   print_line ""
 
   "${NODE_BIN}" - "${action}" "${ASSETS_DIR}" "${BACKUP_SUFFIX}" <<'NODE'
@@ -236,12 +236,12 @@ function findTargets(dir) {
 
 function describeState(target) {
   if (target.guarded) {
-    return "未开启 Speed 设置项";
+    return "Speed setting disabled";
   }
   if (target.patched || target.legacyPatched) {
-    return "已开启 Speed 设置项";
+    return "Speed setting enabled";
   }
-  return "状态未知";
+  return "Unknown state";
 }
 
 function writeBackupIfNeeded(target) {
@@ -254,15 +254,15 @@ function writeBackupIfNeeded(target) {
 function status() {
   const targets = findTargets(assetsDir);
   if (targets.length === 0) {
-    console.log(`未找到 Speed 设置项目标文件：${assetsDir}`);
+    console.log(`Speed setting target file not found: ${assetsDir}`);
     return 1;
   }
 
   for (const target of targets) {
-    console.log(`当前状态：${describeState(target)}`);
-    console.log(`目标文件：${path.relative(process.cwd(), target.filePath)}`);
+    console.log(`Current state: ${describeState(target)}`);
+    console.log(`Target file: ${path.relative(process.cwd(), target.filePath)}`);
     console.log(
-      `备份文件：${fs.existsSync(target.backupPath) ? path.relative(process.cwd(), target.backupPath) : "不存在"}`,
+      `Backup file: ${fs.existsSync(target.backupPath) ? path.relative(process.cwd(), target.backupPath) : "missing"}`,
     );
   }
 
@@ -272,7 +272,7 @@ function status() {
 function apply() {
   const targets = findTargets(assetsDir);
   if (targets.length === 0) {
-    console.log(`未找到 Speed 设置项目标文件：${assetsDir}`);
+    console.log(`Speed setting target file not found: ${assetsDir}`);
     return 1;
   }
 
@@ -310,7 +310,7 @@ function apply() {
 function restore() {
   const targets = findTargets(assetsDir);
   if (targets.length === 0) {
-    console.log(`未找到 Speed 设置项目标文件：${assetsDir}`);
+    console.log(`Speed setting target file not found: ${assetsDir}`);
     return 1;
   }
 
@@ -336,7 +336,7 @@ function restore() {
   }
 
   if (restored === 0) {
-    console.log(`没有可恢复的备份或已修改目标`);
+    console.log(`No backup or modified target is available to restore.`);
     return 1;
   }
 
@@ -356,7 +356,7 @@ switch (command) {
     exitCode = restore();
     break;
   default:
-    console.log(`未知命令：${command}`);
+    console.log(`Unknown command: ${command}`);
     exitCode = 1;
 }
 
@@ -368,7 +368,7 @@ NODE
   if [ "${exit_code}" -eq 0 ]; then
     case "${action}" in
       apply|restore)
-        if ! resign_app_bundle "已修改 Codex.app 资源，正在重新签名。"; then
+        if ! resign_app_bundle "Codex.app resources were modified. Re-signing now."; then
           exit_code=1
         fi
         ;;
@@ -376,29 +376,29 @@ NODE
   fi
 
   print_line ""
-  print_line "退出码：${exit_code}"
+  print_line "Exit code: ${exit_code}"
   return "${exit_code}"
 }
 
 show_menu() {
   clear
   print_line "Codexfast"
-  print_line "固定目标：${APP_RESOURCES}"
-  print_line "说明：这个 .sh 是单文件自包含，可单独分享。"
-  print_line "修改资源后会自动执行本地 ad-hoc 重签名。"
+  print_line "Fixed target: ${APP_RESOURCES}"
+  print_line "Note: this .sh file is fully self-contained and can be shared on its own."
+  print_line "A local ad-hoc re-sign runs automatically after resource changes."
   print_line ""
-  print_line "1) 查看当前状态"
-  print_line "2) 开启 Speed 设置项"
-  print_line "3) 恢复原始状态"
-  print_line "q) 退出"
+  print_line "1) View current status"
+  print_line "2) Enable Speed setting"
+  print_line "3) Restore original state"
+  print_line "q) Quit"
   print_line ""
-  printf '请选择：'
+  printf 'Choose an option: '
 }
 
 main() {
   if ! check_requirements; then
     print_line ""
-    printf '按 Enter 关闭...'
+    printf 'Press Enter to close...'
     read -r _
     exit 1
   fi
@@ -425,7 +425,7 @@ main() {
         ;;
       *)
         print_line ""
-        print_line "无效选项：${choice}"
+        print_line "Invalid option: ${choice}"
         pause
         ;;
     esac
