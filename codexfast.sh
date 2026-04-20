@@ -7,6 +7,7 @@ APP_RESOURCES="${APP_BUNDLE}/Contents/Resources"
 APP_DIR="${APP_RESOURCES}/app"
 APP_ASAR="${APP_RESOURCES}/app.asar"
 APP_ASAR_BACKUP="${APP_RESOURCES}/app.asar1"
+APP_INFO_PLIST="${APP_BUNDLE}/Contents/Info.plist"
 BACKUP_SUFFIX=".speed-setting.bak"
 NPM_BIN=""
 TEMP_ROOT=""
@@ -49,6 +50,24 @@ resolve_codesign() {
   return 1
 }
 
+resolve_shasum() {
+  if command -v shasum >/dev/null 2>&1; then
+    command -v shasum
+    return 0
+  fi
+
+  return 1
+}
+
+resolve_plistbuddy() {
+  if [ -x /usr/libexec/PlistBuddy ]; then
+    printf '%s\n' /usr/libexec/PlistBuddy
+    return 0
+  fi
+
+  return 1
+}
+
 print_manual_resign_guidance() {
   print_line "If the failure was caused by write permissions, run this command manually in Terminal:"
   print_line "codesign --force --deep --sign - ${APP_BUNDLE}"
@@ -81,6 +100,42 @@ create_temp_workspace() {
 
 run_asar() {
   "${NPM_BIN}" exec --yes --package @electron/asar -- asar "$@"
+}
+
+read_asar_integrity_hash() {
+  "${PLIST_BUDDY_BIN}" -c "Print :ElectronAsarIntegrity:Resources/app.asar:hash" "${APP_INFO_PLIST}" 2>/dev/null
+}
+
+update_asar_integrity_metadata() {
+  local current_hash=""
+
+  if [ ! -f "${APP_INFO_PLIST}" ]; then
+    print_line "Info.plist not found: ${APP_INFO_PLIST}"
+    return 1
+  fi
+
+  current_hash="$("${SHASUM_BIN}" -a 256 "${APP_ASAR}" | awk '{print $1}')"
+  if [ -z "${current_hash}" ]; then
+    print_line "Failed to calculate the SHA256 hash for app.asar."
+    return 1
+  fi
+
+  if ! "${PLIST_BUDDY_BIN}" -c "Set :ElectronAsarIntegrity:Resources/app.asar:algorithm SHA256" "${APP_INFO_PLIST}" >/dev/null 2>&1; then
+    print_line "Failed to update ElectronAsarIntegrity algorithm in Info.plist."
+    return 1
+  fi
+
+  if ! "${PLIST_BUDDY_BIN}" -c "Set :ElectronAsarIntegrity:Resources/app.asar:hash ${current_hash}" "${APP_INFO_PLIST}" >/dev/null 2>&1; then
+    print_line "Failed to update ElectronAsarIntegrity hash in Info.plist."
+    return 1
+  fi
+
+  if [ "$(read_asar_integrity_hash)" != "${current_hash}" ]; then
+    print_line "ElectronAsarIntegrity hash verification failed after updating Info.plist."
+    return 1
+  fi
+
+  return 0
 }
 
 ensure_archive_backup() {
@@ -172,6 +227,10 @@ migrate_legacy_unpacked_layout() {
 
   cleanup_temp_workspace
 
+  if ! update_asar_integrity_metadata; then
+    return 1
+  fi
+
   if ! resign_app_bundle "Legacy unpacked layout converted. Re-signing the app bundle."; then
     return 1
   fi
@@ -185,6 +244,10 @@ restore_from_archive_backup() {
 
   if ! cp "${APP_ASAR_BACKUP}" "${APP_ASAR}"; then
     print_line "Failed to restore app.asar from app.asar1."
+    return 1
+  fi
+
+  if ! update_asar_integrity_metadata; then
     return 1
   fi
 
@@ -251,6 +314,18 @@ check_requirements() {
   CODESIGN_BIN="$(resolve_codesign)" || {
     print_line "codesign not found."
     print_line "This macOS environment cannot perform local re-signing."
+    return 1
+  }
+
+  SHASUM_BIN="$(resolve_shasum)" || {
+    print_line "shasum not found."
+    print_line "This macOS environment cannot calculate app.asar integrity hashes."
+    return 1
+  }
+
+  PLIST_BUDDY_BIN="$(resolve_plistbuddy)" || {
+    print_line "PlistBuddy not found."
+    print_line "This macOS environment cannot update ElectronAsarIntegrity in Info.plist."
     return 1
   }
 
@@ -485,12 +560,16 @@ NODE
           exit_code=1
         elif ! pack_temp_app_to_asar; then
           exit_code=1
+        elif ! update_asar_integrity_metadata; then
+          exit_code=1
         elif ! resign_app_bundle "Codex.app resources were modified. Re-signing now."; then
           exit_code=1
         fi
         ;;
       restore)
         if ! pack_temp_app_to_asar; then
+          exit_code=1
+        elif ! update_asar_integrity_metadata; then
           exit_code=1
         elif ! resign_app_bundle "Codex.app resources were modified. Re-signing now."; then
           exit_code=1

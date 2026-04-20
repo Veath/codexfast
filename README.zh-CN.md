@@ -30,7 +30,7 @@ npx codexfast
 - 开启 Speed 设置项
 - 恢复原始状态
 
-当脚本改动本地安装应用后，它会把修改后的内容重新打包回 `app.asar`，再自动执行一次本地 ad-hoc 重签名，避免 `Codex.app` 因签名失效而无法启动。
+当脚本改动本地安装应用后，它会把修改后的内容重新打包回 `app.asar`，同步更新 `Info.plist` 里的 Electron ASAR integrity hash，再自动执行一次本地 ad-hoc 重签名，避免 `Codex.app` 因完整性校验或签名失效而无法启动。
 
 脚本是单文件自包含实现，适合单独分享和直接运行。
 
@@ -85,6 +85,7 @@ chmod +x ./codexfast.sh
 
 - 脚本在检查或打补丁时，会使用临时工作目录解包 `app.asar`
 - 它会把改动重新打包回 `app.asar`，不会再把 `Resources/app` 目录长期留在应用里
+- 它还会同步更新 `Info.plist` 中的 `ElectronAsarIntegrity`
 - 开启、恢复、以及旧版遗留解包布局迁移这几类动作，后面都会自动执行本地 ad-hoc 重签名
 - 这个本地重签会替换当前安装副本原本的厂商签名
 

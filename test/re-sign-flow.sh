@@ -121,12 +121,42 @@ assert_no_persistent_unpack_dir() {
   fi
 }
 
+write_info_plist() {
+  local app_dir="$1"
+  local hash_value="$2"
+
+  mkdir -p "${app_dir}/Contents"
+  cat > "${app_dir}/Contents/Info.plist" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>ElectronAsarIntegrity</key>
+  <dict>
+    <key>Resources/app.asar</key>
+    <dict>
+      <key>algorithm</key>
+      <string>SHA256</string>
+      <key>hash</key>
+      <string>${hash_value}</string>
+    </dict>
+  </dict>
+</dict>
+</plist>
+EOF
+}
+
+read_info_plist_hash() {
+  /usr/libexec/PlistBuddy -c 'Print :ElectronAsarIntegrity:Resources/app.asar:hash' "$1/Contents/Info.plist"
+}
+
 FAKE_APP_EXISTING="${TMP_DIR}/Existing.app"
 FAKE_RESOURCES_EXISTING="${FAKE_APP_EXISTING}/Contents/Resources"
 OUTPUT_EXISTING="${TMP_DIR}/apply-restore-output.txt"
 
 mkdir -p "${FAKE_RESOURCES_EXISTING}"
 printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_RESOURCES_EXISTING}/app.asar"
+write_info_plist "${FAKE_APP_EXISTING}" "$(shasum -a 256 "${FAKE_RESOURCES_EXISTING}/app.asar" | awk '{print $1}')"
 
 run_script "${FAKE_APP_EXISTING}" '2\n\n3\n\nq\n' "${OUTPUT_EXISTING}"
 assert_codesign_calls 2 "${OUTPUT_EXISTING}"
@@ -144,6 +174,12 @@ if ! grep -q 'if(!x)return null;' "${FAKE_RESOURCES_EXISTING}/app.asar"; then
   exit 1
 fi
 
+if [ "$(read_info_plist_hash "${FAKE_APP_EXISTING}")" != "$(shasum -a 256 "${FAKE_RESOURCES_EXISTING}/app.asar" | awk '{print $1}')" ]; then
+  echo "expected ElectronAsarIntegrity hash to match restored app.asar"
+  cat "${FAKE_APP_EXISTING}/Contents/Info.plist"
+  exit 1
+fi
+
 rm -f "${MARKER_FILE}"
 
 FAKE_APP_LEGACY="${TMP_DIR}/Legacy.app"
@@ -154,6 +190,7 @@ OUTPUT_LEGACY="${TMP_DIR}/legacy-output.txt"
 mkdir -p "${FAKE_APP_DIR_LEGACY}"
 printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/general-settings.js"
 printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_RESOURCES_LEGACY}/app.asar1"
+write_info_plist "${FAKE_APP_LEGACY}" "legacy-placeholder-hash"
 
 run_script "${FAKE_APP_LEGACY}" '1\n\nq\n' "${OUTPUT_LEGACY}"
 assert_codesign_calls 1 "${OUTPUT_LEGACY}"
@@ -171,6 +208,12 @@ if ! grep -q 'if(!x)return null;' "${FAKE_RESOURCES_LEGACY}/app.asar"; then
   exit 1
 fi
 
+if [ "$(read_info_plist_hash "${FAKE_APP_LEGACY}")" != "$(shasum -a 256 "${FAKE_RESOURCES_LEGACY}/app.asar" | awk '{print $1}')" ]; then
+  echo "expected ElectronAsarIntegrity hash to match migrated app.asar"
+  cat "${FAKE_APP_LEGACY}/Contents/Info.plist"
+  exit 1
+fi
+
 rm -f "${MARKER_FILE}"
 
 FAKE_APP_FAILING="${TMP_DIR}/Failing.app"
@@ -179,6 +222,7 @@ OUTPUT_FAILING="${TMP_DIR}/failing-output.txt"
 
 mkdir -p "${FAKE_RESOURCES_FAILING}"
 printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_RESOURCES_FAILING}/app.asar"
+write_info_plist "${FAKE_APP_FAILING}" "$(shasum -a 256 "${FAKE_RESOURCES_FAILING}/app.asar" | awk '{print $1}')"
 
 run_script_with_codesign_failure "${FAKE_APP_FAILING}" '2\n\nq\n' "${OUTPUT_FAILING}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_FAILING}" "${OUTPUT_FAILING}"
