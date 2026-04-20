@@ -395,6 +395,7 @@ const [, , command, assetsDirArg, backupSuffix] = process.argv;
 const assetsDir = path.resolve(assetsDirArg);
 const SPEED_LABEL_NEEDLE = "settings.agent.speed.label";
 const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
+const ADD_CONTEXT_SPEED_NEEDLE = "composer.addContext.speed.option.fast.description";
 const GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=_e\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ce\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
@@ -405,6 +406,10 @@ const SLASH_COMMAND_GUARDED_SIGNATURE =
   /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)([A-Za-z_$][\w$]*)(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\w$]*})/;
 const SLASH_COMMAND_PATCHED_SIGNATURE =
   /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)!0(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\w$]*})/;
+const ADD_CONTEXT_SPEED_GUARDED_SIGNATURE =
+  /([A-Za-z_$][\w$]*)=Cr\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ir\([^)]+\)[;,])/;
+const ADD_CONTEXT_SPEED_PATCHED_SIGNATURE =
+  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ir\([^)]+\)[;,])/;
 
 const TARGET_SPECS = [
   {
@@ -426,6 +431,16 @@ const TARGET_SPECS = [
     patchedSignature: SLASH_COMMAND_PATCHED_SIGNATURE,
     legacyPatchedSignature: null,
     applyReplacement: "$1!0$3",
+  },
+  {
+    id: "add-context-speed-menu",
+    label: "Add-context Speed menu",
+    needle: ADD_CONTEXT_SPEED_NEEDLE,
+    guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE,
+    patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1=!0,$2",
+    restoreReplacement: "$1=Cr(),$2",
   },
 ];
 

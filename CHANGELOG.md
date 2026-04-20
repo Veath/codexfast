@@ -4,6 +4,17 @@ All notable changes to `codexfast` will be documented in this file.
 
 This project follows a simple release-oriented changelog format.
 
+## [0.3.0] - 2026-04-20
+
+### Added
+
+- Added patch support for the `Add files and more / +` composer menu `Speed` submenu.
+- Added maintenance checklist coverage for the add-context `Speed` menu alongside Settings-side Fast control and composer `/fast`.
+
+### Changed
+
+- Expanded the shell regression test flow to cover apply and restore behavior for the add-context `Speed` menu target.
+
 ## [0.2.0] - 2026-04-20
 
 ### Added

@@ -10,6 +10,7 @@ STUB_BIN="${TMP_DIR}/bin"
 MARKER_FILE="${TMP_DIR}/codesign.log"
 GUARDED_CONTENT='const label="settings.agent.speed.label";function demo(){let cache=(0,Q.c)(35),fmt=j(),x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";return {cache,fmt,view,y,z};}'
 SLASH_COMMAND_GUARDED_CONTENT='const label="composer.speedSlashCommand.title";function OG(){let e=(0,Q.c)(24),t=ea(),n=Lf(),{serviceTierSettings:r,setServiceTier:i}=Zf(),a;e[0]===r.serviceTier?a=e[1]:(a=N(r.serviceTier),e[0]=r.serviceTier,e[1]=a);let o=a===`fast`,s;e[2]===o?s=e[3]:(s=e=>{let{className:t}=e;return(0,$.jsx)(o?Wv:EG,{className:X(t,o?`text-token-link-foreground`:void 0)})},e[2]=o,e[3]=s);let c=s,l;e[4]===t?l=e[5]:(l=t.formatMessage(DG.title),e[4]=t,e[5]=l);let u;e[6]!==t||e[7]!==o?(u=t.formatMessage(o?DG.disableDescription:DG.commandDescription),e[6]=t,e[7]=o,e[8]=u):u=e[8];let d;e[9]!==o||e[10]!==i?(d=async()=>{await i(o?null:`fast`,`slash_command`)},e[9]=o,e[10]=i,e[11]=d):d=e[11];let f;e[12]!==n||e[13]!==o||e[14]!==r.isLoading||e[15]!==i?(f=[n,o,r.isLoading,i],e[12]=n,e[13]=o,e[14]=r.isLoading,e[15]=i,e[16]=f):f=e[16];let p;return e[17]!==c||e[18]!==n||e[19]!==l||e[20]!==u||e[21]!==d||e[22]!==f?(p={id:`speed`,title:l,description:u,requiresEmptyComposer:!1,enabled:n,Icon:c,onSelect:d,dependencies:f},e[17]=c,e[18]=n,e[19]=l,e[20]=u,e[21]=d,e[22]=f,e[23]=p):p=e[23],DI(p),null}'
+ADD_CONTEXT_SPEED_GUARDED_CONTENT='const label="composer.addContext.speed.option.fast.description";const IE=[];function zE(){let l=Sn(),D=Cr(),{serviceTierSettings:O,setServiceTier:k}=Ir(r);return D?(0,q.jsx)(Qa.FlyoutSubmenuItem,{LeftIcon:Coe,label:(0,q.jsx)(W,{...FE.label}),contentClassName:`min-w-[160px]`,disabled:O.isLoading,children:IE.map(e=>{let t=e.value===O.serviceTier;return(0,q.jsx)(Qa.Item,{disabled:O.isLoading,RightIcon:t?to:void 0,SubText:(0,q.jsx)(`span`,{className:`text-token-description-foreground`,children:(0,q.jsx)(W,{...FE[e.description]})}),onSelect:()=>{k(e.value,`composer_menu`),x()},children:(0,q.jsx)(W,{...FE[e.label]})},e.label)})}):null}'
 
 mkdir -p "${STUB_BIN}"
 
@@ -395,6 +396,7 @@ mkdir -p "${FAKE_RESOURCES_EXISTING}"
 mkdir -p "${TMP_DIR}/existing-assets/webview/assets"
 printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/general-settings.js"
 printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/index.js"
+printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${TMP_DIR}/existing-assets/webview/assets/use-model-settings.js"
 write_fake_asar "${TMP_DIR}/existing-assets" "${FAKE_RESOURCES_EXISTING}/app.asar"
 write_info_plist "${FAKE_APP_EXISTING}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_EXISTING}/app.asar")"
 
@@ -421,6 +423,12 @@ if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/i
   exit 1
 fi
 
+if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/use-model-settings.js" | grep -q 'D=!0'; then
+  echo "expected apply to enable the add-context Speed menu"
+  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/use-model-settings.js"
+  exit 1
+fi
+
 run_script "${FAKE_APP_EXISTING}" '3\n\nq\n' "${OUTPUT_EXISTING_RESTORE}"
 assert_codesign_calls 2 "${OUTPUT_EXISTING_RESTORE}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_EXISTING}" "${OUTPUT_EXISTING_RESTORE}"
@@ -435,6 +443,12 @@ fi
 if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/index.js" | grep -q 'enabled:n'; then
   echo "expected restore to bring the Fast slash command back to its guarded state"
   read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/index.js"
+  exit 1
+fi
+
+if ! read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/use-model-settings.js" | grep -q 'D=Cr()'; then
+  echo "expected restore to hide the add-context Speed menu again"
+  read_fake_asar_file "${FAKE_RESOURCES_EXISTING}/app.asar" "webview/assets/use-model-settings.js"
   exit 1
 fi
 
@@ -454,9 +468,11 @@ OUTPUT_LEGACY="${TMP_DIR}/legacy-output.txt"
 mkdir -p "${FAKE_APP_DIR_LEGACY}"
 printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/general-settings.js"
 printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/index.js"
+printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/use-model-settings.js"
 mkdir -p "${TMP_DIR}/legacy-assets/webview/assets"
 printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/general-settings.js"
 printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/index.js"
+printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${TMP_DIR}/legacy-assets/webview/assets/use-model-settings.js"
 write_fake_asar "${TMP_DIR}/legacy-assets" "${FAKE_RESOURCES_LEGACY}/app.asar1"
 write_info_plist "${FAKE_APP_LEGACY}" "legacy-placeholder-hash"
 
@@ -483,6 +499,12 @@ if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/ind
   exit 1
 fi
 
+if ! read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/use-model-settings.js" | grep -q 'D=Cr()'; then
+  echo "expected repacked app.asar to preserve the add-context Speed menu gate"
+  read_fake_asar_file "${FAKE_RESOURCES_LEGACY}/app.asar" "webview/assets/use-model-settings.js"
+  exit 1
+fi
+
 if [ "$(read_info_plist_hash "${FAKE_APP_LEGACY}")" != "$(read_fake_asar_header_hash "${FAKE_RESOURCES_LEGACY}/app.asar")" ]; then
   echo "expected ElectronAsarIntegrity hash to match migrated app.asar header"
   cat "${FAKE_APP_LEGACY}/Contents/Info.plist"
@@ -499,6 +521,7 @@ mkdir -p "${FAKE_RESOURCES_FAILING}"
 mkdir -p "${TMP_DIR}/failing-assets/webview/assets"
 printf '%s\n' "${GUARDED_CONTENT}" > "${TMP_DIR}/failing-assets/webview/assets/general-settings.js"
 printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${TMP_DIR}/failing-assets/webview/assets/index.js"
+printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT}" > "${TMP_DIR}/failing-assets/webview/assets/use-model-settings.js"
 write_fake_asar "${TMP_DIR}/failing-assets" "${FAKE_RESOURCES_FAILING}/app.asar"
 write_info_plist "${FAKE_APP_FAILING}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_FAILING}/app.asar")"
 

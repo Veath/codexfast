@@ -29,19 +29,25 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
 
 - Confirm the Settings entry still exists in the target bundle and the Speed setting patch signature still matches.
 - Confirm the composer slash command entry still exists in the target bundle and the Fast slash command patch signature still matches.
-- Verify `bash test/re-sign-flow.sh` still covers both targets:
+- Confirm the `Add files and more / +` panel entry still exists in the target bundle and the Add-context Speed menu patch signature still matches.
+- Verify `bash test/re-sign-flow.sh` still covers all targets:
   - apply enables the Settings-side Fast control
   - apply enables the composer `/fast` slash command
-  - restore returns both paths to their original guarded state
+  - apply enables the add-context `Speed` submenu in the composer menu
+  - restore returns all patched paths to their original guarded state
 - Verify status output can report both targets independently:
   - `Speed setting`
   - `Fast slash command`
-- If patch logic changes, make sure restore logic remains symmetrical for both targets.
-- Do not ship a change that only enables one path. `Settings > Fast` and composer `/fast` must be treated as one combined feature set.
+-  `Add-context Speed menu`
+- If patch logic changes, make sure restore logic remains symmetrical for all targets.
+- Do not ship a change that only enables one path. `Settings > Fast`, composer `/fast`, and the add-context `Speed` menu must be treated as one combined Fast feature set.
 - After any real-app validation, manually smoke-test these behaviors on the installed app copy:
   - `Codex.app` launches successfully after patching
   - opening Settings does not crash or show an error
   - the Fast-related Settings control is visible and usable
+  - opening `Add files and more / +` shows the `Speed` submenu
+  - opening the `Speed` submenu shows `Standard` and `Fast`
+  - selecting `Standard` or `Fast` from the add-context menu does not break the UI
   - typing `/fast` in the composer shows the slash command item
   - selecting `/fast` can enable and disable Fast mode without breaking the UI
 - If a new Codex build removes or renames either path, update the README compatibility notes and do not describe the release as fully compatible until both paths work.
