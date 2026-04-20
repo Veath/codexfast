@@ -110,7 +110,7 @@ chmod +x ./codexfast.sh
 
 如果脚本发现旧版脚本留下的 `Resources/app` 解包布局，它会先把这个目录重新打包回 `app.asar`，删除 `Resources/app`，然后自动重签应用。
 
-如果脚本输出 `未找到 Speed 设置项目标文件`，通常说明当前 Codex 构建已经变化，不应该继续盲目打补丁。
+如果脚本输出 `Speed setting target file not found`，通常说明当前 Codex 构建已经变化，不应该继续盲目打补丁。
 
 ## 版本兼容说明
 
@@ -147,13 +147,13 @@ chmod +x ./codexfast.sh
 
 ## 备份与恢复
 
-首次修改时，脚本会创建同名备份文件，后缀为：
+首次修改时，脚本会创建同名文件级备份，后缀为：
 
 ```text
 .speed-setting.bak
 ```
 
-恢复逻辑会优先使用备份文件；如果没有备份，但检测到已修改状态，也会尝试按内联规则恢复。
+恢复逻辑会优先使用归档级备份 `app.asar1`；如果没有归档级备份，则回退到文件级 `.speed-setting.bak` 备份；如果两种备份都没有，但检测到已修改状态，也会尝试按内联规则恢复。
 
 无论是开启还是恢复，脚本都会保持应用处于 `app.asar` 打包布局，并在动作完成后自动重新签名应用。
 
@@ -186,7 +186,7 @@ codesign --force --deep --sign - /Applications/Codex.app
 - 不要继续执行开启动作
 - 说明当前 Codex 构建很可能需要重新适配
 
-如果你之前运行的是旧版脚本，导致 `Codex.app` 打不开，可以这样恢复：
+如果你之前运行的是会遗留 `Resources/app` 的旧版异常脚本，导致 `Codex.app` 打不开，可以这样恢复：
 
 1. 删除 `/Applications/Codex.app/Contents/Resources/app`
 2. 将 `/Applications/Codex.app/Contents/Resources/app.asar1` 改回 `app.asar`

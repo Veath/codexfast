@@ -110,7 +110,7 @@ Recommended flow:
 
 If the script detects the legacy unpacked `Resources/app` layout from an older script version, it repacks that directory back into `app.asar`, removes `Resources/app`, and then re-signs the app bundle automatically.
 
-If the script prints `未找到 Speed 设置项目标文件`, the current Codex build has likely changed and the patch should not be applied blindly.
+If the script prints `Speed setting target file not found`, the current Codex build has likely changed and the patch should not be applied blindly.
 
 ## Version Compatibility
 
@@ -147,13 +147,13 @@ Recommended practice:
 
 ## Backup and Restore
 
-On the first modification, the script creates a same-name backup file with this suffix:
+On the first modification, the script creates a same-name file-level backup with this suffix:
 
 ```text
 .speed-setting.bak
 ```
 
-Restore prefers the backup file. If no backup exists but a patched state is detected, the script will still try to restore inline.
+Restore first prefers the archive-level `app.asar1` backup when it exists. If no archive backup exists, it falls back to the file-level `.speed-setting.bak` backup. If neither backup exists but a patched state is detected, the script still tries to restore inline.
 
 After apply or restore, the script keeps the installed app in the packed `app.asar` layout and re-signs the modified app bundle automatically.
 
@@ -186,7 +186,7 @@ If the script says it cannot find the target file:
 - Do not continue with the enable action
 - The current Codex build likely needs a new adaptation
 
-If `Codex.app` no longer opens after using an older script version:
+If `Codex.app` no longer opens after using an older broken script version that left `Resources/app` behind:
 
 1. Delete `/Applications/Codex.app/Contents/Resources/app`
 2. Rename `/Applications/Codex.app/Contents/Resources/app.asar1` back to `app.asar`
