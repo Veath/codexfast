@@ -1,4 +1,4 @@
-# Codex App Speed Setting
+# codexfast
 
 [English README](./README.md)
 
@@ -8,7 +8,7 @@
 
 脚本文件：
 
-- `codex-speed-setting.command`
+- `codexfast.sh`
 
 ## 作用
 
@@ -26,6 +26,17 @@
 
 它并不是主要面向只使用默认官方托管配置、没有自定义 API 相关需求的用户。
 
+## 平台支持
+
+当前支持情况：
+
+- macOS：支持
+- Windows：暂不支持
+
+这个脚本当前针对的是 macOS 下 `/Applications/Codex.app/Contents/Resources` 这套应用目录结构，并假设本地使用 Bash 方式执行。
+
+所以 Windows 用户目前不能直接使用这一版脚本。
+
 ## 使用方式
 
 前置条件：
@@ -37,11 +48,11 @@
 运行方式：
 
 ```bash
-chmod +x ./codex-speed-setting.command
-./codex-speed-setting.command
+chmod +x ./codexfast.sh
+./codexfast.sh
 ```
 
-也可以直接在 Finder 中双击 `.command` 文件启动。
+请在终端里执行。
 
 ## 自检模式
 

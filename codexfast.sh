@@ -301,9 +301,9 @@ NODE
 
 show_menu() {
   clear
-  print_line "Codex Speed Setting Patch"
+  print_line "Codexfast"
   print_line "固定目标：${APP_RESOURCES}"
-  print_line "说明：这个 .command 是单文件自包含，可单独分享。"
+  print_line "说明：这个 .sh 是单文件自包含，可单独分享。"
   print_line ""
   print_line "1) 查看当前状态"
   print_line "2) 开启 Speed 设置项"

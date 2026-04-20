@@ -1,4 +1,4 @@
-# Codex App Speed Setting
+# codexfast
 
 [中文说明](./README.zh-CN.md)
 
@@ -8,7 +8,7 @@ This script is intended for Codex users who run with a custom API configuration.
 
 Script file:
 
-- `codex-speed-setting.command`
+- `codexfast.sh`
 
 ## What It Does
 
@@ -26,6 +26,17 @@ This script is meant for users who use Codex with a custom API setup.
 
 It is not primarily aimed at users who only use the default hosted configuration without any custom API-related setup.
 
+## Platform Support
+
+Current support:
+
+- macOS: supported
+- Windows: not supported
+
+This script currently targets the macOS app layout at `/Applications/Codex.app/Contents/Resources` and assumes a Bash-based local execution flow.
+
+Windows users are not supported by this version yet.
+
 ## Usage
 
 Requirements:
@@ -37,11 +48,11 @@ Requirements:
 Run:
 
 ```bash
-chmod +x ./codex-speed-setting.command
-./codex-speed-setting.command
+chmod +x ./codexfast.sh
+./codexfast.sh
 ```
 
-You can also launch it by double-clicking the `.command` file in Finder.
+Run it from a shell.
 
 ## Self-Check Mode
 
