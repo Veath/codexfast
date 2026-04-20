@@ -2,52 +2,38 @@
 
 [English README](./README.md)
 
-这个仓库包含一个单文件 macOS 脚本，用于在 `Codex.app` 中开启 custom API 用户相关的隐藏能力。
+**在 macOS 上重新启用 `Codex.app` 里被隐藏的 custom API 能力。**
 
-这个脚本主要面向使用 custom API 配置的 Codex 用户。
+面向 custom API 用户的单文件 patcher，自动完成版本兼容检查、`app.asar` 重打包和本地 ad-hoc 重签名，不需要手动改应用包。
 
-当前覆盖的能力包括：
-
-- Settings 里的 Fast 控制项
-- 输入框里的 `/fast` slash command
-- `Add files and more / +` 菜单里的 `Speed` 子菜单
-- custom API 用户的 Plugins 入口访问能力
-
-这些能力的定义和边界，见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
-
-脚本在重建或修改应用资源后，会自动对本地 `Codex.app` 执行重新签名。
-
-脚本文件：
-
-- `codexfast.sh`
-
-## 快速开始
-
-可以直接通过 npm 调用：
+- **Fast 设置项**（Settings 中）
+- **`/fast` 输入框命令**
+- **Speed 子菜单**（`Add files and more / +` 中）
+- **Plugins 入口**（custom API 用户可用）
 
 ```bash
 npx codexfast
 ```
 
-这会直接启动交互菜单。
+已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
 
 ## 作用
 
-这个脚本会定位 `Codex.app` 的前端资源，检查当前版本是否仍然包含可识别的隐藏 custom API 能力路径，并提供 3 个动作：
+这个脚本会检查 `Codex.app` 的前端资源，确认当前版本是否仍然包含可识别的 hidden custom API 能力路径，并提供 3 个动作：
 
 - 查看当前状态
 - 开启 custom API 相关能力
 - 恢复原始状态
 
-在兼容版本上启用后，脚本会恢复当前 `codexfast` 支持的能力集合；具体定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
+在兼容版本上启用后，`codexfast` 会恢复当前支持的能力集合；具体定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
 
-当脚本改动本地安装应用后，它会把修改后的内容重新打包回 `app.asar`，同步更新 `Info.plist` 里的 Electron ASAR header integrity hash，再自动执行一次本地 ad-hoc 重签名，避免 `Codex.app` 因完整性校验或签名失效而无法启动。
+当脚本改动本地安装应用后，它会把修改后的内容重新打包回 `app.asar`，同步更新 `Info.plist` 里的 Electron ASAR header integrity hash，再自动执行一次本地 ad-hoc 重签名，尽量保证 `Codex.app` 仍然可以正常启动。
 
-脚本是单文件自包含实现，适合单独分享和直接运行。
+脚本是单文件自包含实现，适合单独分享、审阅和直接运行。
 
 ## 适用人群
 
-这个脚本主要给使用 custom API 的 Codex 用户使用。
+这个项目主要给使用 custom API 的 Codex 用户使用，尤其适合那些希望恢复桌面端隐藏能力入口的人。
 
 它并不是主要面向只使用默认官方托管配置、没有自定义 API 相关需求的用户。
 
@@ -76,6 +62,8 @@ npx codexfast
 ```bash
 npx codexfast
 ```
+
+这也是最推荐的大多数用户入口。
 
 在本仓库里本地运行：
 

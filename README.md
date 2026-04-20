@@ -2,52 +2,38 @@
 
 [中文说明](./README.zh-CN.md)
 
-This repository contains a single-file macOS script for exposing hidden custom-API features inside `Codex.app`.
+**Re-enable hidden custom-API features in `Codex.app` on macOS.**
 
-This script is intended for Codex users who run with a custom API configuration.
+A single-file patcher for custom-API Codex users. It auto-checks version compatibility, repacks `app.asar`, and performs a local ad-hoc re-sign — no manual bundle editing.
 
-Current feature coverage:
-
-- Settings-side Fast control
-- Composer `/fast` slash command
-- `Add files and more / +` Speed submenu
-- Plugins access for custom API users
-
-For feature definitions and scope boundaries, see [`docs/feature-scope.md`](./docs/feature-scope.md).
-
-It automatically re-signs the local app bundle after rebuilding or modifying app resources.
-
-Script file:
-
-- `codexfast.sh`
-
-## Quick Start
-
-Run directly with npm:
+- **Fast settings** control in Settings
+- **Composer `/fast`** slash command
+- **Speed submenu** under `Add files and more / +`
+- **Plugins access** for custom-API users
 
 ```bash
 npx codexfast
 ```
 
-This launches the interactive menu.
+Verified for `Codex.app` `26.415.40636` (`build 1799`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
 
 ## What It Does
 
-The script locates the frontend assets inside `Codex.app`, checks whether the current app version still contains the expected hidden custom-API feature paths, and provides three actions:
+The script inspects the frontend assets inside `Codex.app`, verifies that the installed version still matches known hidden custom-API feature paths, and provides three actions:
 
 - View current status
 - Enable custom API features
 - Restore the original state
 
-When enabled on a compatible bundle, the script exposes the current `codexfast` feature set described in [`docs/feature-scope.md`](./docs/feature-scope.md).
+When enabled on a compatible bundle, `codexfast` restores the current feature set described in [`docs/feature-scope.md`](./docs/feature-scope.md).
 
-After the script changes the installed app bundle, it repacks the modified files back into `app.asar`, updates Electron's `Info.plist` ASAR header integrity hash, and performs a local ad-hoc re-sign so `Codex.app` can still launch on macOS.
+After patching the installed app bundle, it repacks the modified files back into `app.asar`, updates Electron's `Info.plist` ASAR header integrity hash, and performs a local ad-hoc re-sign so `Codex.app` can still launch on macOS.
 
-The script is fully self-contained in one file, so it can be shared and run on its own.
+The script is fully self-contained in one file, so it can be shared, audited, and run on its own.
 
 ## Intended Audience
 
-This script is meant for users who use Codex with a custom API setup.
+This project is for Codex users who run with a custom API setup and want feature access that is present in the app bundle but hidden behind frontend gates.
 
 It is not primarily aimed at users who only use the default hosted configuration without any custom API-related setup.
 
@@ -76,6 +62,8 @@ Use from npm:
 ```bash
 npx codexfast
 ```
+
+That is the recommended entrypoint for most users.
 
 Run locally from this repository:
 
