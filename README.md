@@ -1,0 +1,132 @@
+# Codex App Speed Setting
+
+[中文说明](./README.zh-CN.md)
+
+This repository contains a single-file macOS script for exposing and toggling the Speed setting inside `Codex.app`.
+
+This script is intended for Codex users who run with a custom API configuration.
+
+Script file:
+
+- `codex-speed-setting.command`
+
+## What It Does
+
+The script locates the frontend assets inside `Codex.app`, checks whether the current app version still contains the expected Speed-setting code path, and provides three actions:
+
+- View current status
+- Enable the Speed setting
+- Restore the original state
+
+The script is fully self-contained in one file, so it can be shared and run on its own.
+
+## Intended Audience
+
+This script is meant for users who use Codex with a custom API setup.
+
+It is not primarily aimed at users who only use the default hosted configuration without any custom API-related setup.
+
+## Usage
+
+Requirements:
+
+- `Codex.app` is installed at `/Applications/Codex.app`
+- `node` is available in the shell
+- `npx` is available in the shell
+
+Run:
+
+```bash
+chmod +x ./codex-speed-setting.command
+./codex-speed-setting.command
+```
+
+You can also launch it by double-clicking the `.command` file in Finder.
+
+## Self-Check Mode
+
+The script already includes its own self-check flow. No manual file edits are required.
+
+Menu items:
+
+- `1) View current status`
+- `2) Enable Speed setting`
+- `3) Restore original state`
+
+Recommended flow:
+
+1. Run `View current status` first.
+2. Only run `Enable Speed setting` if the target file is detected successfully.
+
+`View current status` checks:
+
+- Whether the `Codex.app` resources directory exists
+- Whether `app.asar` can be found or unpacked
+- Whether the target directory `app/webview/assets` exists
+- Whether the current frontend bundle still contains a recognizable Speed-setting target
+- Whether the current state is "disabled" or "enabled"
+- Whether a backup file already exists
+
+If the script prints `未找到 Speed 设置项目标文件`, the current Codex build has likely changed and the patch should not be applied blindly.
+
+## Version Compatibility
+
+Version verified directly during inspection:
+
+- `Codex.app` version: `26.415.40636`
+- build: `1799`
+
+This version is compatible with the script because:
+
+- `app/webview/assets` still exists inside the current `app.asar`
+- Speed-setting text keys are still present
+- The script's target regex still matches the current bundle
+- The matched target file is `general-settings-BZQqrI-r.js`
+- The current "disabled" state can still be transformed into the "enabled" state
+
+Observed validation result on this version:
+
+- Target file was found
+- Current state was identified as disabled
+- A simulated replacement successfully moved the code from guarded to patched state
+
+That means the script is compatible with the version above.
+
+## Compatibility Limits
+
+This script does not use an official API. It patches frontend build output by matching code signatures, so compatibility can break after a Codex update.
+
+Recommended practice:
+
+- Run `View current status` after every Codex update
+- Only run `Enable Speed setting` when the script still detects the target file
+- If bundle structure, variable names, or minified output changes, the regex may need to be updated
+
+## Backup and Restore
+
+On the first modification, the script creates a same-name backup file with this suffix:
+
+```text
+.speed-setting.bak
+```
+
+Restore prefers the backup file. If no backup exists but a patched state is detected, the script will still try to restore inline.
+
+## Notes
+
+- On first run, if only `app.asar` exists and no unpacked `app/` directory is present, the script will try to extract it and rename `app.asar` to `app.asar1`
+- This script directly modifies the installed local app resources
+- A future Codex auto-update may overwrite the patched state
+
+## Troubleshooting
+
+If the script fails immediately, check:
+
+- Whether `/Applications/Codex.app` exists
+- `node -v`
+- `npx -v`
+
+If the script says it cannot find the target file:
+
+- Do not continue with the enable action
+- The current Codex build likely needs a new adaptation
