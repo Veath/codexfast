@@ -7,10 +7,11 @@ APP_RESOURCES="${APP_BUNDLE}/Contents/Resources"
 APP_DIR="${APP_RESOURCES}/app"
 APP_ASAR="${APP_RESOURCES}/app.asar"
 APP_ASAR_BACKUP="${APP_RESOURCES}/app.asar1"
-ASSETS_DIR="${APP_DIR}/webview/assets"
 BACKUP_SUFFIX=".speed-setting.bak"
 NPM_BIN=""
-APP_STRUCTURE_CHANGED=0
+TEMP_ROOT=""
+TEMP_APP_DIR=""
+TEMP_ASSETS_DIR=""
 
 print_line() {
   printf '%s\n' "$1"
@@ -53,6 +54,149 @@ print_manual_resign_guidance() {
   print_line "codesign --force --deep --sign - ${APP_BUNDLE}"
 }
 
+cleanup_temp_workspace() {
+  if [ -n "${TEMP_ROOT}" ] && [ -d "${TEMP_ROOT}" ]; then
+    rm -rf "${TEMP_ROOT}"
+  fi
+
+  TEMP_ROOT=""
+  TEMP_APP_DIR=""
+  TEMP_ASSETS_DIR=""
+}
+
+trap cleanup_temp_workspace EXIT
+
+create_temp_workspace() {
+  cleanup_temp_workspace
+
+  TEMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/codexfast.XXXXXX")" || {
+    print_line "Failed to create a temporary workspace."
+    return 1
+  }
+
+  TEMP_APP_DIR="${TEMP_ROOT}/app"
+  TEMP_ASSETS_DIR="${TEMP_APP_DIR}/webview/assets"
+  return 0
+}
+
+run_asar() {
+  "${NPM_BIN}" exec --yes --package @electron/asar -- asar "$@"
+}
+
+ensure_archive_backup() {
+  if [ -f "${APP_ASAR_BACKUP}" ]; then
+    return 0
+  fi
+
+  if ! cp "${APP_ASAR}" "${APP_ASAR_BACKUP}"; then
+    print_line "Failed to create the app.asar backup archive."
+    return 1
+  fi
+
+  return 0
+}
+
+unpack_app_asar_to_temp() {
+  if [ ! -f "${APP_ASAR}" ]; then
+    print_line "app.asar not found: ${APP_ASAR}"
+    return 1
+  fi
+
+  if ! create_temp_workspace; then
+    return 1
+  fi
+
+  if ! run_asar e "${APP_ASAR}" "${TEMP_APP_DIR}"; then
+    print_line "Failed to unpack app.asar into the temporary workspace."
+    cleanup_temp_workspace
+    return 1
+  fi
+
+  if [ ! -d "${TEMP_ASSETS_DIR}" ]; then
+    print_line "Assets directory not found in the temporary workspace: ${TEMP_ASSETS_DIR}"
+    cleanup_temp_workspace
+    return 1
+  fi
+
+  return 0
+}
+
+pack_temp_app_to_asar() {
+  local packed_archive="${TEMP_ROOT}/app.asar"
+
+  if ! run_asar p "${TEMP_APP_DIR}" "${packed_archive}"; then
+    print_line "Failed to repack the temporary app directory into app.asar."
+    return 1
+  fi
+
+  if ! mv "${packed_archive}" "${APP_ASAR}"; then
+    print_line "Failed to replace the installed app.asar."
+    return 1
+  fi
+
+  return 0
+}
+
+migrate_legacy_unpacked_layout() {
+  if [ ! -d "${APP_DIR}" ]; then
+    return 0
+  fi
+
+  print_line ""
+  print_line "Detected the legacy unpacked app layout. Converting it back to app.asar."
+
+  if [ -f "${APP_ASAR}" ] && [ ! -f "${APP_ASAR_BACKUP}" ]; then
+    if ! cp "${APP_ASAR}" "${APP_ASAR_BACKUP}"; then
+      print_line "Failed to preserve the existing app.asar before migration."
+      return 1
+    fi
+  fi
+
+  if ! create_temp_workspace; then
+    return 1
+  fi
+
+  TEMP_APP_DIR="${APP_DIR}"
+  TEMP_ASSETS_DIR="${TEMP_APP_DIR}/webview/assets"
+
+  if ! pack_temp_app_to_asar; then
+    cleanup_temp_workspace
+    return 1
+  fi
+
+  if ! rm -rf "${APP_DIR}"; then
+    print_line "Failed to remove the legacy unpacked app directory."
+    cleanup_temp_workspace
+    return 1
+  fi
+
+  cleanup_temp_workspace
+
+  if ! resign_app_bundle "Legacy unpacked layout converted. Re-signing the app bundle."; then
+    return 1
+  fi
+
+  return 0
+}
+
+restore_from_archive_backup() {
+  print_line ""
+  print_line "Restoring the original app.asar from the archive backup."
+
+  if ! cp "${APP_ASAR_BACKUP}" "${APP_ASAR}"; then
+    print_line "Failed to restore app.asar from app.asar1."
+    return 1
+  fi
+
+  if ! resign_app_bundle "Original archive restored. Re-signing the app bundle."; then
+    return 1
+  fi
+
+  print_line ""
+  print_line "Exit code: 0"
+  return 0
+}
+
 resign_app_bundle() {
   local reason="${1:-}"
   local codesign_output=""
@@ -85,51 +229,6 @@ resign_app_bundle() {
   return 0
 }
 
-prepare_app_resources() {
-  APP_STRUCTURE_CHANGED=0
-
-  if [ -d "${APP_DIR}" ]; then
-    if [ -f "${APP_ASAR}" ] && [ ! -f "${APP_ASAR_BACKUP}" ]; then
-      (
-        cd "${APP_RESOURCES}" || exit 1
-        mv ./app.asar ./app.asar1
-      ) || {
-        print_line "Failed to rename app.asar."
-        return 1
-      }
-      APP_STRUCTURE_CHANGED=1
-    fi
-    return 0
-  fi
-
-  if [ -f "${APP_ASAR_BACKUP}" ]; then
-    print_line "Unpacked directory not found: ${APP_DIR}"
-    return 1
-  fi
-
-  if [ ! -f "${APP_ASAR}" ]; then
-    print_line "app.asar not found: ${APP_ASAR}"
-    return 1
-  fi
-
-  if [ -z "${NPM_BIN}" ]; then
-    print_line "npm not found. Cannot unpack app.asar."
-    return 1
-  fi
-
-  (
-    cd "${APP_RESOURCES}" || exit 1
-    "${NPM_BIN}" exec --yes --package @electron/asar -- asar e ./app.asar app || exit 1
-    mv ./app.asar ./app.asar1
-  ) || {
-    print_line "Failed to unpack or rename app.asar."
-    return 1
-  }
-
-  APP_STRUCTURE_CHANGED=1
-  return 0
-}
-
 check_requirements() {
   if [ ! -d "${APP_RESOURCES}" ]; then
     print_line "Codex resources directory not found: ${APP_RESOURCES}"
@@ -155,18 +254,12 @@ check_requirements() {
     return 1
   }
 
-  if ! prepare_app_resources; then
+  if ! migrate_legacy_unpacked_layout; then
     return 1
   fi
 
-  if [ "${APP_STRUCTURE_CHANGED}" -eq 1 ]; then
-    if ! resign_app_bundle "App bundle resources changed. Running an initial local re-sign first."; then
-      return 1
-    fi
-  fi
-
-  if [ ! -d "${ASSETS_DIR}" ]; then
-    print_line "Assets directory not found: ${ASSETS_DIR}"
+  if [ ! -f "${APP_ASAR}" ]; then
+    print_line "app.asar not found: ${APP_ASAR}"
     return 1
   fi
 
@@ -175,6 +268,7 @@ check_requirements() {
 
 run_embedded_tool() {
   local action="$1"
+  local exit_code=1
 
   print_line ""
   print_line "Action: ${action}"
@@ -182,7 +276,16 @@ run_embedded_tool() {
   print_line "Mode: self-contained single file"
   print_line ""
 
-  "${NODE_BIN}" - "${action}" "${ASSETS_DIR}" "${BACKUP_SUFFIX}" <<'NODE'
+  if [ "${action}" = "restore" ] && [ -f "${APP_ASAR_BACKUP}" ]; then
+    restore_from_archive_backup
+    return $?
+  fi
+
+  if ! unpack_app_asar_to_temp; then
+    return 1
+  fi
+
+  "${NODE_BIN}" - "${action}" "${TEMP_ASSETS_DIR}" "${BACKUP_SUFFIX}" <<'NODE'
 "use strict";
 
 const fs = require("fs");
@@ -373,17 +476,30 @@ switch (command) {
 process.exit(exitCode);
 NODE
 
-  local exit_code=$?
+  exit_code=$?
 
   if [ "${exit_code}" -eq 0 ]; then
     case "${action}" in
-      apply|restore)
-        if ! resign_app_bundle "Codex.app resources were modified. Re-signing now."; then
+      apply)
+        if ! ensure_archive_backup; then
+          exit_code=1
+        elif ! pack_temp_app_to_asar; then
+          exit_code=1
+        elif ! resign_app_bundle "Codex.app resources were modified. Re-signing now."; then
+          exit_code=1
+        fi
+        ;;
+      restore)
+        if ! pack_temp_app_to_asar; then
+          exit_code=1
+        elif ! resign_app_bundle "Codex.app resources were modified. Re-signing now."; then
           exit_code=1
         fi
         ;;
     esac
   fi
+
+  cleanup_temp_workspace
 
   print_line ""
   print_line "Exit code: ${exit_code}"

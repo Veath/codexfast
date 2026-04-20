@@ -6,7 +6,7 @@ This repository contains a single-file macOS script for exposing and toggling th
 
 This script is intended for Codex users who run with a custom API configuration.
 
-It automatically re-signs the local app bundle after unpacking or modifying app resources.
+It automatically re-signs the local app bundle after rebuilding or modifying app resources.
 
 Script file:
 
@@ -30,7 +30,7 @@ The script locates the frontend assets inside `Codex.app`, checks whether the cu
 - Enable the Speed setting
 - Restore the original state
 
-After the script changes the installed app bundle, it performs a local ad-hoc re-sign so `Codex.app` can still launch on macOS.
+After the script changes the installed app bundle, it repacks the modified files back into `app.asar` and performs a local ad-hoc re-sign so `Codex.app` can still launch on macOS.
 
 The script is fully self-contained in one file, so it can be shared and run on its own.
 
@@ -83,8 +83,9 @@ The script already includes its own self-check flow. No manual file edits are re
 
 Important behavior:
 
-- If the app is still packed as `app.asar`, the script may unpack it on the first run
-- After unpacking, applying, or restoring, the script automatically performs a local ad-hoc re-sign
+- The script uses a temporary workspace when it needs to inspect or patch `app.asar`
+- It repacks the modified files back into `app.asar` instead of leaving a persistent `Resources/app` directory behind
+- After apply, restore, or legacy-layout migration, the script automatically performs a local ad-hoc re-sign
 - This local re-sign replaces the original vendor signature on your installed app copy
 
 Menu items:
@@ -101,13 +102,13 @@ Recommended flow:
 `View current status` checks:
 
 - Whether the `Codex.app` resources directory exists
-- Whether `app.asar` can be found or unpacked
-- Whether the target directory `app/webview/assets` exists
+- Whether `app.asar` can be found and inspected through the temporary workspace
+- Whether the target directory `app/webview/assets` exists inside the unpacked archive
 - Whether the current frontend bundle still contains a recognizable Speed-setting target
 - Whether the current state is "disabled" or "enabled"
 - Whether a backup file already exists
 
-If the script has to unpack `app.asar` first, that unpack step is also treated as a local app-bundle modification and is followed by automatic re-signing.
+If the script detects the legacy unpacked `Resources/app` layout from an older script version, it repacks that directory back into `app.asar`, removes `Resources/app`, and then re-signs the app bundle automatically.
 
 If the script prints `未找到 Speed 设置项目标文件`, the current Codex build has likely changed and the patch should not be applied blindly.
 
@@ -154,12 +155,13 @@ On the first modification, the script creates a same-name backup file with this 
 
 Restore prefers the backup file. If no backup exists but a patched state is detected, the script will still try to restore inline.
 
-After either operation, the script re-signs the modified app bundle automatically.
+After apply or restore, the script keeps the installed app in the packed `app.asar` layout and re-signs the modified app bundle automatically.
 
 ## Notes
 
-- On first run, if only `app.asar` exists and no unpacked `app/` directory is present, the script will try to extract it and rename `app.asar` to `app.asar1`
-- After unpacking or changing files under `Codex.app`, the script runs `codesign --force --deep --sign - /Applications/Codex.app`
+- On first apply, the script creates `app.asar1` as an archive-level backup of the original app bundle
+- When the script needs to inspect or patch the app, it unpacks `app.asar` into a temporary directory and repacks the result back into `app.asar`
+- After rebuilding or changing files under `Codex.app`, the script runs `codesign --force --deep --sign - /Applications/Codex.app`
 - This script directly modifies the installed local app resources
 - A future Codex auto-update may overwrite the patched state
 - A local ad-hoc re-sign is enough for `codesign` integrity checks, but it does not preserve the original notarized vendor signature

@@ -8,6 +8,7 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 
 STUB_BIN="${TMP_DIR}/bin"
 MARKER_FILE="${TMP_DIR}/codesign.log"
+GUARDED_CONTENT='const label="settings.agent.speed.label";x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";'
 
 mkdir -p "${STUB_BIN}"
 
@@ -28,14 +29,34 @@ EOF
 
 cat > "${STUB_BIN}/npm" <<'EOF'
 #!/bin/bash
-if [ "$1" = "exec" ]; then
-  mkdir -p app/webview/assets
-  cat > app/webview/assets/general-settings.js <<'ASSET'
-const label="settings.agent.speed.label";x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";
-ASSET
+set -euo pipefail
+
+if [ "$1" != "exec" ]; then
   exit 0
 fi
-exit 0
+
+while [ "$1" != "--" ]; do
+  shift
+done
+shift
+
+if [ "$1" != "asar" ]; then
+  exit 0
+fi
+
+mode="$2"
+source_path="$3"
+target_path="$4"
+
+case "${mode}" in
+  e)
+    mkdir -p "${target_path}/webview/assets"
+    cat "${source_path}" > "${target_path}/webview/assets/general-settings.js"
+    ;;
+  p)
+    cat "${source_path}/webview/assets/general-settings.js" > "${target_path}"
+    ;;
+esac
 EOF
 
 chmod +x "${STUB_BIN}/clear" "${STUB_BIN}/codesign" "${STUB_BIN}/npm"
@@ -89,61 +110,78 @@ assert_codesign_calls() {
   fi
 }
 
+assert_no_persistent_unpack_dir() {
+  local resources_dir="$1"
+  local output_file="$2"
+
+  if [ -d "${resources_dir}/app" ]; then
+    echo "expected no persistent Resources/app directory"
+    cat "${output_file}"
+    exit 1
+  fi
+}
+
 FAKE_APP_EXISTING="${TMP_DIR}/Existing.app"
 FAKE_RESOURCES_EXISTING="${FAKE_APP_EXISTING}/Contents/Resources"
-FAKE_ASSETS_EXISTING="${FAKE_RESOURCES_EXISTING}/app/webview/assets"
-TARGET_FILE_EXISTING="${FAKE_ASSETS_EXISTING}/general-settings.js"
 OUTPUT_EXISTING="${TMP_DIR}/apply-restore-output.txt"
 
-mkdir -p "${FAKE_ASSETS_EXISTING}"
-cat > "${TARGET_FILE_EXISTING}" <<'EOF'
-const label="settings.agent.speed.label";x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";
-EOF
+mkdir -p "${FAKE_RESOURCES_EXISTING}"
+printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_RESOURCES_EXISTING}/app.asar"
 
 run_script "${FAKE_APP_EXISTING}" '2\n\n3\n\nq\n' "${OUTPUT_EXISTING}"
 assert_codesign_calls 2 "${OUTPUT_EXISTING}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_EXISTING}" "${OUTPUT_EXISTING}"
 
-if ! grep -q 'if(!x)return null;' "${TARGET_FILE_EXISTING}"; then
-  echo "expected restore to put the guarded code back"
-  cat "${TARGET_FILE_EXISTING}"
+if [ ! -f "${FAKE_RESOURCES_EXISTING}/app.asar1" ]; then
+  echo "expected archive backup to be created on apply"
+  cat "${OUTPUT_EXISTING}"
+  exit 1
+fi
+
+if ! grep -q 'if(!x)return null;' "${FAKE_RESOURCES_EXISTING}/app.asar"; then
+  echo "expected restore to bring app.asar back to the guarded state"
+  cat "${FAKE_RESOURCES_EXISTING}/app.asar"
   exit 1
 fi
 
 rm -f "${MARKER_FILE}"
 
-FAKE_APP_PACKED="${TMP_DIR}/Packed.app"
-FAKE_RESOURCES_PACKED="${FAKE_APP_PACKED}/Contents/Resources"
-OUTPUT_PACKED="${TMP_DIR}/status-output.txt"
+FAKE_APP_LEGACY="${TMP_DIR}/Legacy.app"
+FAKE_RESOURCES_LEGACY="${FAKE_APP_LEGACY}/Contents/Resources"
+FAKE_APP_DIR_LEGACY="${FAKE_RESOURCES_LEGACY}/app/webview/assets"
+OUTPUT_LEGACY="${TMP_DIR}/legacy-output.txt"
 
-mkdir -p "${FAKE_RESOURCES_PACKED}"
-touch "${FAKE_RESOURCES_PACKED}/app.asar"
+mkdir -p "${FAKE_APP_DIR_LEGACY}"
+printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_APP_DIR_LEGACY}/general-settings.js"
+printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_RESOURCES_LEGACY}/app.asar1"
 
-run_script "${FAKE_APP_PACKED}" '1\n\nq\n' "${OUTPUT_PACKED}"
-assert_codesign_calls 1 "${OUTPUT_PACKED}"
+run_script "${FAKE_APP_LEGACY}" '1\n\nq\n' "${OUTPUT_LEGACY}"
+assert_codesign_calls 1 "${OUTPUT_LEGACY}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_LEGACY}" "${OUTPUT_LEGACY}"
 
-if [ ! -f "${FAKE_RESOURCES_PACKED}/app.asar1" ]; then
-  echo "expected app.asar to be renamed after unpack"
-  cat "${OUTPUT_PACKED}"
+if [ ! -f "${FAKE_RESOURCES_LEGACY}/app.asar" ]; then
+  echo "expected legacy unpacked layout to be repacked into app.asar"
+  cat "${OUTPUT_LEGACY}"
   exit 1
 fi
 
-if [ ! -f "${FAKE_RESOURCES_PACKED}/app/webview/assets/general-settings.js" ]; then
-  echo "expected unpacked assets to exist after npm stub extraction"
-  cat "${OUTPUT_PACKED}"
+if ! grep -q 'if(!x)return null;' "${FAKE_RESOURCES_LEGACY}/app.asar"; then
+  echo "expected repacked app.asar to preserve the current JS content"
+  cat "${FAKE_RESOURCES_LEGACY}/app.asar"
   exit 1
 fi
+
+rm -f "${MARKER_FILE}"
 
 FAKE_APP_FAILING="${TMP_DIR}/Failing.app"
 FAKE_RESOURCES_FAILING="${FAKE_APP_FAILING}/Contents/Resources"
-FAKE_ASSETS_FAILING="${FAKE_RESOURCES_FAILING}/app/webview/assets"
 OUTPUT_FAILING="${TMP_DIR}/failing-output.txt"
 
-mkdir -p "${FAKE_ASSETS_FAILING}"
-cat > "${FAKE_ASSETS_FAILING}/general-settings.js" <<'EOF'
-const label="settings.agent.speed.label";x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";
-EOF
+mkdir -p "${FAKE_RESOURCES_FAILING}"
+printf '%s\n' "${GUARDED_CONTENT}" > "${FAKE_RESOURCES_FAILING}/app.asar"
 
 run_script_with_codesign_failure "${FAKE_APP_FAILING}" '2\n\nq\n' "${OUTPUT_FAILING}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_FAILING}" "${OUTPUT_FAILING}"
 
 if ! grep -q 'codesign --force --deep --sign - '"${FAKE_APP_FAILING}" "${OUTPUT_FAILING}"; then
   echo "expected manual re-sign guidance in failure output"
