@@ -48,8 +48,14 @@ resolve_codesign() {
   return 1
 }
 
+print_manual_resign_guidance() {
+  print_line "If the failure was caused by write permissions, run this command manually in Terminal:"
+  print_line "codesign --force --deep --sign - ${APP_BUNDLE}"
+}
+
 resign_app_bundle() {
   local reason="${1:-}"
+  local codesign_output=""
 
   if [ -n "${reason}" ]; then
     print_line ""
@@ -58,8 +64,12 @@ resign_app_bundle() {
 
   print_line "Running local ad-hoc re-sign: ${APP_BUNDLE}"
 
-  if ! "${CODESIGN_BIN}" --force --deep --sign - "${APP_BUNDLE}" >/dev/null 2>&1; then
+  if ! codesign_output="$("${CODESIGN_BIN}" --force --deep --sign - "${APP_BUNDLE}" 2>&1)"; then
     print_line "Re-sign failed."
+    if [ -n "${codesign_output}" ]; then
+      print_line "${codesign_output}"
+    fi
+    print_manual_resign_guidance
     print_line "Restore the original app.asar or reinstall Codex.app."
     return 1
   fi

@@ -173,6 +173,12 @@ If the script fails immediately, check:
 - `npm -v`
 - `codesign -h`
 
+If the automatic re-sign step fails because macOS refuses the write, the script now prints the exact manual fallback command:
+
+```bash
+codesign --force --deep --sign - /Applications/Codex.app
+```
+
 If the script says it cannot find the target file:
 
 - Do not continue with the enable action

@@ -18,6 +18,10 @@ EOF
 
 cat > "${STUB_BIN}/codesign" <<EOF
 #!/bin/bash
+if [ "\${CODEXFAST_TEST_CODESIGN_FAIL:-0}" = "1" ] && [ "\$1" = "--force" ]; then
+  printf '%s\n' "codesign: permission denied" >&2
+  exit 1
+fi
 printf '%s\n' "\$*" >> "${MARKER_FILE}"
 exit 0
 EOF
@@ -44,6 +48,21 @@ run_script() {
   printf '%b' "${input}" | \
     PATH="${STUB_BIN}:$PATH" \
     CODEXFAST_APP_BUNDLE="${app_dir}" \
+    "${ROOT_DIR}/codexfast.sh" > "${output_file}" 2>&1 || {
+      cat "${output_file}"
+      exit 1
+    }
+}
+
+run_script_with_codesign_failure() {
+  local app_dir="$1"
+  local input="$2"
+  local output_file="$3"
+
+  printf '%b' "${input}" | \
+    PATH="${STUB_BIN}:$PATH" \
+    CODEXFAST_APP_BUNDLE="${app_dir}" \
+    CODEXFAST_TEST_CODESIGN_FAIL=1 \
     "${ROOT_DIR}/codexfast.sh" > "${output_file}" 2>&1 || {
       cat "${output_file}"
       exit 1
@@ -111,6 +130,30 @@ fi
 if [ ! -f "${FAKE_RESOURCES_PACKED}/app/webview/assets/general-settings.js" ]; then
   echo "expected unpacked assets to exist after npm stub extraction"
   cat "${OUTPUT_PACKED}"
+  exit 1
+fi
+
+FAKE_APP_FAILING="${TMP_DIR}/Failing.app"
+FAKE_RESOURCES_FAILING="${FAKE_APP_FAILING}/Contents/Resources"
+FAKE_ASSETS_FAILING="${FAKE_RESOURCES_FAILING}/app/webview/assets"
+OUTPUT_FAILING="${TMP_DIR}/failing-output.txt"
+
+mkdir -p "${FAKE_ASSETS_FAILING}"
+cat > "${FAKE_ASSETS_FAILING}/general-settings.js" <<'EOF'
+const label="settings.agent.speed.label";x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";
+EOF
+
+run_script_with_codesign_failure "${FAKE_APP_FAILING}" '2\n\nq\n' "${OUTPUT_FAILING}"
+
+if ! grep -q 'codesign --force --deep --sign - '"${FAKE_APP_FAILING}" "${OUTPUT_FAILING}"; then
+  echo "expected manual re-sign guidance in failure output"
+  cat "${OUTPUT_FAILING}"
+  exit 1
+fi
+
+if ! grep -q 'Exit code: 1' "${OUTPUT_FAILING}"; then
+  echo "expected a failed action exit code when codesign fails"
+  cat "${OUTPUT_FAILING}"
   exit 1
 fi
 

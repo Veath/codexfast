@@ -173,6 +173,12 @@ chmod +x ./codexfast.sh
 - `npm -v`
 - `codesign -h`
 
+如果自动重签步骤因为 macOS 拒绝写入而失败，脚本现在会直接打印这条可手动执行的回退命令：
+
+```bash
+codesign --force --deep --sign - /Applications/Codex.app
+```
+
 如果脚本提示找不到目标文件：
 
 - 不要继续执行开启动作
