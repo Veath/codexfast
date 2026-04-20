@@ -14,6 +14,10 @@ Repository guidance for `codexfast`.
 - Start with [`docs/README.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/README.md) for the long-lived docs index.
 - Read [`docs/feature-scope.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/feature-scope.md) when you need the current supported feature paths before diving into bundle-specific implementation details.
 - Read [`docs/compatibility-matrix.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/compatibility-matrix.md) before changing the whitelist or describing a Codex build as supported.
+- Read [`docs/patch-targets.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/patch-targets.md) before changing regexes, target specs, or restore mapping.
+- Read [`docs/troubleshooting.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/troubleshooting.md) when the app fails to launch, a UI path breaks, `Plugins` remains partially unavailable, or repeated patch runs behave unexpectedly.
+- Read [`docs/real-app-validation.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/real-app-validation.md) when claiming real installed-app compatibility.
+- Read [`docs/version-adaptation-playbook.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/version-adaptation-playbook.md) when adapting to a new `Codex.app` build.
 - Read [`docs/release-process.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/release-process.md) when preparing a version bump, release commit, or npm publish.
 - Read the relevant file under [`docs/bundle-notes/`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/bundle-notes/) when adapting to a Codex bundle or investigating a gate/signature change.
 - Keep `docs/` focused on reusable conclusions. Do not store raw conversation transcripts or throwaway debugging logs there.
