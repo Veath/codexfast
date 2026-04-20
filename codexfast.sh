@@ -2,13 +2,15 @@
 
 set -u
 
-APP_RESOURCES="/Applications/Codex.app/Contents/Resources"
+APP_BUNDLE="${CODEXFAST_APP_BUNDLE:-/Applications/Codex.app}"
+APP_RESOURCES="${APP_BUNDLE}/Contents/Resources"
 APP_DIR="${APP_RESOURCES}/app"
 APP_ASAR="${APP_RESOURCES}/app.asar"
 APP_ASAR_BACKUP="${APP_RESOURCES}/app.asar1"
 ASSETS_DIR="${APP_DIR}/webview/assets"
 BACKUP_SUFFIX=".speed-setting.bak"
 NPM_BIN=""
+APP_STRUCTURE_CHANGED=0
 
 print_line() {
   printf '%s\n' "$1"
@@ -37,7 +39,45 @@ resolve_npm() {
   return 1
 }
 
+resolve_codesign() {
+  if command -v codesign >/dev/null 2>&1; then
+    command -v codesign
+    return 0
+  fi
+
+  return 1
+}
+
+resign_app_bundle() {
+  local reason="${1:-}"
+
+  if [ -n "${reason}" ]; then
+    print_line ""
+    print_line "${reason}"
+  fi
+
+  print_line "执行本地 ad-hoc 重新签名：${APP_BUNDLE}"
+
+  if ! "${CODESIGN_BIN}" --force --deep --sign - "${APP_BUNDLE}" >/dev/null 2>&1; then
+    print_line "重新签名失败。"
+    print_line "请恢复原始 app.asar，或重新安装 Codex.app。"
+    return 1
+  fi
+
+  if ! "${CODESIGN_BIN}" --verify --deep --strict --verbose=2 "${APP_BUNDLE}" >/dev/null 2>&1; then
+    print_line "重新签名后的 codesign 校验失败。"
+    print_line "请恢复原始 app.asar，或重新安装 Codex.app。"
+    return 1
+  fi
+
+  print_line "重新签名完成，codesign 校验通过。"
+  print_line "提示：本地 ad-hoc 签名会替换原始厂商签名，spctl 可能显示 rejected，这是预期现象。"
+  return 0
+}
+
 prepare_app_resources() {
+  APP_STRUCTURE_CHANGED=0
+
   if [ -d "${APP_DIR}" ]; then
     if [ -f "${APP_ASAR}" ] && [ ! -f "${APP_ASAR_BACKUP}" ]; then
       (
@@ -47,6 +87,7 @@ prepare_app_resources() {
         print_line "重命名 app.asar 失败。"
         return 1
       }
+      APP_STRUCTURE_CHANGED=1
     fi
     return 0
   fi
@@ -75,13 +116,14 @@ prepare_app_resources() {
     return 1
   }
 
+  APP_STRUCTURE_CHANGED=1
   return 0
 }
 
 check_requirements() {
   if [ ! -d "${APP_RESOURCES}" ]; then
     print_line "未找到 Codex 资源目录：${APP_RESOURCES}"
-    print_line "请确认 Codex.app 安装在 /Applications 下。"
+    print_line "请确认 Codex.app 安装在 ${APP_BUNDLE}。"
     return 1
   fi
 
@@ -97,8 +139,20 @@ check_requirements() {
     return 1
   }
 
+  CODESIGN_BIN="$(resolve_codesign)" || {
+    print_line "未找到 codesign。"
+    print_line "当前 macOS 环境无法完成本地重新签名。"
+    return 1
+  }
+
   if ! prepare_app_resources; then
     return 1
+  fi
+
+  if [ "${APP_STRUCTURE_CHANGED}" -eq 1 ]; then
+    if ! resign_app_bundle "检测到应用资源结构发生变化，先执行一次本地重签名。"; then
+      return 1
+    fi
   fi
 
   if [ ! -d "${ASSETS_DIR}" ]; then
@@ -310,6 +364,17 @@ process.exit(exitCode);
 NODE
 
   local exit_code=$?
+
+  if [ "${exit_code}" -eq 0 ]; then
+    case "${action}" in
+      apply|restore)
+        if ! resign_app_bundle "已修改 Codex.app 资源，正在重新签名。"; then
+          exit_code=1
+        fi
+        ;;
+    esac
+  fi
+
   print_line ""
   print_line "退出码：${exit_code}"
   return "${exit_code}"
@@ -320,6 +385,7 @@ show_menu() {
   print_line "Codexfast"
   print_line "固定目标：${APP_RESOURCES}"
   print_line "说明：这个 .sh 是单文件自包含，可单独分享。"
+  print_line "修改资源后会自动执行本地 ad-hoc 重签名。"
   print_line ""
   print_line "1) 查看当前状态"
   print_line "2) 开启 Speed 设置项"

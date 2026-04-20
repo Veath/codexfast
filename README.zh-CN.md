@@ -6,6 +6,8 @@
 
 这个脚本主要面向使用 custom API 配置的 Codex 用户。
 
+脚本在解包或修改应用资源后，会自动对本地 `Codex.app` 执行重新签名。
+
 脚本文件：
 
 - `codexfast.sh`
@@ -18,7 +20,7 @@
 npx codexfast
 ```
 
-这会直接启动现有的交互菜单。
+这会直接启动交互菜单。
 
 ## 作用
 
@@ -27,6 +29,8 @@ npx codexfast
 - 查看当前状态
 - 开启 Speed 设置项
 - 恢复原始状态
+
+当脚本改动本地安装应用后，会自动执行一次本地 ad-hoc 重签名，避免 `Codex.app` 因签名失效而无法启动。
 
 脚本是单文件自包含实现，适合单独分享和直接运行。
 
@@ -53,9 +57,16 @@ npx codexfast
 
 - `Codex.app` 安装在 `/Applications/Codex.app`
 - 命令行可用 `node`
-- 命令行可用 `npx`
+- 命令行可用 `npm`
+- macOS 自带 `codesign`
 
-运行方式：
+通过 npm 调用：
+
+```bash
+npx codexfast
+```
+
+在本仓库里本地运行：
 
 ```bash
 chmod +x ./codexfast.sh
@@ -64,11 +75,17 @@ chmod +x ./codexfast.sh
 
 请在终端里执行。
 
-如果你是在本仓库里本地运行，也可以这样执行：
+如果你是直接使用这个仓库，本地脚本文件就是最终执行入口。
 
 ## 自检模式
 
 脚本已经内置自检流程，不需要手动改文件。
+
+需要注意：
+
+- 如果当前应用仍然是 `app.asar` 打包状态，脚本首次运行时可能会先解包
+- 解包、开启、恢复这三类会修改应用资源的动作，后面都会自动执行本地 ad-hoc 重签名
+- 这个本地重签会替换当前安装副本原本的厂商签名
 
 菜单项：
 
@@ -89,6 +106,8 @@ chmod +x ./codexfast.sh
 - 当前前端 bundle 中是否还能识别出 Speed 设置项的目标代码
 - 当前状态是“未开启”还是“已开启”
 - 是否已经存在备份文件
+
+如果脚本在进入状态检查前必须先解包 `app.asar`，这一步也会被视为本地应用包修改，并在之后立即自动重签。
 
 如果脚本输出 `未找到 Speed 设置项目标文件`，通常说明当前 Codex 构建已经变化，不应该继续盲目打补丁。
 
@@ -135,11 +154,15 @@ chmod +x ./codexfast.sh
 
 恢复逻辑会优先使用备份文件；如果没有备份，但检测到已修改状态，也会尝试按内联规则恢复。
 
+无论是开启还是恢复，脚本都会在动作完成后自动重新签名应用。
+
 ## 注意事项
 
 - 首次运行时，如果只有 `app.asar` 而没有解包后的 `app/` 目录，脚本会尝试解包，并把 `app.asar` 重命名为 `app.asar1`
+- 在解包或修改 `Codex.app` 内文件后，脚本会执行 `codesign --force --deep --sign - /Applications/Codex.app`
 - 这个脚本会直接修改本地已安装应用的资源文件
 - 未来 Codex 自动更新后，补丁状态可能会被覆盖
+- 本地 ad-hoc 重签足以通过 `codesign` 完整性校验，但不会保留原本官方 notarized 厂商签名
 
 ## 故障排查
 
@@ -147,9 +170,24 @@ chmod +x ./codexfast.sh
 
 - `/Applications/Codex.app` 是否存在
 - `node -v`
-- `npx -v`
+- `npm -v`
+- `codesign -h`
 
 如果脚本提示找不到目标文件：
 
 - 不要继续执行开启动作
 - 说明当前 Codex 构建很可能需要重新适配
+
+如果你之前运行的是旧版脚本，导致 `Codex.app` 打不开，可以这样恢复：
+
+1. 删除 `/Applications/Codex.app/Contents/Resources/app`
+2. 将 `/Applications/Codex.app/Contents/Resources/app.asar1` 改回 `app.asar`
+3. 重新打开 `Codex.app`
+
+如果你想检查脚本运行后的本地签名状态，优先使用：
+
+```bash
+codesign --verify --deep --strict /Applications/Codex.app
+```
+
+不要把 `spctl --assess` 在本地 ad-hoc 重签后的 `rejected` 直接当成失败。对这种本地重签应用来说，这是预期现象，并不等于应用一定无法启动。

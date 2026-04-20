@@ -6,6 +6,8 @@ This repository contains a single-file macOS script for exposing and toggling th
 
 This script is intended for Codex users who run with a custom API configuration.
 
+It automatically re-signs the local app bundle after unpacking or modifying app resources.
+
 Script file:
 
 - `codexfast.sh`
@@ -18,7 +20,7 @@ Run directly with npm:
 npx codexfast
 ```
 
-This launches the existing interactive menu.
+This launches the interactive menu.
 
 ## What It Does
 
@@ -27,6 +29,8 @@ The script locates the frontend assets inside `Codex.app`, checks whether the cu
 - View current status
 - Enable the Speed setting
 - Restore the original state
+
+After the script changes the installed app bundle, it performs a local ad-hoc re-sign so `Codex.app` can still launch on macOS.
 
 The script is fully self-contained in one file, so it can be shared and run on its own.
 
@@ -53,9 +57,16 @@ Requirements:
 
 - `Codex.app` is installed at `/Applications/Codex.app`
 - `node` is available in the shell
-- `npx` is available in the shell
+- `npm` is available in the shell
+- macOS built-in `codesign` is available
 
-Run:
+Use from npm:
+
+```bash
+npx codexfast
+```
+
+Run locally from this repository:
 
 ```bash
 chmod +x ./codexfast.sh
@@ -64,11 +75,17 @@ chmod +x ./codexfast.sh
 
 Run it from a shell.
 
-You can also run it locally from this repository:
+If you are using the repository directly, the local script path is the source of truth.
 
 ## Self-Check Mode
 
 The script already includes its own self-check flow. No manual file edits are required.
+
+Important behavior:
+
+- If the app is still packed as `app.asar`, the script may unpack it on the first run
+- After unpacking, applying, or restoring, the script automatically performs a local ad-hoc re-sign
+- This local re-sign replaces the original vendor signature on your installed app copy
 
 Menu items:
 
@@ -89,6 +106,8 @@ Recommended flow:
 - Whether the current frontend bundle still contains a recognizable Speed-setting target
 - Whether the current state is "disabled" or "enabled"
 - Whether a backup file already exists
+
+If the script has to unpack `app.asar` first, that unpack step is also treated as a local app-bundle modification and is followed by automatic re-signing.
 
 If the script prints `未找到 Speed 设置项目标文件`, the current Codex build has likely changed and the patch should not be applied blindly.
 
@@ -135,11 +154,15 @@ On the first modification, the script creates a same-name backup file with this 
 
 Restore prefers the backup file. If no backup exists but a patched state is detected, the script will still try to restore inline.
 
+After either operation, the script re-signs the modified app bundle automatically.
+
 ## Notes
 
 - On first run, if only `app.asar` exists and no unpacked `app/` directory is present, the script will try to extract it and rename `app.asar` to `app.asar1`
+- After unpacking or changing files under `Codex.app`, the script runs `codesign --force --deep --sign - /Applications/Codex.app`
 - This script directly modifies the installed local app resources
 - A future Codex auto-update may overwrite the patched state
+- A local ad-hoc re-sign is enough for `codesign` integrity checks, but it does not preserve the original notarized vendor signature
 
 ## Troubleshooting
 
@@ -147,9 +170,24 @@ If the script fails immediately, check:
 
 - Whether `/Applications/Codex.app` exists
 - `node -v`
-- `npx -v`
+- `npm -v`
+- `codesign -h`
 
 If the script says it cannot find the target file:
 
 - Do not continue with the enable action
 - The current Codex build likely needs a new adaptation
+
+If `Codex.app` no longer opens after using an older script version:
+
+1. Delete `/Applications/Codex.app/Contents/Resources/app`
+2. Rename `/Applications/Codex.app/Contents/Resources/app.asar1` back to `app.asar`
+3. Reopen `Codex.app`
+
+If you want to inspect the local signature state after running this script, prefer:
+
+```bash
+codesign --verify --deep --strict /Applications/Codex.app
+```
+
+Do not treat `spctl --assess` as a failure signal after the script's local ad-hoc re-sign. A locally re-signed app can be launchable while `spctl` still reports `rejected`.
