@@ -1,6 +1,6 @@
 {
   "name": "codexfast",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Expose and toggle the Speed setting in Codex.app for custom API users on macOS.",
   "scripts": {
     "test": "bash test/re-sign-flow.sh"
