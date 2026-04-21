@@ -15,7 +15,7 @@
 npx codexfast
 ```
 
-已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
+已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）和 `26.417.41555`（`build 1858`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
 
 ## 作用
 
@@ -48,6 +48,7 @@ npx codexfast
 本脚本不走官方 API，而是通过匹配前端打包产物的代码特征做补丁，Codex 更新后可能失效。
 
 - 已验证版本：`Codex.app` `26.415.40636`（`build 1799`）
+- 已验证版本：`Codex.app` `26.417.41555`（`build 1858`）
 - **开启动作** 只允许在白名单里的 version/build 上执行
 - **查看状态** 和 **恢复** 在任何版本都可用
 - Plugins 仅移除 custom API 用户的侧边栏鉴权 gate；插件最终是否可用仍取决于 connector 可用性、插件自身状态以及应用内管理侧限制

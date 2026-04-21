@@ -15,7 +15,7 @@ A single-file patcher for custom-API Codex users. It auto-checks version compati
 npx codexfast
 ```
 
-Verified for `Codex.app` `26.415.40636` (`build 1799`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
+Verified for `Codex.app` `26.415.40636` (`build 1799`) and `26.417.41555` (`build 1858`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
 
 ## What It Does
 
@@ -48,6 +48,7 @@ Always run **View current status** first. Only enable when compatibility is `sup
 The script does not use an official API — it matches code signatures in frontend build output, so it can break after a Codex update.
 
 - Verified on `Codex.app` `26.415.40636` (`build 1799`)
+- Verified on `Codex.app` `26.417.41555` (`build 1858`)
 - **Enable** is blocked unless the installed version/build is whitelisted
 - **View status** and **Restore** work on any version
 - For Plugins, the script only removes the custom-API sidebar gate — actual plugin availability can still depend on connectors, plugin state, or admin restrictions

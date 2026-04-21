@@ -4,6 +4,17 @@ All notable changes to `codexfast` will be documented in this file.
 
 This project follows a simple release-oriented changelog format.
 
+## [Unreleased]
+
+### Fixed
+
+- Adapted the bundle patch signatures for `Codex.app` `26.417.41555` (`build 1858`) while keeping `26.415.40636` (`build 1799`) supported.
+- Fixed the 26.417 `Plugins access` patch so it also exposes the unified sidebar `Plugins` label state, and normalizes the earlier partial patch shape on re-apply.
+
+### Documentation
+
+- Recorded the new supported build in the compatibility matrix, README files, patch target notes, and bundle notes.
+
 ## [0.4.0] - 2026-04-20
 
 ### Added

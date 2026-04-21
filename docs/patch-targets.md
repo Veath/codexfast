@@ -8,10 +8,10 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 
 | Feature | Target label | Current file | Needle | Patch intent |
 | --- | --- | --- | --- | --- |
-| Settings-side Fast control | `Speed setting` | `general-settings-BZQqrI-r.js` | `settings.agent.speed.label` | Remove the guarded Fast-settings early return. |
-| Composer `/fast` slash command | `Fast slash command` | `index-n7COQvZQ.js` | `composer.speedSlashCommand.title` | Force the slash command entry to be enabled. |
-| `Add files and more / +` Speed submenu | `Add-context Speed menu` | `use-model-settings-DEaRTAXy.js` | `composer.addContext.speed.option.fast.description` | Force the menu gate to enabled so the `Speed` submenu renders. |
-| Plugins sidebar access | `Plugins access` | `index-n7COQvZQ.js` | `sidebarElectron.pluginsDisabledTooltip` | Remove the API-key sidebar auth-method gate in the matched local assignment. |
+| Settings-side Fast control | `Speed setting` | `general-settings-*.js` | `settings.agent.speed.label` | Remove the guarded Fast-settings early return. |
+| Composer `/fast` slash command | `Fast slash command` | `index-*.js` | `composer.speedSlashCommand.title` | Force the slash command entry to be enabled. |
+| `Add files and more / +` Speed submenu | `Add-context Speed menu` | `use-model-settings-*.js` | `composer.addContext.speed.option.fast.description` | Force the menu gate to enabled so the `Speed` submenu renders. |
+| Plugins sidebar access | `Plugins access` | `index-*.js` or a nearby sidebar asset | `sidebarElectron.pluginsDisabledTooltip` | Remove the API-key gate for both the disabled Plugins nav item and any adjacent unified Skills/Plugins label state in the matched local assignments. |
 
 ## Current Restore Rules
 
@@ -20,9 +20,9 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 - `Fast slash command`
   - Restore the original enabled variable instead of a forced `!0`
 - `Add-context Speed menu`
-  - Restore the `Cr()` gate
+  - Restore the original gate local assignment (`Cr()` or `cr()` depending on build)
 - `Plugins access`
-  - Restore the original `authMethod === "apikey"` local assignment
+  - Restore the original auth-method-derived disabled-nav and label assignments for the matched build
 
 ## Update Rules
 

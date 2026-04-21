@@ -12,6 +12,10 @@ GUARDED_CONTENT='const label="settings.agent.speed.label";function demo(){let ca
 SLASH_COMMAND_GUARDED_CONTENT='const label="composer.speedSlashCommand.title";function OG(){let e=(0,Q.c)(24),t=ea(),n=Lf(),{serviceTierSettings:r,setServiceTier:i}=Zf(),a;e[0]===r.serviceTier?a=e[1]:(a=N(r.serviceTier),e[0]=r.serviceTier,e[1]=a);let o=a===`fast`,s;e[2]===o?s=e[3]:(s=e=>{let{className:t}=e;return(0,$.jsx)(o?Wv:EG,{className:X(t,o?`text-token-link-foreground`:void 0)})},e[2]=o,e[3]=s);let c=s,l;e[4]===t?l=e[5]:(l=t.formatMessage(DG.title),e[4]=t,e[5]=l);let u;e[6]!==t||e[7]!==o?(u=t.formatMessage(o?DG.disableDescription:DG.commandDescription),e[6]=t,e[7]=o,e[8]=u):u=e[8];let d;e[9]!==o||e[10]!==i?(d=async()=>{await i(o?null:`fast`,`slash_command`)},e[9]=o,e[10]=i,e[11]=d):d=e[11];let f;e[12]!==n||e[13]!==o||e[14]!==r.isLoading||e[15]!==i?(f=[n,o,r.isLoading,i],e[12]=n,e[13]=o,e[14]=r.isLoading,e[15]=i,e[16]=f):f=e[16];let p;return e[17]!==c||e[18]!==n||e[19]!==l||e[20]!==u||e[21]!==d||e[22]!==f?(p={id:`speed`,title:l,description:u,requiresEmptyComposer:!1,enabled:n,Icon:c,onSelect:d,dependencies:f},e[17]=c,e[18]=n,e[19]=l,e[20]=u,e[21]=d,e[22]=f,e[23]=p):p=e[23],DI(p),null}'
 ADD_CONTEXT_SPEED_GUARDED_CONTENT='const label="composer.addContext.speed.option.fast.description";const IE=[];function zE(){let l=Sn(),D=Cr(),{serviceTierSettings:O,setServiceTier:k}=Ir(r);return D?(0,q.jsx)(Qa.FlyoutSubmenuItem,{LeftIcon:Coe,label:(0,q.jsx)(W,{...FE.label}),contentClassName:`min-w-[160px]`,disabled:O.isLoading,children:IE.map(e=>{let t=e.value===O.serviceTier;return(0,q.jsx)(Qa.Item,{disabled:O.isLoading,RightIcon:t?to:void 0,SubText:(0,q.jsx)(`span`,{className:`text-token-description-foreground`,children:(0,q.jsx)(W,{...FE[e.description]})}),onSelect:()=>{k(e.value,`composer_menu`),x()},children:(0,q.jsx)(W,{...FE[e.label]})},e.label)})}):null}'
 PLUGINS_SIDEBAR_GUARDED_CONTENT='const label="sidebarElectron.pluginsDisabledTooltip";function sidebar(){let e=ea(),{authMethod:T}=Nf(),D=Gf(),O=Hl(),k=cf(`533078438`),j=T===`apikey`,M=k&&j,N=O&&!j;return {e,D,O,k,j,M,N};}'
+GUARDED_CONTENT_26417='const label="settings.agent.speed.label";function an(){let e=(0,Q.c)(35),t=C(),n=ae(),{serviceTierSettings:r,setServiceTier:a}=se();if(!n)return null;let o;e[0]===r.serviceTier?o=e[1]:(o=i(r.serviceTier),e[0]=r.serviceTier,e[1]=o);let s=o;return {t,n,s,a};}'
+ADD_CONTEXT_SPEED_GUARDED_CONTENT_26417='const label="composer.addContext.speed.option.fast.description";const gD=zr.map(e=>({label:_D(e),description:vD(e),value:e}));function yD({conversationId:r}){let l=Cn(),u=oe(_),d=mD(),f=(0,K.useRef)(!1),p=Tt(uee),{isOpen:m,setIsOpen:h,tooltipOpen:g,triggerRef:v,onTriggerBlur:y,onTriggerPointerLeave:b,handleSelectAndClose:x}=pD(),S=Yl(r),{activeMode:C,modes:w,setSelectedMode:T,isLoading:E}=fD(r),D=cr(),{serviceTierSettings:O,setServiceTier:k}=jr(r),A=o===`connected`,j=C.mode===`plan`,M=O.serviceTier===`fast`;return D?(0,q.jsx)(Qa.FlyoutSubmenuItem,{disabled:O.isLoading,children:gD.map(e=>(0,q.jsx)(Qa.Item,{onSelect:()=>{k(e.value,`composer_menu`),x()}},e.label))}):null}'
+PLUGINS_SIDEBAR_GUARDED_CONTENT_26417='const label="sidebarElectron.pluginsDisabledTooltip";function jT(){let e=je(k),t=Pm(),n=nr(fw),r=Bg(),{remoteProjects:i,setSelectedRemoteProjectId:a}=Vp(),o=tg(()=>{r()}),s=ur(Jy),c=d(),l=x(),f=le(),{isDragActive:p,dropHandlers:m}=LT({onDropRoot:VT}),h=u(`/local/:conversationId`),g=u(`/remote/:conversationId`),_=u(`/worktree-init-v2/:pendingId`),[v,y]=(0,Z.useOptimistic)(aC({localId:h?.params.conversationId??null,remoteId:g?.params.conversationId??null,pendingId:_?.params.pendingId??null}),(e,t)=>t),b=tg(e=>{e!==v&&(0,Z.startTransition)(()=>{y(e)})}),S=WT(v),w=pa(),{authMethod:T}=$f(),D=Fs(),O=hf(`533078438`),A=T===`apikey`,j=O&&A,M=D&&!A;return {e,t,n,r,O,A,j,M};}'
+PLUGINS_SIDEBAR_PARTIAL_PATCHED_CONTENT_26417='const label="sidebarElectron.pluginsDisabledTooltip";function jT(){let e=je(k),t=Pm(),n=nr(fw),r=Bg(),{remoteProjects:i,setSelectedRemoteProjectId:a}=Vp(),o=tg(()=>{r()}),s=ur(Jy),c=d(),l=x(),f=le(),{isDragActive:p,dropHandlers:m}=LT({onDropRoot:VT}),h=u(`/local/:conversationId`),g=u(`/remote/:conversationId`),_=u(`/worktree-init-v2/:pendingId`),[v,y]=(0,Z.useOptimistic)(aC({localId:h?.params.conversationId??null,remoteId:g?.params.conversationId??null,pendingId:_?.params.pendingId??null}),(e,t)=>t),b=tg(e=>{e!==v&&(0,Z.startTransition)(()=>{y(e)})}),S=WT(v),w=pa(),{authMethod:T}=$f(),D=Fs(),O=hf(`533078438`),A=T===`apikey`,j=!1,M=D&&!A;return {e,t,n,r,O,A,j,M};}'
 
 mkdir -p "${STUB_BIN}"
 
@@ -418,16 +422,51 @@ write_standard_assets() {
   printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT}" > "${assets_dir}/sidebar.js"
 }
 
+write_26417_assets() {
+  local assets_dir="$1"
+
+  mkdir -p "${assets_dir}"
+  printf '%s\n' "${GUARDED_CONTENT_26417}" > "${assets_dir}/general-settings-D2eks1ok.js"
+  printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${assets_dir}/index-CxBol07n.js"
+  printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT_26417}" > "${assets_dir}/use-model-settings-ldiRRtPt.js"
+  printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT_26417}" > "${assets_dir}/sidebar-CxBol07n.js"
+}
+
+write_26417_partial_patched_assets() {
+  local assets_dir="$1"
+
+  mkdir -p "${assets_dir}"
+  printf '%s\n' "${GUARDED_CONTENT_26417}" > "${assets_dir}/general-settings-D2eks1ok.js"
+  printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT}" > "${assets_dir}/index-CxBol07n.js"
+  printf '%s\n' "${ADD_CONTEXT_SPEED_GUARDED_CONTENT_26417}" > "${assets_dir}/use-model-settings-ldiRRtPt.js"
+  printf '%s\n' "${PLUGINS_SIDEBAR_PARTIAL_PATCHED_CONTENT_26417}" > "${assets_dir}/sidebar-CxBol07n.js"
+}
+
 prepare_archived_fake_app() {
   local app_dir="$1"
   local assets_root="$2"
   local app_version="${3:-26.415.40636}"
   local app_build="${4:-1799}"
+  local asset_profile="${5:-standard}"
   local resources_dir="${app_dir}/Contents/Resources"
   local archive_path="${resources_dir}/app.asar"
 
   mkdir -p "${resources_dir}"
-  write_standard_assets "${assets_root}/webview/assets"
+  case "${asset_profile}" in
+    standard)
+      write_standard_assets "${assets_root}/webview/assets"
+      ;;
+    26417)
+      write_26417_assets "${assets_root}/webview/assets"
+      ;;
+    26417-partial)
+      write_26417_partial_patched_assets "${assets_root}/webview/assets"
+      ;;
+    *)
+      echo "unknown asset profile: ${asset_profile}"
+      exit 1
+      ;;
+  esac
   write_fake_asar "${assets_root}" "${archive_path}"
   write_info_plist "${app_dir}" "$(read_fake_asar_header_hash "${archive_path}")" "${app_version}" "${app_build}"
 }
@@ -508,6 +547,75 @@ assert_guarded_state() {
   fi
 }
 
+assert_apply_state_26417() {
+  local archive_path="$1"
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/general-settings-D2eks1ok.js" | grep -q 'let o;'; then
+    echo "expected 26.417 apply to remove the guarded Speed settings return"
+    read_fake_asar_file "${archive_path}" "webview/assets/general-settings-D2eks1ok.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-CxBol07n.js" | grep -q 'enabled:!0'; then
+    echo "expected 26.417 apply to enable the Fast slash command"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-CxBol07n.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/use-model-settings-ldiRRtPt.js" | grep -q 'D=!0'; then
+    echo "expected 26.417 apply to enable the add-context Speed menu"
+    read_fake_asar_file "${archive_path}" "webview/assets/use-model-settings-ldiRRtPt.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/sidebar-CxBol07n.js" | grep -q 'j=!1'; then
+    echo "expected 26.417 apply to remove the Plugins sidebar api-key gate"
+    read_fake_asar_file "${archive_path}" "webview/assets/sidebar-CxBol07n.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/sidebar-CxBol07n.js" | grep -Eq 'j=!1,M=D([,;])'; then
+    echo "expected 26.417 apply to expose the Plugins nav label for api-key users"
+    read_fake_asar_file "${archive_path}" "webview/assets/sidebar-CxBol07n.js"
+    exit 1
+  fi
+}
+
+assert_guarded_state_26417() {
+  local archive_path="$1"
+  local context="$2"
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/general-settings-D2eks1ok.js" | grep -q 'if(!n)return null;'; then
+    echo "expected ${context} to preserve the 26.417 guarded Speed settings state"
+    read_fake_asar_file "${archive_path}" "webview/assets/general-settings-D2eks1ok.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-CxBol07n.js" | grep -q 'enabled:n'; then
+    echo "expected ${context} to preserve the 26.417 guarded Fast slash command state"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-CxBol07n.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/use-model-settings-ldiRRtPt.js" | grep -q 'D=cr()'; then
+    echo "expected ${context} to preserve the 26.417 guarded add-context Speed menu state"
+    read_fake_asar_file "${archive_path}" "webview/assets/use-model-settings-ldiRRtPt.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/sidebar-CxBol07n.js" | grep -q 'j=O&&A'; then
+    echo "expected ${context} to preserve the 26.417 guarded Plugins sidebar state"
+    read_fake_asar_file "${archive_path}" "webview/assets/sidebar-CxBol07n.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/sidebar-CxBol07n.js" | grep -q 'M=D&&!A'; then
+    echo "expected ${context} to preserve the 26.417 guarded Plugins nav label state"
+    read_fake_asar_file "${archive_path}" "webview/assets/sidebar-CxBol07n.js"
+    exit 1
+  fi
+}
+
 FAKE_APP_EXISTING="${TMP_DIR}/Existing.app"
 FAKE_RESOURCES_EXISTING="${FAKE_APP_EXISTING}/Contents/Resources"
 OUTPUT_EXISTING_APPLY="${TMP_DIR}/apply-output.txt"
@@ -540,6 +648,47 @@ if [ "$(read_info_plist_hash "${FAKE_APP_EXISTING}")" != "$(read_fake_asar_heade
   cat "${FAKE_APP_EXISTING}/Contents/Info.plist"
   exit 1
 fi
+
+rm -f "${MARKER_FILE}"
+
+FAKE_APP_26417="${TMP_DIR}/Supported26417.app"
+FAKE_RESOURCES_26417="${FAKE_APP_26417}/Contents/Resources"
+OUTPUT_26417_APPLY="${TMP_DIR}/apply-26417-output.txt"
+OUTPUT_26417_RESTORE="${TMP_DIR}/restore-26417-output.txt"
+
+prepare_archived_fake_app "${FAKE_APP_26417}" "${TMP_DIR}/supported-26417-assets" "26.417.41555" "1858" "26417"
+
+run_script "${FAKE_APP_26417}" '2\n\nq\n' "${OUTPUT_26417_APPLY}"
+assert_codesign_calls 1 "${OUTPUT_26417_APPLY}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26417}" "${OUTPUT_26417_APPLY}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_26417}/app.asar"
+assert_apply_state_26417 "${FAKE_RESOURCES_26417}/app.asar"
+
+run_script "${FAKE_APP_26417}" '3\n\nq\n' "${OUTPUT_26417_RESTORE}"
+assert_codesign_calls 2 "${OUTPUT_26417_RESTORE}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26417}" "${OUTPUT_26417_RESTORE}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_26417}/app.asar"
+assert_guarded_state_26417 "${FAKE_RESOURCES_26417}/app.asar" "26.417 restore"
+
+if [ "$(read_info_plist_hash "${FAKE_APP_26417}")" != "$(read_fake_asar_header_hash "${FAKE_RESOURCES_26417}/app.asar")" ]; then
+  echo "expected ElectronAsarIntegrity hash to match restored 26.417 app.asar header"
+  cat "${FAKE_APP_26417}/Contents/Info.plist"
+  exit 1
+fi
+
+rm -f "${MARKER_FILE}"
+
+FAKE_APP_26417_PARTIAL="${TMP_DIR}/Supported26417Partial.app"
+FAKE_RESOURCES_26417_PARTIAL="${FAKE_APP_26417_PARTIAL}/Contents/Resources"
+OUTPUT_26417_PARTIAL_APPLY="${TMP_DIR}/apply-26417-partial-output.txt"
+
+prepare_archived_fake_app "${FAKE_APP_26417_PARTIAL}" "${TMP_DIR}/supported-26417-partial-assets" "26.417.41555" "1858" "26417-partial"
+
+run_script "${FAKE_APP_26417_PARTIAL}" '2\n\nq\n' "${OUTPUT_26417_PARTIAL_APPLY}"
+assert_codesign_calls 1 "${OUTPUT_26417_PARTIAL_APPLY}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26417_PARTIAL}" "${OUTPUT_26417_PARTIAL_APPLY}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_26417_PARTIAL}/app.asar"
+assert_apply_state_26417 "${FAKE_RESOURCES_26417_PARTIAL}/app.asar"
 
 rm -f "${MARKER_FILE}"
 

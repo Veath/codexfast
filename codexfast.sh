@@ -9,7 +9,7 @@ APP_ASAR="${APP_RESOURCES}/app.asar"
 APP_ASAR_BACKUP="${APP_RESOURCES}/app.asar1"
 APP_INFO_PLIST="${APP_BUNDLE}/Contents/Info.plist"
 BACKUP_SUFFIX=".speed-setting.bak"
-SUPPORTED_APP_VERSION_KEYS="26.415.40636+1799"
+SUPPORTED_APP_VERSION_KEYS="26.415.40636+1799 26.417.41555+1858"
 NPM_BIN=""
 TEMP_ROOT=""
 TEMP_APP_DIR=""
@@ -461,23 +461,33 @@ const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
 const ADD_CONTEXT_SPEED_NEEDLE = "composer.addContext.speed.option.fast.description";
 const PLUGINS_SIDEBAR_NEEDLE = "sidebarElectron.pluginsDisabledTooltip";
 const GUARDED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=_e\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ce\(\);)if\(!\1\)return null;/;
+  /([A-Za-z_$][\w$]*)=((?:_e|ae)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ce\(\);)let /;
+  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se)\(\);)let /;
 const NORMALIZED_PATCHED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=_e\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ce\(\);)let /;
+  /([A-Za-z_$][\w$]*)=((?:_e|ae)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se)\(\);)let /;
 const SLASH_COMMAND_GUARDED_SIGNATURE =
   /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)([A-Za-z_$][\w$]*)(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\w$]*})/;
 const SLASH_COMMAND_PATCHED_SIGNATURE =
   /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)!0(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\w$]*})/;
-const ADD_CONTEXT_SPEED_GUARDED_SIGNATURE =
+const ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_OLD =
   /([A-Za-z_$][\w$]*)=Cr\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ir\([^)]+\)[;,])/;
-const ADD_CONTEXT_SPEED_PATCHED_SIGNATURE =
+const ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_OLD =
   /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Ir\([^)]+\)[;,])/;
-const PLUGINS_SIDEBAR_GUARDED_SIGNATURE =
-  /(cf\(`533078438`\),)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)===`apikey`,/;
-const PLUGINS_SIDEBAR_PATCHED_SIGNATURE =
-  /(cf\(`533078438`\),)([A-Za-z_$][\w$]*)=!1,/;
+const ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_NEW =
+  /([A-Za-z_$][\w$]*)=cr\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=jr\([^)]+\)[;,])/;
+const ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_NEW =
+  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=jr\([^)]+\)[;,])/;
+const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?cf\(`533078438`\),)([A-Za-z_$][\w$]*)=\2===`apikey`,/;
+const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?cf\(`533078438`\),)([A-Za-z_$][\w$]*)=!1,/;
+const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_NEW =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?)([A-Za-z_$][\w$]*)=Fs\(\),([A-Za-z_$][\w$]*)=hf\(`533078438`\),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=\4&&\5,([A-Za-z_$][\w$]*)=\3&&!?\5([,;])/;
+const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_NEW =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?)([A-Za-z_$][\w$]*)=Fs\(\),([A-Za-z_$][\w$]*)=hf\(`533078438`\),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([A-Za-z_$][\w$]*)=\3([,;])/;
+const PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_NEW =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?)([A-Za-z_$][\w$]*)=Fs\(\),([A-Za-z_$][\w$]*)=hf\(`533078438`\),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([A-Za-z_$][\w$]*)=\3&&!?\5([,;])/;
 
 const TARGET_SPECS = [
   {
@@ -487,9 +497,29 @@ const TARGET_SPECS = [
     guardedSignature: GUARDED_SIGNATURE,
     patchedSignature: NORMALIZED_PATCHED_SIGNATURE,
     legacyPatchedSignature: PATCHED_SIGNATURE,
-    applyReplacement: "$1=_e(),$2",
-    normalizeReplacement: "$1=_e(),$2let ",
-    restoreReplacement: "$1=_e(),$2if(!$1)return null;let ",
+    applyReplacement: "$1=$2$3",
+    normalizeReplacement: "$1=$2$3let ",
+    restoreReplacement: "$1=$2$3if(!$1)return null;let ",
+  },
+  {
+    id: "add-context-speed-menu-old",
+    label: "Add-context Speed menu",
+    needle: ADD_CONTEXT_SPEED_NEEDLE,
+    guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_OLD,
+    patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_OLD,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1=!0,$2",
+    restoreReplacement: "$1=Cr(),$2",
+  },
+  {
+    id: "add-context-speed-menu-new",
+    label: "Add-context Speed menu",
+    needle: ADD_CONTEXT_SPEED_NEEDLE,
+    guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_NEW,
+    patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_NEW,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1=!0,$2",
+    restoreReplacement: "$1=cr(),$2",
   },
   {
     id: "fast-slash-command",
@@ -501,24 +531,26 @@ const TARGET_SPECS = [
     applyReplacement: "$1!0$3",
   },
   {
-    id: "add-context-speed-menu",
-    label: "Add-context Speed menu",
-    needle: ADD_CONTEXT_SPEED_NEEDLE,
-    guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE,
-    patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
-    applyReplacement: "$1=!0,$2",
-    restoreReplacement: "$1=Cr(),$2",
-  },
-  {
-    id: "plugins-access",
+    id: "plugins-access-old",
     label: "Plugins access",
     needle: PLUGINS_SIDEBAR_NEEDLE,
-    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE,
-    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE,
+    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD,
+    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD,
     legacyPatchedSignature: null,
-    applyReplacement: "$1$2=!1,",
-    restoreReplacement: "$1$2=$3===`apikey`,",
+    applyReplacement: "$1$3=!1,",
+    restoreReplacement: "$1$3=$2===`apikey`,",
+  },
+  {
+    id: "plugins-access-new",
+    label: "Plugins access",
+    needle: PLUGINS_SIDEBAR_NEEDLE,
+    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_NEW,
+    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_NEW,
+    legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_NEW,
+    applyReplacement: "$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=!1,$7=$3$8",
+    normalizeReplacement: "$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=!1,$7=$3$8",
+    restoreReplacement:
+      "$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=$4&&$5,$7=$3&&!$5$8",
   },
 ];
 
