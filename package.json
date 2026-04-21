@@ -1,6 +1,6 @@
 {
   "name": "codexfast",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Expose hidden custom API features in Codex.app for macOS users on verified compatible builds.",
   "scripts": {
     "test": "bash test/re-sign-flow.sh"
