@@ -2,9 +2,9 @@
 
 [中文说明](./README.zh-CN.md)
 
-**Re-enable hidden custom-API features in `Codex.app` on macOS.**
+**A macOS patch script for `Codex.app` that re-enables hidden custom API features on verified compatible builds.**
 
-A single-file patcher for custom-API Codex users. It auto-checks version compatibility, repacks `app.asar`, and performs a local ad-hoc re-sign — no manual bundle editing.
+`codexfast` is a single-file patcher for custom-API Codex users who want to restore hidden `Codex.app` features such as the Settings Fast control, the composer `/fast` slash command, the `Add files and more / +` Speed submenu, and Plugins access.
 
 - **Fast settings** control in Settings
 - **Composer `/fast`** slash command

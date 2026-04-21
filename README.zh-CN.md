@@ -2,9 +2,9 @@
 
 [English README](./README.md)
 
-**在 macOS 上重新启用 `Codex.app` 里被隐藏的 custom API 能力。**
+**一个面向 `Codex.app` 的 macOS patch 脚本，用于在已验证兼容的版本上重新启用被隐藏的 custom API 能力。**
 
-面向 custom API 用户的单文件 patcher，自动完成版本兼容检查、`app.asar` 重打包和本地 ad-hoc 重签名，不需要手动改应用包。
+`codexfast` 是一个面向 custom API 用户的单文件 patcher，用来恢复 `Codex.app` 中被隐藏的能力，包括 Settings 里的 Fast 设置项、输入框 `/fast` 命令、`Add files and more / +` 下的 Speed 子菜单，以及 Plugins 入口。
 
 - **Fast 设置项**（Settings 中）
 - **`/fast` 输入框命令**
