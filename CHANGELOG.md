@@ -6,10 +6,21 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-04-24
+
+### Added
+
+- Added 26.422 `GPT-5.5 model list` and `GPT-5.5 model query selector` patch targets that inject a Codex-shaped `gpt-5.5` UI catalog entry and preserve it after the app filters raw models into `modelsByType.models`.
+
+### Changed
+
+- Expanded the shell regression flow to cover apply and restore behavior for the GPT-5.5 model-list and query-selector injections.
+
 ### Documentation
 
 - Improved README search terms and npm package metadata for GitHub, Google, and npm discoverability.
 - Expanded README usage instructions for viewing status, enabling features, and restoring the original app state.
+- Documented the GPT-5.5 model-list patch scope and provider-support boundary.
 
 ## [0.5.0] - 2026-04-24
 

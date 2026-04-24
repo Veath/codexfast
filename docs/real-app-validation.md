@@ -25,6 +25,12 @@ Run these checks after any meaningful bundle change, patch-signature update, or 
 - Opening `Plugins` does not fail only because of the auth-method gate
 - At least one plugin install or connect path is not blocked solely by `authMethod === "apikey"`
 
+## Model List
+
+- `GPT-5.5` appears in the app model picker for custom API users
+- Selecting `GPT-5.5` writes the expected model setting
+- A custom API provider request using `model: "gpt-5.5"` still succeeds independently of the UI catalog injection
+
 ## Recovery Checks
 
 - `Restore original state` completes successfully

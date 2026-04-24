@@ -29,8 +29,16 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - This removes the sidebar auth-method gate for API-key users.
 - This does not guarantee that every plugin install or connector flow is available. Connector availability, plugin state, or admin-side restrictions may still block a specific plugin.
 
+### GPT-5.5 model-list entry for custom API users
+
+- Exposes `GPT-5.5` in the app model list on supported builds when the bundled model catalog does not include it.
+- On `26.422.21637`, the app filters the raw `model/list` response into `modelsByType` before rendering menus, so the patch also preserves the injected entry after that query selector filter.
+- This injects the UI catalog metadata only. The configured custom API provider must still accept `gpt-5.5` at request time.
+- This does not replace the app's model execution path or make Codex merge arbitrary custom provider `/v1/models` responses into the UI catalog.
+
 ## Scope Rules
 
 - `Settings-side Fast control`, composer `/fast`, and the composer-side `Speed` menu should be treated as one combined Fast feature set.
 - `Plugins` support should not be described as available unless the sidebar gate patch still works cleanly on the target build.
+- `GPT-5.5` model-list support should not be described as provider support. It is only a UI catalog entry.
 - Compatibility claims must also match `docs/compatibility-matrix.md` and the strict whitelist in `codexfast.sh`.

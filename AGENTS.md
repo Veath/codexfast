@@ -49,6 +49,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - the composer `/fast` slash command
   - the composer-side `Speed` menu, whether exposed through add-context or Intelligence UI
   - the Plugins sidebar auth-method gate
+  - the GPT-5.5 model-list bridge and model query selector injection targets
   - unsupported-version blocking before unpack, backup, and re-sign
   - restore symmetry for all patched paths
 - Confirm status output still reports:

@@ -461,6 +461,10 @@ const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
 const ADD_CONTEXT_SPEED_NEEDLE = "composer.addContext.speed.option.fast.description";
 const INTELLIGENCE_SPEED_NEEDLE = "composer.intelligenceDropdown.speed.title";
 const PLUGINS_SIDEBAR_NEEDLE = "sidebarElectron.pluginsDisabledTooltip";
+const MODEL_LIST_NEEDLE = "\"list-models-for-host\"";
+const MODEL_QUERY_NEEDLE = "modelsByType";
+const GPT_55_MODEL_ENTRY =
+  "{id:`gpt-5.5`,model:`gpt-5.5`,upgrade:null,upgradeInfo:null,availabilityNux:null,displayName:`GPT-5.5`,description:`Frontier model for complex coding, research, and real-world work.`,hidden:!1,supportedReasoningEfforts:[{reasoningEffort:`low`,description:`Fast responses with lighter reasoning`},{reasoningEffort:`medium`,description:`Balances speed and reasoning depth for everyday tasks`},{reasoningEffort:`high`,description:`Greater reasoning depth for complex problems`},{reasoningEffort:`xhigh`,description:`Extra high reasoning depth for complex problems`}],defaultReasoningEffort:`medium`,inputModalities:[`text`],supportsPersonality:!0,additionalSpeedTiers:[`fast`],isDefault:!1}";
 const GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
@@ -499,6 +503,14 @@ const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26422 =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=(\$f\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))([,;])/;
 const PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26422 =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=(\$f\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))&&!\5([,;])/;
+const MODEL_LIST_GUARDED_SIGNATURE =
+  /("list-models-for-host":i9\()\(([A-Za-z_$][\w$]*),\{hostId:([A-Za-z_$][\w$]*),\.\.\.([A-Za-z_$][\w$]*)\}\)=>\2\.sendRequest\(`model\/list`,\4\)(\))/;
+const MODEL_LIST_PATCHED_SIGNATURE =
+  /("list-models-for-host":i9\()async\(([A-Za-z_$][\w$]*),\{hostId:([A-Za-z_$][\w$]*),\.\.\.([A-Za-z_$][\w$]*)\}\)=>\/\*codexfast-gpt55\*\/\{let ([A-Za-z_$][\w$]*)=await \2\.sendRequest\(`model\/list`,\4\);return Array\.isArray\(\5\.data\)&&!\5\.data\.some\(e=>e\.model===`gpt-5\.5`\)\?\{\.\.\.\5,data:\[\.\.\.\5\.data,\{id:`gpt-5\.5`[^]*?isDefault:!1\}\]\}:\5\}(\))/;
+const MODEL_QUERY_GUARDED_SIGNATURE =
+  /(\}\}\),)([A-Za-z_$][\w$]*)\?\?=([A-Za-z_$][\w$]*)\.models\.find\(e=>e\.model===([A-Za-z_$][\w$]*)\.defaultModel\)\?\?null,\{modelsByType:\3,defaultModel:\2\}/;
+const MODEL_QUERY_PATCHED_SIGNATURE =
+  /(\}\}\),)\/\*codexfast-gpt55-select\*\/([A-Za-z_$][\w$]*)\.models\.some\(e=>e\.model===`gpt-5\.5`\)\|\|\2\.models\.push\(\{id:`gpt-5\.5`[^]*?isDefault:!1\}\),([A-Za-z_$][\w$]*)\?\?=\2\.models\.find\(e=>e\.model===([A-Za-z_$][\w$]*)\.defaultModel\)\?\?null,\{modelsByType:\2,defaultModel:\3\}/;
 
 const TARGET_SPECS = [
   {
@@ -583,6 +595,30 @@ const TARGET_SPECS = [
     applyReplacement: "$1$3=$4,$5=$2===`apikey`,$6=!1,$7$8=$9$10",
     normalizeReplacement: "$1$3=$4,$5=$2===`apikey`,$6=!1,$7$8=$9$10",
     restoreReplacement: "$1$3=$4,$5=$2===`apikey`,$6=$3&&$5,$7$8=$9&&!$5$10",
+  },
+  {
+    id: "gpt55-model-list",
+    label: "GPT-5.5 model list",
+    needle: MODEL_LIST_NEEDLE,
+    guardedSignature: MODEL_LIST_GUARDED_SIGNATURE,
+    patchedSignature: MODEL_LIST_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: (_, prefix, managerVar, hostVar, paramsVar, suffix) =>
+      `${prefix}async(${managerVar},{hostId:${hostVar},...${paramsVar}})=>/*codexfast-gpt55*/{let r=await ${managerVar}.sendRequest(\`model/list\`,${paramsVar});return Array.isArray(r.data)&&!r.data.some(e=>e.model===\`gpt-5.5\`)?{...r,data:[...r.data,${GPT_55_MODEL_ENTRY}]}:r}${suffix}`,
+    restoreReplacement: (_, prefix, managerVar, hostVar, paramsVar, resultVar, suffix) =>
+      `${prefix}(${managerVar},{hostId:${hostVar},...${paramsVar}})=>${managerVar}.sendRequest(\`model/list\`,${paramsVar})${suffix}`,
+  },
+  {
+    id: "gpt55-model-query-selector",
+    label: "GPT-5.5 model query selector",
+    needle: MODEL_QUERY_NEEDLE,
+    guardedSignature: MODEL_QUERY_GUARDED_SIGNATURE,
+    patchedSignature: MODEL_QUERY_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: (_, prefix, defaultVar, modelsByTypeVar, configVar) =>
+      `${prefix}/*codexfast-gpt55-select*/${modelsByTypeVar}.models.some(e=>e.model===\`gpt-5.5\`)||${modelsByTypeVar}.models.push(${GPT_55_MODEL_ENTRY}),${defaultVar}??=${modelsByTypeVar}.models.find(e=>e.model===${configVar}.defaultModel)??null,{modelsByType:${modelsByTypeVar},defaultModel:${defaultVar}}`,
+    restoreReplacement: (_, prefix, modelsByTypeVar, defaultVar, configVar) =>
+      `${prefix}${defaultVar}??=${modelsByTypeVar}.models.find(e=>e.model===${configVar}.defaultModel)??null,{modelsByType:${modelsByTypeVar},defaultModel:${defaultVar}}`,
   },
 ];
 

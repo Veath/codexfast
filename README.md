@@ -1,21 +1,22 @@
-# codexfast - enable Fast mode and Plugins in OpenAI Codex.app
+# codexfast - enable Fast mode, GPT-5.5, and Plugins in OpenAI Codex.app
 
 [中文说明](./README.zh-CN.md)
 
 **A macOS patch script for OpenAI `Codex.app` that re-enables hidden custom API features on verified compatible builds.**
 
-`codexfast` is a single-file OpenAI Codex.app patcher for custom API users on macOS. It restores hidden Fast mode features such as the Settings Fast control, the composer `/fast` slash command, the composer Speed menu, and Plugins access.
+`codexfast` is a single-file OpenAI Codex.app patcher for custom API users on macOS. It restores hidden Fast mode features such as the Settings Fast control, the composer `/fast` slash command, the composer Speed menu, the GPT-5.5 model-list entry, and Plugins access.
 
 - **Fast settings** control in Settings
 - **Composer `/fast`** slash command
 - **Speed submenu** in the composer
+- **GPT-5.5** model-list entry for custom-API users
 - **Plugins access** for custom-API users
 
 ```bash
 npx codexfast
 ```
 
-Search terms: OpenAI Codex.app, Codex Fast mode, `/fast`, Speed menu, Plugins, custom API, macOS, `npx codexfast`.
+Search terms: OpenAI Codex.app, Codex Fast mode, GPT-5.5 model list, `/fast`, Speed menu, Plugins, custom API, macOS, `npx codexfast`.
 
 Verified for `Codex.app` `26.415.40636` (`build 1799`), `26.417.41555` (`build 1858`), and `26.422.21637` (`build 2056`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
 
@@ -67,6 +68,7 @@ Choose **2) Enable custom API features** when status reports a supported build. 
 - Fast control in Settings
 - `/fast` slash command in the composer
 - Speed menu in the composer
+- GPT-5.5 in the model list
 - Plugins sidebar access for custom-API users
 
 The first enable run creates backups, updates `app.asar`, refreshes the Electron ASAR integrity hash, and runs an ad-hoc re-sign. Restart `Codex.app` after the script finishes.
@@ -86,6 +88,7 @@ The script does not use an official API — it matches code signatures in fronte
 - Verified on `Codex.app` `26.422.21637` (`build 2056`)
 - **Enable** is blocked unless the installed version/build is whitelisted
 - **View status** and **Restore** work on any version
+- The GPT-5.5 model-list patch only injects the UI catalog entry and keeps it visible after Codex filters the model query; your configured provider must still support `gpt-5.5`
 - For Plugins, the script only removes the custom-API sidebar gate — actual plugin availability can still depend on connectors, plugin state, or admin restrictions
 
 Re-run **View current status** after every Codex update.
@@ -114,6 +117,8 @@ codesign --force --deep --sign - /Applications/Codex.app
 **Target not found / version unsupported** — do not continue, do not hand-patch. The build likely needs a new adaptation.
 
 **Plugins visible but still unusable** — not caused by this script. Check connector availability, plugin state, or admin-side restrictions.
+
+**GPT-5.5 visible but requests fail** — the UI entry is present, but your custom API provider still needs to accept `model: "gpt-5.5"`.
 
 **`Codex.app` won't open after an old broken run** (left `Resources/app` behind or wrote a bad integrity hash):
 

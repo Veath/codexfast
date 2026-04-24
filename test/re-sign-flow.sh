@@ -20,6 +20,8 @@ GUARDED_CONTENT_26422='const label="settings.agent.speed.label";function Tn(){le
 SLASH_COMMAND_GUARDED_CONTENT_26422='const slashLabel26422="composer.speedSlashCommand.title";function FY(){let e=(0,Q.c)(24),t=ka(),n=_f(),{serviceTierSettings:r,setServiceTier:i}=Jp(),a;e[0]===r.serviceTier?a=e[1]:(a=ye(r.serviceTier),e[0]=r.serviceTier,e[1]=a);let o=a===`fast`,s;e[2]===o?s=e[3]:(s=e=>{let{className:t}=e;return(0,$.jsx)(o?ub:NY,{className:X(t,o?`text-token-link-foreground`:void 0)})},e[2]=o,e[3]=s);let c=s,l;e[4]===t?l=e[5]:(l=t.formatMessage(PY.title),e[4]=t,e[5]=l);let u;e[6]!==t||e[7]!==o?(u=t.formatMessage(o?PY.disableDescription:PY.commandDescription),e[6]=t,e[7]=o,e[8]=u):u=e[8];let d;e[9]!==o||e[10]!==i?(d=async()=>{await i(o?null:`fast`,`slash_command`)},e[9]=o,e[10]=i,e[11]=d):d=e[11];let f;e[12]!==n||e[13]!==o||e[14]!==r.isLoading||e[15]!==i?(f=[n,o,r.isLoading,i],e[12]=n,e[13]=o,e[14]=r.isLoading,e[15]=i,e[16]=f):f=e[16];let p;return e[17]!==c||e[18]!==n||e[19]!==l||e[20]!==u||e[21]!==d||e[22]!==f?(p={id:`speed`,title:l,description:u,requiresEmptyComposer:!1,enabled:n,Icon:c,onSelect:d,dependencies:f},e[17]=c,e[18]=n,e[19]=l,e[20]=u,e[21]=d,e[22]=f,e[23]=p):p=e[23],Iz(p),null}'
 INTELLIGENCE_SPEED_GUARDED_CONTENT_26422='const intelligenceSpeedLabel26422="composer.intelligenceDropdown.speed.title";function menu(){let t=(0,Q.c)(74),{serviceTierSettings:m,setServiceTier:h}=Jp(n),g=_f(),_=z(eU,n),N=m.serviceTier,U=done;let ge;t[56]!==U||t[57]!==g||t[58]!==N||t[59]!==m.isLoading||t[60]!==h?(ge=g?(0,$.jsx)(cU,{selectedServiceTier:N,isLoading:m.isLoading,setServiceTier:h,onSelectComplete:U}):null,t[56]=U,t[57]=g,t[58]=N,t[59]=m.isLoading,t[60]=h,t[61]=ge):ge=t[61];return ge}'
 PLUGINS_SIDEBAR_GUARDED_CONTENT_26422='const pluginsLabel26422="sidebarElectron.pluginsDisabledTooltip";function xA(){let e=R(Qe),T=ka(),{authMethod:D}=zp(),O=$f(`533078438`),k=D===`apikey`,A=O&&k,j=T.formatMessage({id:`sidebarElectron.addGenericWorkspaceRoot`}),M=T.formatMessage({id:`sidebarElectron.newThread`}),N=T.formatMessage({id:`sidebarElectron.recentChats`}),P=T.formatMessage({id:`sidebarElectron.pinnedThreads`}),F=Sg(()=>{}),I=$f(`3326157269`),L=W_(),z=J(DD),B=J(kS),V=tx(),H=Py(),U=Ng(),W=Cp(),G=!H,{remoteConnections:K}=jp(),q=g_(K),ee=Ha({hostId:me})&&!k,te=W&&q.length>0;return {e,T,D,O,k,A,ee,te};}'
+MODEL_LIST_GUARDED_CONTENT_26422='const modelListLabel26422="list-models-for-host";const handlers={"list-models-for-host":i9((e,{hostId:t,...n})=>e.sendRequest(`model/list`,n)),"list-plugins":i9((e,{hostId:t,...n})=>e.sendRequest(`plugin/list`,n))};'
+MODEL_QUERY_GUARDED_CONTENT_26422='function He(){let c=`apikey`,d={useHiddenModels:!0,availableModels:new Set([`gpt-5.4`]),defaultModel:`gpt-5.4`};let g=e=>{let{data:t}=e,n={models:[]},r=null;return t.forEach(e=>{if(d.useHiddenModels?d.availableModels.has(e.model):!e.hidden){let t=c===`copilot`?[e.supportedReasoningEfforts.find(Ue)??{reasoningEffort:`medium`,description:`medium effort`}]:[...e.supportedReasoningEfforts];n.models.push({...e,supportedReasoningEfforts:t}),r=e.isDefault?e:r}}),r??=n.models.find(e=>e.model===d.defaultModel)??null,{modelsByType:n,defaultModel:r}};return g}'
 
 mkdir -p "${STUB_BIN}"
 
@@ -454,6 +456,8 @@ write_26422_assets() {
   printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT_26422}" > "${assets_dir}/index-gATb9Tvd.js"
   printf '%s\n' "${INTELLIGENCE_SPEED_GUARDED_CONTENT_26422}" >> "${assets_dir}/index-gATb9Tvd.js"
   printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT_26422}" >> "${assets_dir}/index-gATb9Tvd.js"
+  printf '%s\n' "${MODEL_LIST_GUARDED_CONTENT_26422}" >> "${assets_dir}/index-gATb9Tvd.js"
+  printf '%s\n' "${MODEL_QUERY_GUARDED_CONTENT_26422}" > "${assets_dir}/font-settings-C9TXXljS.js"
 }
 
 prepare_archived_fake_app() {
@@ -665,6 +669,18 @@ assert_apply_state_26422() {
     read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
     exit 1
   fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'codexfast-gpt55'; then
+    echo "expected 26.422 apply to inject GPT-5.5 into the model list"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/font-settings-C9TXXljS.js" | grep -q 'codexfast-gpt55-select'; then
+    echo "expected 26.422 apply to keep GPT-5.5 visible after the model query filter"
+    read_fake_asar_file "${archive_path}" "webview/assets/font-settings-C9TXXljS.js"
+    exit 1
+  fi
 }
 
 assert_guarded_state_26422() {
@@ -698,6 +714,30 @@ assert_guarded_state_26422() {
   if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'ee=Ha({hostId:me})&&!k'; then
     echo "expected ${context} to preserve the 26.422 guarded Plugins nav label state"
     read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q '"list-models-for-host":i9((e,{hostId:t,...n})=>e.sendRequest(`model/list`,n))'; then
+    echo "expected ${context} to preserve the guarded model list handler"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'codexfast-gpt55'; then
+    echo "expected ${context} to remove the GPT-5.5 model list injection"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/font-settings-C9TXXljS.js" | grep -q 'r??=n.models.find(e=>e.model===d.defaultModel)??null,{modelsByType:n,defaultModel:r}'; then
+    echo "expected ${context} to preserve the guarded model query selector"
+    read_fake_asar_file "${archive_path}" "webview/assets/font-settings-C9TXXljS.js"
+    exit 1
+  fi
+
+  if read_fake_asar_file "${archive_path}" "webview/assets/font-settings-C9TXXljS.js" | grep -q 'codexfast-gpt55-select'; then
+    echo "expected ${context} to remove the GPT-5.5 model query selector injection"
+    read_fake_asar_file "${archive_path}" "webview/assets/font-settings-C9TXXljS.js"
     exit 1
   fi
 }
@@ -781,6 +821,7 @@ rm -f "${MARKER_FILE}"
 FAKE_APP_26422="${TMP_DIR}/Supported26422.app"
 FAKE_RESOURCES_26422="${FAKE_APP_26422}/Contents/Resources"
 OUTPUT_26422_APPLY="${TMP_DIR}/apply-26422-output.txt"
+OUTPUT_26422_STATUS="${TMP_DIR}/status-26422-output.txt"
 OUTPUT_26422_RESTORE="${TMP_DIR}/restore-26422-output.txt"
 
 prepare_archived_fake_app "${FAKE_APP_26422}" "${TMP_DIR}/supported-26422-assets" "26.422.21637" "2056" "26422"
@@ -790,6 +831,18 @@ assert_codesign_calls 1 "${OUTPUT_26422_APPLY}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26422}" "${OUTPUT_26422_APPLY}"
 assert_fake_asar_js_parses "${FAKE_RESOURCES_26422}/app.asar"
 assert_apply_state_26422 "${FAKE_RESOURCES_26422}/app.asar"
+
+run_script "${FAKE_APP_26422}" '1\n\nq\n' "${OUTPUT_26422_STATUS}"
+if grep -q 'Current state: GPT-5.5 model query selector disabled' "${OUTPUT_26422_STATUS}"; then
+  echo "expected 26.422 status to report the GPT-5.5 model query selector as enabled after apply"
+  cat "${OUTPUT_26422_STATUS}"
+  exit 1
+fi
+if ! grep -q 'Current state: GPT-5.5 model query selector enabled' "${OUTPUT_26422_STATUS}"; then
+  echo "expected 26.422 status to include the GPT-5.5 model query selector target"
+  cat "${OUTPUT_26422_STATUS}"
+  exit 1
+fi
 
 run_script "${FAKE_APP_26422}" '3\n\nq\n' "${OUTPUT_26422_RESTORE}"
 assert_codesign_calls 2 "${OUTPUT_26422_RESTORE}"
