@@ -33,6 +33,8 @@ npx codexfast
 
 仅支持 macOS。需要：`Codex.app` 安装在 `/Applications`，命令行可用 `node`、`npm` 和系统自带的 `codesign`。
 
+运行 patcher：
+
 ```bash
 npx codexfast
 ```
@@ -43,7 +45,37 @@ npx codexfast
 ./codexfast.sh
 ```
 
-先执行 **查看当前状态**，只有在兼容性显示为 `supported` 时再执行开启动作。
+脚本会打开一个交互菜单：
+
+```text
+1) View current status
+2) Enable custom API features
+3) Restore original state
+q) Quit
+```
+
+### 查看状态
+
+先选择 **1) View current status**。状态检查会读取当前安装的 `Codex.app`，显示检测到的版本和 build，告诉你兼容性是否为 `supported`，并列出 app bundle 里找到的 patch 目标。
+
+每次 Codex 更新后都先跑一次查看状态。如果兼容性不是 `supported`，不要在这个版本上开补丁。
+
+### 开启功能
+
+当状态显示当前 build 已支持时，选择 **2) Enable custom API features**。这会开启当前支持的能力集合：
+
+- Settings 里的 Fast 控制项
+- composer 里的 `/fast` slash command
+- composer 里的 Speed 菜单
+- custom API 用户的 Plugins 侧边栏入口
+
+第一次开启时脚本会创建备份，更新 `app.asar`，刷新 Electron ASAR integrity hash，并执行本地 ad-hoc 重签名。脚本完成后重启 `Codex.app`。
+
+### 关闭或恢复
+
+选择 **3) Restore original state** 可以关闭补丁。恢复流程会优先把 `Codex.app` 回滚到备份的原始 vendor bundle，必要时重新签名。
+
+排查问题、测试新的 Codex 更新，或想回到官方原始行为时，都可以先执行恢复。
 
 ## 兼容性
 

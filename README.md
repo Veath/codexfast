@@ -33,6 +33,8 @@ Patching unpacks `app.asar`, rewrites the frontend assets, repacks, updates the 
 
 macOS only. Requires `Codex.app` at `/Applications`, plus `node`, `npm`, and the built-in `codesign`.
 
+Run the patcher:
+
 ```bash
 npx codexfast
 ```
@@ -43,7 +45,37 @@ Or from a clone of this repo:
 ./codexfast.sh
 ```
 
-Always run **View current status** first. Only enable when compatibility is `supported`.
+The script opens an interactive menu:
+
+```text
+1) View current status
+2) Enable custom API features
+3) Restore original state
+q) Quit
+```
+
+### View Status
+
+Choose **1) View current status** before changing anything. Status checks the installed `Codex.app`, reports the detected version/build, shows whether the build is `supported`, and lists the patch targets found in the app bundle.
+
+Use this after every Codex update. If compatibility is not `supported`, do not enable the patch on that build.
+
+### Enable Features
+
+Choose **2) Enable custom API features** when status reports a supported build. This enables the supported feature set:
+
+- Fast control in Settings
+- `/fast` slash command in the composer
+- Speed menu in the composer
+- Plugins sidebar access for custom-API users
+
+The first enable run creates backups, updates `app.asar`, refreshes the Electron ASAR integrity hash, and runs an ad-hoc re-sign. Restart `Codex.app` after the script finishes.
+
+### Disable or Restore
+
+Choose **3) Restore original state** to turn the patch off. Restore rolls `Codex.app` back to the vendor bundle when the archive backup is available, then re-signs if needed.
+
+Use restore before troubleshooting, before testing a fresh Codex update, or whenever you want to return to the original app behavior.
 
 ## Compatibility
 

@@ -9,6 +9,7 @@ This project follows a simple release-oriented changelog format.
 ### Documentation
 
 - Improved README search terms and npm package metadata for GitHub, Google, and npm discoverability.
+- Expanded README usage instructions for viewing status, enabling features, and restoring the original app state.
 
 ## [0.5.0] - 2026-04-24
 
