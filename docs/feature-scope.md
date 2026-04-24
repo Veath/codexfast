@@ -16,10 +16,12 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - Exposes the `/fast` slash command in the composer.
 - This is the prompt-side command path for enabling or disabling Fast mode during composition.
 
-### `Add files and more / +` Speed submenu
+### Composer Speed menu
 
-- Exposes the `Speed` submenu under the composer attachment/context menu.
-- On supported builds this submenu should surface `Standard` and `Fast`.
+- Exposes the composer-side `Speed` menu.
+- On `26.415.40636` and `26.417.41555`, this is the `Add files and more / +` Speed submenu.
+- On `26.422.21637`, this is the composer `Intelligence` dropdown Speed submenu.
+- On supported builds this menu should surface `Standard` and `Fast`.
 
 ### Plugins sidebar access for custom API users
 
@@ -29,6 +31,6 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 ## Scope Rules
 
-- `Settings-side Fast control`, composer `/fast`, and the add-context `Speed` submenu should be treated as one combined Fast feature set.
+- `Settings-side Fast control`, composer `/fast`, and the composer-side `Speed` menu should be treated as one combined Fast feature set.
 - `Plugins` support should not be described as available unless the sidebar gate patch still works cleanly on the target build.
 - Compatibility claims must also match `docs/compatibility-matrix.md` and the strict whitelist in `codexfast.sh`.

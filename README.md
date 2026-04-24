@@ -4,18 +4,18 @@
 
 **A macOS patch script for `Codex.app` that re-enables hidden custom API features on verified compatible builds.**
 
-`codexfast` is a single-file patcher for custom-API Codex users who want to restore hidden `Codex.app` features such as the Settings Fast control, the composer `/fast` slash command, the `Add files and more / +` Speed submenu, and Plugins access.
+`codexfast` is a single-file patcher for custom-API Codex users who want to restore hidden `Codex.app` features such as the Settings Fast control, the composer `/fast` slash command, the composer Speed menu, and Plugins access.
 
 - **Fast settings** control in Settings
 - **Composer `/fast`** slash command
-- **Speed submenu** under `Add files and more / +`
+- **Speed submenu** in the composer
 - **Plugins access** for custom-API users
 
 ```bash
 npx codexfast
 ```
 
-Verified for `Codex.app` `26.415.40636` (`build 1799`) and `26.417.41555` (`build 1858`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
+Verified for `Codex.app` `26.415.40636` (`build 1799`), `26.417.41555` (`build 1858`), and `26.422.21637` (`build 2056`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
 
 ## What It Does
 
@@ -49,6 +49,7 @@ The script does not use an official API — it matches code signatures in fronte
 
 - Verified on `Codex.app` `26.415.40636` (`build 1799`)
 - Verified on `Codex.app` `26.417.41555` (`build 1858`)
+- Verified on `Codex.app` `26.422.21637` (`build 2056`)
 - **Enable** is blocked unless the installed version/build is whitelisted
 - **View status** and **Restore** work on any version
 - For Plugins, the script only removes the custom-API sidebar gate — actual plugin availability can still depend on connectors, plugin state, or admin restrictions

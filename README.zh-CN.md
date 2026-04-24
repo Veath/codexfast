@@ -4,18 +4,18 @@
 
 **一个面向 `Codex.app` 的 macOS patch 脚本，用于在已验证兼容的版本上重新启用被隐藏的 custom API 能力。**
 
-`codexfast` 是一个面向 custom API 用户的单文件 patcher，用来恢复 `Codex.app` 中被隐藏的能力，包括 Settings 里的 Fast 设置项、输入框 `/fast` 命令、`Add files and more / +` 下的 Speed 子菜单，以及 Plugins 入口。
+`codexfast` 是一个面向 custom API 用户的单文件 patcher，用来恢复 `Codex.app` 中被隐藏的能力，包括 Settings 里的 Fast 设置项、输入框 `/fast` 命令、composer 里的 Speed 菜单，以及 Plugins 入口。
 
 - **Fast 设置项**（Settings 中）
 - **`/fast` 输入框命令**
-- **Speed 子菜单**（`Add files and more / +` 中）
+- **Speed 子菜单**（composer 中）
 - **Plugins 入口**（custom API 用户可用）
 
 ```bash
 npx codexfast
 ```
 
-已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）和 `26.417.41555`（`build 1858`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
+已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）、`26.417.41555`（`build 1858`）和 `26.422.21637`（`build 2056`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
 
 ## 作用
 
@@ -49,6 +49,7 @@ npx codexfast
 
 - 已验证版本：`Codex.app` `26.415.40636`（`build 1799`）
 - 已验证版本：`Codex.app` `26.417.41555`（`build 1858`）
+- 已验证版本：`Codex.app` `26.422.21637`（`build 2056`）
 - **开启动作** 只允许在白名单里的 version/build 上执行
 - **查看状态** 和 **恢复** 在任何版本都可用
 - Plugins 仅移除 custom API 用户的侧边栏鉴权 gate；插件最终是否可用仍取决于 connector 可用性、插件自身状态以及应用内管理侧限制

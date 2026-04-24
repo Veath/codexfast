@@ -6,6 +6,17 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-04-24
+
+### Added
+
+- Added support for `Codex.app` `26.422.21637` (`build 2056`), including patch signatures and strict compatibility gating while keeping prior supported builds covered.
+- Added support for the 26.422 composer `Intelligence` dropdown Speed menu, replacing the older add-context Speed target for that build.
+
+### Documentation
+
+- Recorded the 26.422 supported build in the compatibility matrix, README files, patch target notes, and bundle notes.
+
 ## [0.4.1] - 2026-04-21
 
 ### Fixed

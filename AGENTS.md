@@ -47,7 +47,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
 - Confirm `bash test/re-sign-flow.sh` still covers:
   - the Settings-side Fast control
   - the composer `/fast` slash command
-  - the add-context `Speed` submenu
+  - the composer-side `Speed` menu, whether exposed through add-context or Intelligence UI
   - the Plugins sidebar auth-method gate
   - unsupported-version blocking before unpack, backup, and re-sign
   - restore symmetry for all patched paths

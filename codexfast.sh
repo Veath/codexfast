@@ -9,7 +9,7 @@ APP_ASAR="${APP_RESOURCES}/app.asar"
 APP_ASAR_BACKUP="${APP_RESOURCES}/app.asar1"
 APP_INFO_PLIST="${APP_BUNDLE}/Contents/Info.plist"
 BACKUP_SUFFIX=".speed-setting.bak"
-SUPPORTED_APP_VERSION_KEYS="26.415.40636+1799 26.417.41555+1858"
+SUPPORTED_APP_VERSION_KEYS="26.415.40636+1799 26.417.41555+1858 26.422.21637+2056"
 NPM_BIN=""
 TEMP_ROOT=""
 TEMP_APP_DIR=""
@@ -459,13 +459,14 @@ const assetsDir = path.resolve(assetsDirArg);
 const SPEED_LABEL_NEEDLE = "settings.agent.speed.label";
 const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
 const ADD_CONTEXT_SPEED_NEEDLE = "composer.addContext.speed.option.fast.description";
+const INTELLIGENCE_SPEED_NEEDLE = "composer.intelligenceDropdown.speed.title";
 const PLUGINS_SIDEBAR_NEEDLE = "sidebarElectron.pluginsDisabledTooltip";
 const GUARDED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=((?:_e|ae)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se)\(\);)if\(!\1\)return null;/;
+  /([A-Za-z_$][\w$]*)=((?:_e|ae|P)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se)\(\);)let /;
+  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be)\(\);)let /;
 const NORMALIZED_PATCHED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=((?:_e|ae)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se)\(\);)let /;
+  /([A-Za-z_$][\w$]*)=((?:_e|ae|P)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be)\(\);)let /;
 const SLASH_COMMAND_GUARDED_SIGNATURE =
   /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)([A-Za-z_$][\w$]*)(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\w$]*})/;
 const SLASH_COMMAND_PATCHED_SIGNATURE =
@@ -478,6 +479,10 @@ const ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_NEW =
   /([A-Za-z_$][\w$]*)=cr\(\),(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=jr\([^)]+\)[;,])/;
 const ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_NEW =
   /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=jr\([^)]+\)[;,])/;
+const INTELLIGENCE_SPEED_GUARDED_SIGNATURE =
+  /(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Jp\([^)]+\),)([A-Za-z_$][\w$]*)=_f\(\),/;
+const INTELLIGENCE_SPEED_PATCHED_SIGNATURE =
+  /(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Jp\([^)]+\),)([A-Za-z_$][\w$]*)=!0,/;
 const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?cf\(`533078438`\),)([A-Za-z_$][\w$]*)=\2===`apikey`,/;
 const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD =
@@ -488,6 +493,12 @@ const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_NEW =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?)([A-Za-z_$][\w$]*)=Fs\(\),([A-Za-z_$][\w$]*)=hf\(`533078438`\),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([A-Za-z_$][\w$]*)=\3([,;])/;
 const PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_NEW =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?)([A-Za-z_$][\w$]*)=Fs\(\),([A-Za-z_$][\w$]*)=hf\(`533078438`\),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([A-Za-z_$][\w$]*)=\3&&!?\5([,;])/;
+const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26422 =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=(\$f\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=\3&&\5,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))&&!\5([,;])/;
+const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26422 =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=(\$f\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))([,;])/;
+const PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26422 =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=(\$f\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))&&!\5([,;])/;
 
 const TARGET_SPECS = [
   {
@@ -522,6 +533,16 @@ const TARGET_SPECS = [
     restoreReplacement: "$1=cr(),$2",
   },
   {
+    id: "intelligence-speed-menu",
+    label: "Composer Intelligence Speed menu",
+    needle: INTELLIGENCE_SPEED_NEEDLE,
+    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE,
+    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1$2=!0,",
+    restoreReplacement: "$1$2=_f(),",
+  },
+  {
     id: "fast-slash-command",
     label: "Fast slash command",
     needle: SPEED_SLASH_COMMAND_NEEDLE,
@@ -551,6 +572,17 @@ const TARGET_SPECS = [
     normalizeReplacement: "$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=!1,$7=$3$8",
     restoreReplacement:
       "$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=$4&&$5,$7=$3&&!$5$8",
+  },
+  {
+    id: "plugins-access-26422",
+    label: "Plugins access",
+    needle: PLUGINS_SIDEBAR_NEEDLE,
+    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26422,
+    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26422,
+    legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26422,
+    applyReplacement: "$1$3=$4,$5=$2===`apikey`,$6=!1,$7$8=$9$10",
+    normalizeReplacement: "$1$3=$4,$5=$2===`apikey`,$6=!1,$7$8=$9$10",
+    restoreReplacement: "$1$3=$4,$5=$2===`apikey`,$6=$3&&$5,$7$8=$9&&!$5$10",
   },
 ];
 
@@ -844,7 +876,7 @@ run_embedded_tool() {
 show_menu() {
   clear
   print_line "Codexfast"
-  print_line "Fixed target: ${APP_RESOURCES}"
+  print_line "Target: ${APP_RESOURCES}"
   print_line "Note: this .sh file is fully self-contained and can be shared on its own."
   print_line "A local ad-hoc re-sign runs automatically after resource changes."
   print_line ""

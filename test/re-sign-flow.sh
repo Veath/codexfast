@@ -16,6 +16,10 @@ GUARDED_CONTENT_26417='const label="settings.agent.speed.label";function an(){le
 ADD_CONTEXT_SPEED_GUARDED_CONTENT_26417='const label="composer.addContext.speed.option.fast.description";const gD=zr.map(e=>({label:_D(e),description:vD(e),value:e}));function yD({conversationId:r}){let l=Cn(),u=oe(_),d=mD(),f=(0,K.useRef)(!1),p=Tt(uee),{isOpen:m,setIsOpen:h,tooltipOpen:g,triggerRef:v,onTriggerBlur:y,onTriggerPointerLeave:b,handleSelectAndClose:x}=pD(),S=Yl(r),{activeMode:C,modes:w,setSelectedMode:T,isLoading:E}=fD(r),D=cr(),{serviceTierSettings:O,setServiceTier:k}=jr(r),A=o===`connected`,j=C.mode===`plan`,M=O.serviceTier===`fast`;return D?(0,q.jsx)(Qa.FlyoutSubmenuItem,{disabled:O.isLoading,children:gD.map(e=>(0,q.jsx)(Qa.Item,{onSelect:()=>{k(e.value,`composer_menu`),x()}},e.label))}):null}'
 PLUGINS_SIDEBAR_GUARDED_CONTENT_26417='const label="sidebarElectron.pluginsDisabledTooltip";function jT(){let e=je(k),t=Pm(),n=nr(fw),r=Bg(),{remoteProjects:i,setSelectedRemoteProjectId:a}=Vp(),o=tg(()=>{r()}),s=ur(Jy),c=d(),l=x(),f=le(),{isDragActive:p,dropHandlers:m}=LT({onDropRoot:VT}),h=u(`/local/:conversationId`),g=u(`/remote/:conversationId`),_=u(`/worktree-init-v2/:pendingId`),[v,y]=(0,Z.useOptimistic)(aC({localId:h?.params.conversationId??null,remoteId:g?.params.conversationId??null,pendingId:_?.params.pendingId??null}),(e,t)=>t),b=tg(e=>{e!==v&&(0,Z.startTransition)(()=>{y(e)})}),S=WT(v),w=pa(),{authMethod:T}=$f(),D=Fs(),O=hf(`533078438`),A=T===`apikey`,j=O&&A,M=D&&!A;return {e,t,n,r,O,A,j,M};}'
 PLUGINS_SIDEBAR_PARTIAL_PATCHED_CONTENT_26417='const label="sidebarElectron.pluginsDisabledTooltip";function jT(){let e=je(k),t=Pm(),n=nr(fw),r=Bg(),{remoteProjects:i,setSelectedRemoteProjectId:a}=Vp(),o=tg(()=>{r()}),s=ur(Jy),c=d(),l=x(),f=le(),{isDragActive:p,dropHandlers:m}=LT({onDropRoot:VT}),h=u(`/local/:conversationId`),g=u(`/remote/:conversationId`),_=u(`/worktree-init-v2/:pendingId`),[v,y]=(0,Z.useOptimistic)(aC({localId:h?.params.conversationId??null,remoteId:g?.params.conversationId??null,pendingId:_?.params.pendingId??null}),(e,t)=>t),b=tg(e=>{e!==v&&(0,Z.startTransition)(()=>{y(e)})}),S=WT(v),w=pa(),{authMethod:T}=$f(),D=Fs(),O=hf(`533078438`),A=T===`apikey`,j=!1,M=D&&!A;return {e,t,n,r,O,A,j,M};}'
+GUARDED_CONTENT_26422='const label="settings.agent.speed.label";function Tn(){let e=(0,Q.c)(35),t=k(),n=P(),{serviceTierSettings:r,setServiceTier:i}=be();if(!n)return null;let a;e[0]===r.serviceTier?a=e[1]:(a=c(r.serviceTier),e[0]=r.serviceTier,e[1]=a);return {t,n,a,r,i};}'
+SLASH_COMMAND_GUARDED_CONTENT_26422='const slashLabel26422="composer.speedSlashCommand.title";function FY(){let e=(0,Q.c)(24),t=ka(),n=_f(),{serviceTierSettings:r,setServiceTier:i}=Jp(),a;e[0]===r.serviceTier?a=e[1]:(a=ye(r.serviceTier),e[0]=r.serviceTier,e[1]=a);let o=a===`fast`,s;e[2]===o?s=e[3]:(s=e=>{let{className:t}=e;return(0,$.jsx)(o?ub:NY,{className:X(t,o?`text-token-link-foreground`:void 0)})},e[2]=o,e[3]=s);let c=s,l;e[4]===t?l=e[5]:(l=t.formatMessage(PY.title),e[4]=t,e[5]=l);let u;e[6]!==t||e[7]!==o?(u=t.formatMessage(o?PY.disableDescription:PY.commandDescription),e[6]=t,e[7]=o,e[8]=u):u=e[8];let d;e[9]!==o||e[10]!==i?(d=async()=>{await i(o?null:`fast`,`slash_command`)},e[9]=o,e[10]=i,e[11]=d):d=e[11];let f;e[12]!==n||e[13]!==o||e[14]!==r.isLoading||e[15]!==i?(f=[n,o,r.isLoading,i],e[12]=n,e[13]=o,e[14]=r.isLoading,e[15]=i,e[16]=f):f=e[16];let p;return e[17]!==c||e[18]!==n||e[19]!==l||e[20]!==u||e[21]!==d||e[22]!==f?(p={id:`speed`,title:l,description:u,requiresEmptyComposer:!1,enabled:n,Icon:c,onSelect:d,dependencies:f},e[17]=c,e[18]=n,e[19]=l,e[20]=u,e[21]=d,e[22]=f,e[23]=p):p=e[23],Iz(p),null}'
+INTELLIGENCE_SPEED_GUARDED_CONTENT_26422='const intelligenceSpeedLabel26422="composer.intelligenceDropdown.speed.title";function menu(){let t=(0,Q.c)(74),{serviceTierSettings:m,setServiceTier:h}=Jp(n),g=_f(),_=z(eU,n),N=m.serviceTier,U=done;let ge;t[56]!==U||t[57]!==g||t[58]!==N||t[59]!==m.isLoading||t[60]!==h?(ge=g?(0,$.jsx)(cU,{selectedServiceTier:N,isLoading:m.isLoading,setServiceTier:h,onSelectComplete:U}):null,t[56]=U,t[57]=g,t[58]=N,t[59]=m.isLoading,t[60]=h,t[61]=ge):ge=t[61];return ge}'
+PLUGINS_SIDEBAR_GUARDED_CONTENT_26422='const pluginsLabel26422="sidebarElectron.pluginsDisabledTooltip";function xA(){let e=R(Qe),T=ka(),{authMethod:D}=zp(),O=$f(`533078438`),k=D===`apikey`,A=O&&k,j=T.formatMessage({id:`sidebarElectron.addGenericWorkspaceRoot`}),M=T.formatMessage({id:`sidebarElectron.newThread`}),N=T.formatMessage({id:`sidebarElectron.recentChats`}),P=T.formatMessage({id:`sidebarElectron.pinnedThreads`}),F=Sg(()=>{}),I=$f(`3326157269`),L=W_(),z=J(DD),B=J(kS),V=tx(),H=Py(),U=Ng(),W=Cp(),G=!H,{remoteConnections:K}=jp(),q=g_(K),ee=Ha({hostId:me})&&!k,te=W&&q.length>0;return {e,T,D,O,k,A,ee,te};}'
 
 mkdir -p "${STUB_BIN}"
 
@@ -442,6 +446,16 @@ write_26417_partial_patched_assets() {
   printf '%s\n' "${PLUGINS_SIDEBAR_PARTIAL_PATCHED_CONTENT_26417}" > "${assets_dir}/sidebar-CxBol07n.js"
 }
 
+write_26422_assets() {
+  local assets_dir="$1"
+
+  mkdir -p "${assets_dir}"
+  printf '%s\n' "${GUARDED_CONTENT_26422}" > "${assets_dir}/general-settings-CnVD4YyB.js"
+  printf '%s\n' "${SLASH_COMMAND_GUARDED_CONTENT_26422}" > "${assets_dir}/index-gATb9Tvd.js"
+  printf '%s\n' "${INTELLIGENCE_SPEED_GUARDED_CONTENT_26422}" >> "${assets_dir}/index-gATb9Tvd.js"
+  printf '%s\n' "${PLUGINS_SIDEBAR_GUARDED_CONTENT_26422}" >> "${assets_dir}/index-gATb9Tvd.js"
+}
+
 prepare_archived_fake_app() {
   local app_dir="$1"
   local assets_root="$2"
@@ -461,6 +475,9 @@ prepare_archived_fake_app() {
       ;;
     26417-partial)
       write_26417_partial_patched_assets "${assets_root}/webview/assets"
+      ;;
+    26422)
+      write_26422_assets "${assets_root}/webview/assets"
       ;;
     *)
       echo "unknown asset profile: ${asset_profile}"
@@ -616,6 +633,75 @@ assert_guarded_state_26417() {
   fi
 }
 
+assert_apply_state_26422() {
+  local archive_path="$1"
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/general-settings-CnVD4YyB.js" | grep -q 'let a;'; then
+    echo "expected 26.422 apply to remove the guarded Speed settings return"
+    read_fake_asar_file "${archive_path}" "webview/assets/general-settings-CnVD4YyB.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'enabled:!0'; then
+    echo "expected 26.422 apply to enable the Fast slash command"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'g=!0'; then
+    echo "expected 26.422 apply to enable the composer Intelligence Speed menu"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'A=!1'; then
+    echo "expected 26.422 apply to remove the Plugins sidebar api-key gate"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'ee=Ha({hostId:me})[,;]'; then
+    echo "expected 26.422 apply to expose the Plugins nav label for api-key users"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+}
+
+assert_guarded_state_26422() {
+  local archive_path="$1"
+  local context="$2"
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/general-settings-CnVD4YyB.js" | grep -q 'if(!n)return null;'; then
+    echo "expected ${context} to preserve the 26.422 guarded Speed settings state"
+    read_fake_asar_file "${archive_path}" "webview/assets/general-settings-CnVD4YyB.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'enabled:n'; then
+    echo "expected ${context} to preserve the 26.422 guarded Fast slash command state"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'g=_f()'; then
+    echo "expected ${context} to preserve the 26.422 guarded composer Intelligence Speed menu state"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'A=O&&k'; then
+    echo "expected ${context} to preserve the 26.422 guarded Plugins sidebar state"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'ee=Ha({hostId:me})&&!k'; then
+    echo "expected ${context} to preserve the 26.422 guarded Plugins nav label state"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+}
+
 FAKE_APP_EXISTING="${TMP_DIR}/Existing.app"
 FAKE_RESOURCES_EXISTING="${FAKE_APP_EXISTING}/Contents/Resources"
 OUTPUT_EXISTING_APPLY="${TMP_DIR}/apply-output.txt"
@@ -689,6 +775,33 @@ assert_codesign_calls 1 "${OUTPUT_26417_PARTIAL_APPLY}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26417_PARTIAL}" "${OUTPUT_26417_PARTIAL_APPLY}"
 assert_fake_asar_js_parses "${FAKE_RESOURCES_26417_PARTIAL}/app.asar"
 assert_apply_state_26417 "${FAKE_RESOURCES_26417_PARTIAL}/app.asar"
+
+rm -f "${MARKER_FILE}"
+
+FAKE_APP_26422="${TMP_DIR}/Supported26422.app"
+FAKE_RESOURCES_26422="${FAKE_APP_26422}/Contents/Resources"
+OUTPUT_26422_APPLY="${TMP_DIR}/apply-26422-output.txt"
+OUTPUT_26422_RESTORE="${TMP_DIR}/restore-26422-output.txt"
+
+prepare_archived_fake_app "${FAKE_APP_26422}" "${TMP_DIR}/supported-26422-assets" "26.422.21637" "2056" "26422"
+
+run_script "${FAKE_APP_26422}" '2\n\nq\n' "${OUTPUT_26422_APPLY}"
+assert_codesign_calls 1 "${OUTPUT_26422_APPLY}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26422}" "${OUTPUT_26422_APPLY}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_26422}/app.asar"
+assert_apply_state_26422 "${FAKE_RESOURCES_26422}/app.asar"
+
+run_script "${FAKE_APP_26422}" '3\n\nq\n' "${OUTPUT_26422_RESTORE}"
+assert_codesign_calls 2 "${OUTPUT_26422_RESTORE}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26422}" "${OUTPUT_26422_RESTORE}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_26422}/app.asar"
+assert_guarded_state_26422 "${FAKE_RESOURCES_26422}/app.asar" "26.422 restore"
+
+if [ "$(read_info_plist_hash "${FAKE_APP_26422}")" != "$(read_fake_asar_header_hash "${FAKE_RESOURCES_26422}/app.asar")" ]; then
+  echo "expected ElectronAsarIntegrity hash to match restored 26.422 app.asar header"
+  cat "${FAKE_APP_26422}/Contents/Info.plist"
+  exit 1
+fi
 
 rm -f "${MARKER_FILE}"
 
