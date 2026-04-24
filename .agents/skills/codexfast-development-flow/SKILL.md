@@ -59,7 +59,9 @@ Do not use this skill for npm release-only work. Use `codexfast-release-flow` fo
 
 - Settings-side Fast patch still works.
 - Composer `/fast` patch still works.
-- `Add files and more / +` Speed menu patch still works.
+- Composer-side `Speed` menu patch still works for the target bundle:
+  - `Add files and more / +` Speed submenu on builds that still expose the add-context path.
+  - Composer `Intelligence` dropdown Speed submenu on newer builds where the add-context Speed entry moved.
 - Plugins sidebar gate patch still works.
 - Unsupported versions are blocked before unpack, backup creation, or re-sign.
 - Restore still works even when apply is blocked for unsupported versions.

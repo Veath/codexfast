@@ -13,9 +13,11 @@ Run these checks after any meaningful bundle change, patch-signature update, or 
 ## Fast Feature Set
 
 - The Fast-related Settings control is visible and usable
-- Opening `Add files and more / +` shows the `Speed` submenu
+- Open the build-specific composer-side `Speed` entry:
+  - On `26.415.40636` and `26.417.41555`, open `Add files and more / +` and verify the `Speed` submenu is present
+  - On `26.422.21637` and newer matching bundles, open the composer `Intelligence` dropdown and verify the `Speed` submenu is present
 - Opening the `Speed` submenu shows `Standard` and `Fast`
-- Selecting `Standard` or `Fast` from the add-context menu does not break the UI
+- Selecting `Standard` or `Fast` from the build-specific composer-side menu does not break the UI
 - Typing `/fast` in the composer shows the slash command item
 - Selecting `/fast` can enable and disable Fast mode without breaking the UI
 
