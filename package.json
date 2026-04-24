@@ -1,7 +1,7 @@
 {
   "name": "codexfast",
   "version": "0.5.0",
-  "description": "Expose hidden custom API features in Codex.app for macOS users on verified compatible builds.",
+  "description": "Enable Fast mode, /fast, Speed menu, and Plugins in OpenAI Codex.app for custom API users on macOS.",
   "scripts": {
     "test": "bash test/re-sign-flow.sh"
   },
@@ -18,10 +18,17 @@
     "darwin"
   ],
   "keywords": [
+    "codexfast",
     "codex",
+    "openai-codex",
     "codex-app",
-    "speed",
+    "codex-fast",
+    "fast-mode",
+    "plugins",
+    "codex-plugins",
+    "speed-menu",
     "custom-api",
+    "electron-asar",
     "macos"
   ],
   "homepage": "https://github.com/Veath/codexfast",

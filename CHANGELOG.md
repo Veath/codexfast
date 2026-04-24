@@ -6,6 +6,10 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Documentation
+
+- Improved README search terms and npm package metadata for GitHub, Google, and npm discoverability.
+
 ## [0.5.0] - 2026-04-24
 
 ### Added

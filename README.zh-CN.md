@@ -1,10 +1,10 @@
-# codexfast
+# codexfast - 为 OpenAI Codex.app 开启 Fast mode 和 Plugins
 
 [English README](./README.md)
 
-**一个面向 `Codex.app` 的 macOS patch 脚本，用于在已验证兼容的版本上重新启用被隐藏的 custom API 能力。**
+**一个面向 OpenAI `Codex.app` 的 macOS patch 脚本，用于在已验证兼容的版本上重新启用被隐藏的 custom API 能力。**
 
-`codexfast` 是一个面向 custom API 用户的单文件 patcher，用来恢复 `Codex.app` 中被隐藏的能力，包括 Settings 里的 Fast 设置项、输入框 `/fast` 命令、composer 里的 Speed 菜单，以及 Plugins 入口。
+`codexfast` 是一个面向 macOS custom API 用户的 OpenAI Codex.app 单文件 patcher，用来恢复被隐藏的 Fast mode 能力，包括 Settings 里的 Fast 设置项、输入框 `/fast` 命令、composer 里的 Speed 菜单，以及 Plugins 入口。
 
 - **Fast 设置项**（Settings 中）
 - **`/fast` 输入框命令**
@@ -14,6 +14,8 @@
 ```bash
 npx codexfast
 ```
+
+搜索关键词：OpenAI Codex.app、Codex Fast mode、`/fast`、Speed menu、Plugins、custom API、macOS、`npx codexfast`。
 
 已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）、`26.417.41555`（`build 1858`）和 `26.422.21637`（`build 2056`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
 

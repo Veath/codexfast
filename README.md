@@ -1,10 +1,10 @@
-# codexfast
+# codexfast - enable Fast mode and Plugins in OpenAI Codex.app
 
 [中文说明](./README.zh-CN.md)
 
-**A macOS patch script for `Codex.app` that re-enables hidden custom API features on verified compatible builds.**
+**A macOS patch script for OpenAI `Codex.app` that re-enables hidden custom API features on verified compatible builds.**
 
-`codexfast` is a single-file patcher for custom-API Codex users who want to restore hidden `Codex.app` features such as the Settings Fast control, the composer `/fast` slash command, the composer Speed menu, and Plugins access.
+`codexfast` is a single-file OpenAI Codex.app patcher for custom API users on macOS. It restores hidden Fast mode features such as the Settings Fast control, the composer `/fast` slash command, the composer Speed menu, and Plugins access.
 
 - **Fast settings** control in Settings
 - **Composer `/fast`** slash command
@@ -14,6 +14,8 @@
 ```bash
 npx codexfast
 ```
+
+Search terms: OpenAI Codex.app, Codex Fast mode, `/fast`, Speed menu, Plugins, custom API, macOS, `npx codexfast`.
 
 Verified for `Codex.app` `26.415.40636` (`build 1799`), `26.417.41555` (`build 1858`), and `26.422.21637` (`build 2056`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
 
