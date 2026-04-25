@@ -37,6 +37,18 @@ Repository guidance for `codexfast`.
 - Do not claim macOS app behavior is fixed unless the shell test passes and the real-world limitation is stated clearly.
 - Update the relevant files under `docs/` when compatibility knowledge, bundle notes, or release process knowledge changes.
 
+## Commit Rules
+
+- Use Conventional Commit format for every commit message: `<type>: <summary>`.
+- Prefer these types in this repo:
+  - `fix:` for bug fixes, patch-signature corrections, restore behavior fixes, and compatibility-scope corrections.
+  - `feat:` for newly supported Codex builds or newly exposed feature paths.
+  - `docs:` for documentation-only changes.
+  - `test:` for test-only changes.
+  - `chore:` for release commits and repository maintenance.
+- Release commits must use `chore: release x.y.z`.
+- Do not use free-form commit subjects such as `Add Codex 26.422 support`; write `feat: add Codex 26.422 support` instead.
+
 ## Maintenance Checklist
 
 Use this checklist for every future Codex bundle adaptation or patch-signature update.
