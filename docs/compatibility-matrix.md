@@ -18,7 +18,7 @@ This file tracks verified `Codex.app` builds for `codexfast`.
 | `26.415.40636` | `1799` | `supported` | Settings Fast, `/fast`, Add-context Speed menu, Plugins access | `2026-04-20` | Matches the current strict whitelist in `codexfast.sh`. |
 | `26.417.41555` | `1858` | `supported` | Settings Fast, `/fast`, Add-context Speed menu, Plugins access | `2026-04-21` | Verified by direct bundle inspection, `bash test/re-sign-flow.sh`, and rerun real-app smoke validation including the sidebar `Plugins` entry fix. |
 | `26.422.21637` | `2056` | `supported` | Settings Fast, `/fast`, Intelligence Speed menu, GPT-5.5 model list, Plugins access | `2026-04-24` | Verified by direct bundle inspection, real app status detection, and `bash test/re-sign-flow.sh`. The composer Speed path moved to the `Intelligence` dropdown. |
-| `26.422.30944` | `2080` | `supported` | Settings Fast, `/fast`, Intelligence Speed menu, GPT-5.5 model list, Plugins access | `2026-04-25` | Verified by direct installed-bundle status detection and shell regression coverage. Target signatures match the 26.422 build 2056 bundle shape. |
+| `26.422.30944` | `2080` | `supported` | Settings Fast, `/fast`, Intelligence Speed menu, Plugins access | `2026-04-25` | Verified by direct installed-bundle status detection, user validation that GPT-5.5 is already visible through the official path, and shell regression coverage. `codexfast` skips GPT-5.5 apply targets from this version onward but can still restore older `0.5.2` GPT-5.5 patch markers. |
 
 ## Update Rules
 

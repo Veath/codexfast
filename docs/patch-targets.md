@@ -13,8 +13,8 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 | Composer Speed menu on `26.415.40636` and `26.417.41555` | `Add-context Speed menu` | `use-model-settings-*.js` | `composer.addContext.speed.option.fast.description` | Force the menu gate to enabled so the `Speed` submenu renders. |
 | Composer Speed menu on `26.422.21637` and `26.422.30944` | `Composer Intelligence Speed menu` | `index-*.js` | `composer.intelligenceDropdown.speed.title` | Force the Intelligence dropdown speed gate to enabled so the `Speed` submenu renders. |
 | Plugins sidebar access | `Plugins access` | `index-*.js` or a nearby sidebar asset | `sidebarElectron.pluginsDisabledTooltip` | Remove the API-key gate for both the disabled Plugins nav item and any adjacent unified Skills/Plugins label state in the matched local assignments. |
-| GPT-5.5 model-list entry on `26.422.21637` and `26.422.30944` | `GPT-5.5 model list` | `index-*.js` | `"list-models-for-host"` | Wrap the app bridge model-list handler so it appends a Codex-shaped `gpt-5.5` entry when the returned list does not already include it. |
-| GPT-5.5 model-list entry on `26.422.21637` and `26.422.30944` | `GPT-5.5 model query selector` | `font-settings-*.js` | `modelsByType` | Append the same Codex-shaped `gpt-5.5` entry after the model query selector filters raw models into `modelsByType.models`. |
+| GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model list` | `index-*.js` | `"list-models-for-host"` | Wrap the app bridge model-list handler so it appends a Codex-shaped `gpt-5.5` entry when the returned list does not already include it. |
+| GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model query selector` | `font-settings-*.js` | `modelsByType` | Append the same Codex-shaped `gpt-5.5` entry after the model query selector filters raw models into `modelsByType.models`. |
 
 ## Current Restore Rules
 
@@ -32,6 +32,11 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
   - Restore the original `list-models-for-host` bridge handler without the `codexfast-gpt55` injection wrapper
 - `GPT-5.5 model query selector`
   - Restore the original `modelsByType` selector return without the `codexfast-gpt55-select` injection wrapper
+
+## Build-Specific Skips
+
+- On `26.422.30944` and later builds, `codexfast` does not apply the `GPT-5.5 model list` or `GPT-5.5 model query selector` targets because GPT-5.5 is expected to be visible through the official app path from that version onward.
+- Restore still recognizes those GPT-5.5 patch markers on `26.422.30944` and later builds to recover apps that were patched by `codexfast` `0.5.2`.
 
 ## Update Rules
 

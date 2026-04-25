@@ -448,13 +448,13 @@ validate_action_request() {
 run_embedded_patcher() {
   local action="$1"
 
-  "${NODE_BIN}" - "${action}" "${TEMP_ASSETS_DIR}" "${BACKUP_SUFFIX}" <<'NODE'
+  "${NODE_BIN}" - "${action}" "${TEMP_ASSETS_DIR}" "${BACKUP_SUFFIX}" "${APP_VERSION_KEY}" <<'NODE'
 "use strict";
 
 const fs = require("fs");
 const path = require("path");
 
-const [, , command, assetsDirArg, backupSuffix] = process.argv;
+const [, , command, assetsDirArg, backupSuffix, appVersionKey = "unknown"] = process.argv;
 const assetsDir = path.resolve(assetsDirArg);
 const SPEED_LABEL_NEEDLE = "settings.agent.speed.label";
 const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
@@ -463,6 +463,7 @@ const INTELLIGENCE_SPEED_NEEDLE = "composer.intelligenceDropdown.speed.title";
 const PLUGINS_SIDEBAR_NEEDLE = "sidebarElectron.pluginsDisabledTooltip";
 const MODEL_LIST_NEEDLE = "\"list-models-for-host\"";
 const MODEL_QUERY_NEEDLE = "modelsByType";
+const GPT_55_OFFICIAL_MODEL_LIST_MIN_VERSION = "26.422.30944";
 const GPT_55_MODEL_ENTRY =
   "{id:`gpt-5.5`,model:`gpt-5.5`,upgrade:null,upgradeInfo:null,availabilityNux:null,displayName:`GPT-5.5`,description:`Frontier model for complex coding, research, and real-world work.`,hidden:!1,supportedReasoningEfforts:[{reasoningEffort:`low`,description:`Fast responses with lighter reasoning`},{reasoningEffort:`medium`,description:`Balances speed and reasoning depth for everyday tasks`},{reasoningEffort:`high`,description:`Greater reasoning depth for complex problems`},{reasoningEffort:`xhigh`,description:`Extra high reasoning depth for complex problems`}],defaultReasoningEffort:`medium`,inputModalities:[`text`],supportsPersonality:!0,additionalSpeedTiers:[`fast`],isDefault:!1}";
 const GUARDED_SIGNATURE =
@@ -653,12 +654,64 @@ function inspectSpec(content, spec) {
     return null;
   }
 
+  if (!isTargetRelevantForCommand(spec, { guarded, patched, legacyPatched })) {
+    return null;
+  }
+
   return {
     spec,
     guarded,
     patched,
     legacyPatched,
   };
+}
+
+function isGpt55ModelTarget(spec) {
+  return spec.id === "gpt55-model-list" || spec.id === "gpt55-model-query-selector";
+}
+
+function parseVersionParts(value) {
+  const version = value.split("+", 1)[0];
+  return version.split(".").map((part) => {
+    const parsed = Number.parseInt(part, 10);
+    return Number.isFinite(parsed) ? parsed : 0;
+  });
+}
+
+function compareVersions(left, right) {
+  const leftParts = parseVersionParts(left);
+  const rightParts = parseVersionParts(right);
+  const length = Math.max(leftParts.length, rightParts.length);
+
+  for (let index = 0; index < length; index += 1) {
+    const leftPart = leftParts[index] ?? 0;
+    const rightPart = rightParts[index] ?? 0;
+    if (leftPart !== rightPart) {
+      return leftPart > rightPart ? 1 : -1;
+    }
+  }
+
+  return 0;
+}
+
+function hasOfficialGpt55ModelList() {
+  return compareVersions(appVersionKey, GPT_55_OFFICIAL_MODEL_LIST_MIN_VERSION) >= 0;
+}
+
+function isTargetRelevantForCommand(spec, state) {
+  if (!isGpt55ModelTarget(spec) || !hasOfficialGpt55ModelList()) {
+    return true;
+  }
+
+  if (command === "apply") {
+    return state.patched || state.legacyPatched;
+  }
+
+  if (command === "status" || command === "restore") {
+    return state.patched || state.legacyPatched;
+  }
+
+  return true;
 }
 
 function inspectFile(filePath) {

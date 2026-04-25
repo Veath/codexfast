@@ -4,12 +4,12 @@
 
 **A macOS patch script for OpenAI `Codex.app` that re-enables hidden custom API features on verified compatible builds.**
 
-`codexfast` is a single-file OpenAI Codex.app patcher for custom API users on macOS. It restores hidden Fast mode features such as the Settings Fast control, the composer `/fast` slash command, the composer Speed menu, the GPT-5.5 model-list entry, and Plugins access.
+`codexfast` is a single-file OpenAI Codex.app patcher for custom API users on macOS. It restores hidden Fast mode features such as the Settings Fast control, the composer `/fast` slash command, the composer Speed menu, GPT-5.5 model-list compatibility where needed, and Plugins access.
 
 - **Fast settings** control in Settings
 - **Composer `/fast`** slash command
 - **Speed submenu** in the composer
-- **GPT-5.5** model-list entry for custom-API users
+- **GPT-5.5** model-list compatibility for custom-API users where the supported build still needs it
 - **Plugins access** for custom-API users
 
 ```bash
@@ -66,7 +66,7 @@ Choose **2) Enable custom API features** when status reports a supported build. 
 - Fast control in Settings
 - `/fast` slash command in the composer
 - Speed menu in the composer
-- GPT-5.5 in the model list
+- GPT-5.5 in the model list where the supported build still needs the compatibility patch
 - Plugins sidebar access for custom-API users
 
 The first enable run creates backups, updates `app.asar`, refreshes the Electron ASAR integrity hash, and runs an ad-hoc re-sign. Restart `Codex.app` after the script finishes.
@@ -87,7 +87,7 @@ The script does not use an official API — it matches code signatures in fronte
 - Verified on `Codex.app` `26.422.30944` (`build 2080`)
 - **Enable** is blocked unless the installed version/build is whitelisted
 - **View status** and **Restore** work on any version
-- The GPT-5.5 model-list patch only injects the UI catalog entry and keeps it visible after Codex filters the model query; your configured provider must still support `gpt-5.5`
+- The GPT-5.5 model-list patch only injects the UI catalog entry on supported builds that still need it. `Codex.app` `26.422.30944` and later builds are expected to expose GPT-5.5 through the official app path, so `codexfast` skips that apply target from `26.422.30944` onward. Your configured provider must still support `gpt-5.5`
 - For Plugins, the script only removes the custom-API sidebar gate — actual plugin availability can still depend on connectors, plugin state, or admin restrictions
 
 Re-run **View current status** after every Codex update.

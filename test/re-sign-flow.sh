@@ -683,6 +683,46 @@ assert_apply_state_26422() {
   fi
 }
 
+assert_apply_state_26422_without_gpt_patch() {
+  local archive_path="$1"
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/general-settings-CnVD4YyB.js" | grep -q 'let a;'; then
+    echo "expected 26.422 build 2080 apply to remove the guarded Speed settings return"
+    read_fake_asar_file "${archive_path}" "webview/assets/general-settings-CnVD4YyB.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'enabled:!0'; then
+    echo "expected 26.422 build 2080 apply to enable the Fast slash command"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'g=!0'; then
+    echo "expected 26.422 build 2080 apply to enable the composer Intelligence Speed menu"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if ! read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'A=!1'; then
+    echo "expected 26.422 build 2080 apply to remove the Plugins sidebar api-key gate"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js" | grep -q 'codexfast-gpt55'; then
+    echo "expected 26.422 build 2080 apply to leave the model list handler on the official path"
+    read_fake_asar_file "${archive_path}" "webview/assets/index-gATb9Tvd.js"
+    exit 1
+  fi
+
+  if read_fake_asar_file "${archive_path}" "webview/assets/font-settings-C9TXXljS.js" | grep -q 'codexfast-gpt55-select'; then
+    echo "expected 26.422 build 2080 apply to leave the model query selector on the official path"
+    read_fake_asar_file "${archive_path}" "webview/assets/font-settings-C9TXXljS.js"
+    exit 1
+  fi
+}
+
 assert_guarded_state_26422() {
   local archive_path="$1"
   local context="$2"
@@ -862,6 +902,7 @@ FAKE_APP_26422_2080="${TMP_DIR}/Supported26422Build2080.app"
 FAKE_RESOURCES_26422_2080="${FAKE_APP_26422_2080}/Contents/Resources"
 OUTPUT_26422_2080_APPLY="${TMP_DIR}/apply-26422-2080-output.txt"
 OUTPUT_26422_2080_RESTORE="${TMP_DIR}/restore-26422-2080-output.txt"
+OUTPUT_26422_2080_STATUS="${TMP_DIR}/status-26422-2080-output.txt"
 
 prepare_archived_fake_app "${FAKE_APP_26422_2080}" "${TMP_DIR}/supported-26422-2080-assets" "26.422.30944" "2080" "26422"
 
@@ -869,13 +910,59 @@ run_script "${FAKE_APP_26422_2080}" '2\n\nq\n' "${OUTPUT_26422_2080_APPLY}"
 assert_codesign_calls 1 "${OUTPUT_26422_2080_APPLY}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26422_2080}" "${OUTPUT_26422_2080_APPLY}"
 assert_fake_asar_js_parses "${FAKE_RESOURCES_26422_2080}/app.asar"
-assert_apply_state_26422 "${FAKE_RESOURCES_26422_2080}/app.asar"
+assert_apply_state_26422_without_gpt_patch "${FAKE_RESOURCES_26422_2080}/app.asar"
+
+if grep -q 'patched: GPT-5.5' "${OUTPUT_26422_2080_APPLY}"; then
+  echo "expected 26.422 build 2080 apply to skip GPT-5.5 patch targets"
+  cat "${OUTPUT_26422_2080_APPLY}"
+  exit 1
+fi
+
+run_script "${FAKE_APP_26422_2080}" '1\n\nq\n' "${OUTPUT_26422_2080_STATUS}"
+if grep -q 'GPT-5.5 model' "${OUTPUT_26422_2080_STATUS}"; then
+  echo "expected 26.422 build 2080 status to omit unpatched GPT-5.5 compatibility targets"
+  cat "${OUTPUT_26422_2080_STATUS}"
+  exit 1
+fi
 
 run_script "${FAKE_APP_26422_2080}" '3\n\nq\n' "${OUTPUT_26422_2080_RESTORE}"
 assert_codesign_calls 2 "${OUTPUT_26422_2080_RESTORE}"
 assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26422_2080}" "${OUTPUT_26422_2080_RESTORE}"
 assert_fake_asar_js_parses "${FAKE_RESOURCES_26422_2080}/app.asar"
 assert_guarded_state_26422 "${FAKE_RESOURCES_26422_2080}/app.asar" "26.422 build 2080 restore"
+
+rm -f "${MARKER_FILE}"
+
+FAKE_APP_26422_2080_INLINE="${TMP_DIR}/Supported26422Build2080InlineRestore.app"
+FAKE_RESOURCES_26422_2080_INLINE="${FAKE_APP_26422_2080_INLINE}/Contents/Resources"
+OUTPUT_26422_2080_INLINE_APPLY="${TMP_DIR}/apply-26422-2080-inline-output.txt"
+OUTPUT_26422_2080_INLINE_RESTORE="${TMP_DIR}/restore-26422-2080-inline-output.txt"
+
+prepare_archived_fake_app "${FAKE_APP_26422_2080_INLINE}" "${TMP_DIR}/supported-26422-2080-inline-assets" "26.422.21637" "2056" "26422"
+
+run_script "${FAKE_APP_26422_2080_INLINE}" '2\n\nq\n' "${OUTPUT_26422_2080_INLINE_APPLY}"
+assert_apply_state_26422 "${FAKE_RESOURCES_26422_2080_INLINE}/app.asar"
+rm -f "${FAKE_RESOURCES_26422_2080_INLINE}/app.asar1"
+write_info_plist "${FAKE_APP_26422_2080_INLINE}" "$(read_fake_asar_header_hash "${FAKE_RESOURCES_26422_2080_INLINE}/app.asar")" "26.422.30944" "2080"
+
+run_script "${FAKE_APP_26422_2080_INLINE}" '3\n\nq\n' "${OUTPUT_26422_2080_INLINE_RESTORE}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26422_2080_INLINE}" "${OUTPUT_26422_2080_INLINE_RESTORE}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_26422_2080_INLINE}/app.asar"
+assert_guarded_state_26422 "${FAKE_RESOURCES_26422_2080_INLINE}/app.asar" "26.422 build 2080 inline restore from 0.5.2 state"
+
+rm -f "${MARKER_FILE}"
+
+FAKE_APP_FUTURE_GPT_SKIP="${TMP_DIR}/FutureGptSkip.app"
+OUTPUT_FUTURE_GPT_SKIP_STATUS="${TMP_DIR}/status-future-gpt-skip-output.txt"
+
+prepare_archived_fake_app "${FAKE_APP_FUTURE_GPT_SKIP}" "${TMP_DIR}/future-gpt-skip-assets" "26.500.0" "9999" "26422"
+
+run_script "${FAKE_APP_FUTURE_GPT_SKIP}" '1\n\nq\n' "${OUTPUT_FUTURE_GPT_SKIP_STATUS}"
+if grep -q 'GPT-5.5 model' "${OUTPUT_FUTURE_GPT_SKIP_STATUS}"; then
+  echo "expected post-26.422.30944 status to omit unpatched GPT-5.5 compatibility targets"
+  cat "${OUTPUT_FUTURE_GPT_SKIP_STATUS}"
+  exit 1
+fi
 
 rm -f "${MARKER_FILE}"
 
