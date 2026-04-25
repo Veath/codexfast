@@ -1,6 +1,6 @@
 {
   "name": "codexfast",
-  "version": "0.5.2",
+  "version": "0.5.3",
   "description": "Enable Fast mode, GPT-5.5, /fast, Speed menu, and Plugins in OpenAI Codex.app for custom API users on macOS.",
   "scripts": {
     "test": "bash test/re-sign-flow.sh"

@@ -6,10 +6,17 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-04-25
+
 ### Changed
 
 - `Codex.app` `26.422.30944` and later builds now skip the GPT-5.5 model-list and query-selector apply targets because GPT-5.5 is expected to be visible through the official app path from that version onward.
 - Restore still recognizes the earlier `0.5.2` GPT-5.5 patch markers on `26.422.30944` and later builds so users can recover from a previously patched app even when the archive backup is unavailable.
+
+### Documentation
+
+- Removed outdated README search terms.
+- Documented the required Conventional Commit message format for future repository commits.
 
 ## [0.5.2] - 2026-04-25
 
