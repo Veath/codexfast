@@ -16,7 +16,6 @@
 npx codexfast
 ```
 
-搜索关键词：OpenAI Codex.app、Codex Fast mode、GPT-5.5 model list、`/fast`、Speed menu、Plugins、custom API、macOS、`npx codexfast`。
 
 已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）、`26.417.41555`（`build 1858`）、`26.422.21637`（`build 2056`）和 `26.422.30944`（`build 2080`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
 
