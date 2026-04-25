@@ -20,7 +20,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 - Exposes the composer-side `Speed` menu.
 - On `26.415.40636` and `26.417.41555`, this is the `Add files and more / +` Speed submenu.
-- On `26.422.21637`, this is the composer `Intelligence` dropdown Speed submenu.
+- On `26.422.21637` and `26.422.30944`, this is the composer `Intelligence` dropdown Speed submenu.
 - On supported builds this menu should surface `Standard` and `Fast`.
 
 ### Plugins sidebar access for custom API users
@@ -32,7 +32,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 ### GPT-5.5 model-list entry for custom API users
 
 - Exposes `GPT-5.5` in the app model list on supported builds when the bundled model catalog does not include it.
-- On `26.422.21637`, the app filters the raw `model/list` response into `modelsByType` before rendering menus, so the patch also preserves the injected entry after that query selector filter.
+- On `26.422.21637` and `26.422.30944`, the app filters the raw `model/list` response into `modelsByType` before rendering menus, so the patch also preserves the injected entry after that query selector filter.
 - This injects the UI catalog metadata only. The configured custom API provider must still accept `gpt-5.5` at request time.
 - This does not replace the app's model execution path or make Codex merge arbitrary custom provider `/v1/models` responses into the UI catalog.
 

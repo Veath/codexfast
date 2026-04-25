@@ -18,7 +18,7 @@ npx codexfast
 
 Search terms: OpenAI Codex.app, Codex Fast mode, GPT-5.5 model list, `/fast`, Speed menu, Plugins, custom API, macOS, `npx codexfast`.
 
-Verified for `Codex.app` `26.415.40636` (`build 1799`), `26.417.41555` (`build 1858`), and `26.422.21637` (`build 2056`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
+Verified for `Codex.app` `26.415.40636` (`build 1799`), `26.417.41555` (`build 1858`), `26.422.21637` (`build 2056`), and `26.422.30944` (`build 2080`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
 
 ## What It Does
 
@@ -86,6 +86,7 @@ The script does not use an official API — it matches code signatures in fronte
 - Verified on `Codex.app` `26.415.40636` (`build 1799`)
 - Verified on `Codex.app` `26.417.41555` (`build 1858`)
 - Verified on `Codex.app` `26.422.21637` (`build 2056`)
+- Verified on `Codex.app` `26.422.30944` (`build 2080`)
 - **Enable** is blocked unless the installed version/build is whitelisted
 - **View status** and **Restore** work on any version
 - The GPT-5.5 model-list patch only injects the UI catalog entry and keeps it visible after Codex filters the model query; your configured provider must still support `gpt-5.5`

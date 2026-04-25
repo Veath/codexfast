@@ -11,10 +11,10 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 | Settings-side Fast control | `Speed setting` | `general-settings-*.js` | `settings.agent.speed.label` | Remove the guarded Fast-settings early return. |
 | Composer `/fast` slash command | `Fast slash command` | `index-*.js` | `composer.speedSlashCommand.title` | Force the slash command entry to be enabled. |
 | Composer Speed menu on `26.415.40636` and `26.417.41555` | `Add-context Speed menu` | `use-model-settings-*.js` | `composer.addContext.speed.option.fast.description` | Force the menu gate to enabled so the `Speed` submenu renders. |
-| Composer Speed menu on `26.422.21637` | `Composer Intelligence Speed menu` | `index-*.js` | `composer.intelligenceDropdown.speed.title` | Force the Intelligence dropdown speed gate to enabled so the `Speed` submenu renders. |
+| Composer Speed menu on `26.422.21637` and `26.422.30944` | `Composer Intelligence Speed menu` | `index-*.js` | `composer.intelligenceDropdown.speed.title` | Force the Intelligence dropdown speed gate to enabled so the `Speed` submenu renders. |
 | Plugins sidebar access | `Plugins access` | `index-*.js` or a nearby sidebar asset | `sidebarElectron.pluginsDisabledTooltip` | Remove the API-key gate for both the disabled Plugins nav item and any adjacent unified Skills/Plugins label state in the matched local assignments. |
-| GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model list` | `index-*.js` | `"list-models-for-host"` | Wrap the app bridge model-list handler so it appends a Codex-shaped `gpt-5.5` entry when the returned list does not already include it. |
-| GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model query selector` | `font-settings-*.js` | `modelsByType` | Append the same Codex-shaped `gpt-5.5` entry after the model query selector filters raw models into `modelsByType.models`. |
+| GPT-5.5 model-list entry on `26.422.21637` and `26.422.30944` | `GPT-5.5 model list` | `index-*.js` | `"list-models-for-host"` | Wrap the app bridge model-list handler so it appends a Codex-shaped `gpt-5.5` entry when the returned list does not already include it. |
+| GPT-5.5 model-list entry on `26.422.21637` and `26.422.30944` | `GPT-5.5 model query selector` | `font-settings-*.js` | `modelsByType` | Append the same Codex-shaped `gpt-5.5` entry after the model query selector filters raw models into `modelsByType.models`. |
 
 ## Current Restore Rules
 

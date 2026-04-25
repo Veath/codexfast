@@ -858,6 +858,27 @@ fi
 
 rm -f "${MARKER_FILE}"
 
+FAKE_APP_26422_2080="${TMP_DIR}/Supported26422Build2080.app"
+FAKE_RESOURCES_26422_2080="${FAKE_APP_26422_2080}/Contents/Resources"
+OUTPUT_26422_2080_APPLY="${TMP_DIR}/apply-26422-2080-output.txt"
+OUTPUT_26422_2080_RESTORE="${TMP_DIR}/restore-26422-2080-output.txt"
+
+prepare_archived_fake_app "${FAKE_APP_26422_2080}" "${TMP_DIR}/supported-26422-2080-assets" "26.422.30944" "2080" "26422"
+
+run_script "${FAKE_APP_26422_2080}" '2\n\nq\n' "${OUTPUT_26422_2080_APPLY}"
+assert_codesign_calls 1 "${OUTPUT_26422_2080_APPLY}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26422_2080}" "${OUTPUT_26422_2080_APPLY}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_26422_2080}/app.asar"
+assert_apply_state_26422 "${FAKE_RESOURCES_26422_2080}/app.asar"
+
+run_script "${FAKE_APP_26422_2080}" '3\n\nq\n' "${OUTPUT_26422_2080_RESTORE}"
+assert_codesign_calls 2 "${OUTPUT_26422_2080_RESTORE}"
+assert_no_persistent_unpack_dir "${FAKE_RESOURCES_26422_2080}" "${OUTPUT_26422_2080_RESTORE}"
+assert_fake_asar_js_parses "${FAKE_RESOURCES_26422_2080}/app.asar"
+assert_guarded_state_26422 "${FAKE_RESOURCES_26422_2080}/app.asar" "26.422 build 2080 restore"
+
+rm -f "${MARKER_FILE}"
+
 FAKE_APP_LEGACY="${TMP_DIR}/Legacy.app"
 FAKE_RESOURCES_LEGACY="${FAKE_APP_LEGACY}/Contents/Resources"
 FAKE_APP_DIR_LEGACY="${FAKE_RESOURCES_LEGACY}/app/webview/assets"

@@ -18,7 +18,7 @@ npx codexfast
 
 搜索关键词：OpenAI Codex.app、Codex Fast mode、GPT-5.5 model list、`/fast`、Speed menu、Plugins、custom API、macOS、`npx codexfast`。
 
-已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）、`26.417.41555`（`build 1858`）和 `26.422.21637`（`build 2056`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
+已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）、`26.417.41555`（`build 1858`）、`26.422.21637`（`build 2056`）和 `26.422.30944`（`build 2080`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
 
 ## 作用
 
@@ -86,6 +86,7 @@ q) Quit
 - 已验证版本：`Codex.app` `26.415.40636`（`build 1799`）
 - 已验证版本：`Codex.app` `26.417.41555`（`build 1858`）
 - 已验证版本：`Codex.app` `26.422.21637`（`build 2056`）
+- 已验证版本：`Codex.app` `26.422.30944`（`build 2080`）
 - **开启动作** 只允许在白名单里的 version/build 上执行
 - **查看状态** 和 **恢复** 在任何版本都可用
 - GPT-5.5 模型列表补丁只注入 UI catalog 项，并保证它在 Codex 过滤模型查询后仍可见；你的 custom API provider 仍然必须支持 `gpt-5.5`

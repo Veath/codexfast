@@ -6,6 +6,18 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added support for `Codex.app` `26.422.30944` (`build 2080`) after installed-bundle status detection confirmed the existing 26.422 patch signatures still match.
+
+### Changed
+
+- Expanded the shell regression flow to cover the `26.422.30944` (`build 2080`) compatibility whitelist gate.
+
+### Documentation
+
+- Recorded the 26.422 build 2080 support status in the compatibility matrix, README files, patch target notes, and bundle notes.
+
 ## [0.5.1] - 2026-04-24
 
 ### Added
