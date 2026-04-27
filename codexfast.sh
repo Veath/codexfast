@@ -449,6 +449,7 @@ run_embedded_patcher() {
   local action="$1"
 
   "${NODE_BIN}" - "${action}" "${TEMP_ASSETS_DIR}" "${BACKUP_SUFFIX}" "${APP_VERSION_KEY}" <<'NODE'
+// @ts-nocheck
 "use strict";
 
 const fs = require("fs");
@@ -897,6 +898,7 @@ switch (command) {
 }
 
 process.exit(exitCode);
+
 NODE
 }
 

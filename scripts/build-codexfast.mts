@@ -8,7 +8,7 @@ const checkOnly = process.argv.includes("--check");
 
 const generated = [
   readFileSync(join(sourceDir, "shell-prefix.sh"), "utf8"),
-  readFileSync(join(sourceDir, "patcher.mjs"), "utf8"),
+  readFileSync(join(sourceDir, "patcher.mts"), "utf8"),
   "\nNODE\n",
   readFileSync(join(sourceDir, "shell-suffix.sh"), "utf8"),
 ].join("");
