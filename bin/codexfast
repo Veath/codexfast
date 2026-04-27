@@ -1,5 +1,22 @@
 #!/usr/bin/env node
 "use strict";
+const MIN_NODE_VERSION = "22.12.0";
+function isNodeVersionSupported(currentVersion, minimumVersion) {
+  const currentParts = currentVersion.split(".").map(Number);
+  const minimumParts = minimumVersion.split(".").map(Number);
+  for (let index = 0; index < minimumParts.length; index += 1) {
+    const currentPart = currentParts[index] || 0;
+    const minimumPart = minimumParts[index] || 0;
+    if (currentPart !== minimumPart) {
+      return currentPart > minimumPart;
+    }
+  }
+  return true;
+}
+if (!isNodeVersionSupported(process.versions.node, MIN_NODE_VERSION)) {
+  console.error("codexfast requires Node.js >= " + MIN_NODE_VERSION + ". Current version: " + process.versions.node + ".");
+  process.exit(1);
+}
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_crypto_1 = require("node:crypto");
 const node_fs_1 = require("node:fs");

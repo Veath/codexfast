@@ -31,7 +31,7 @@ npx codexfast
 
 ## 使用方式
 
-仅支持 macOS。需要：`Codex.app` 安装在 `/Applications`，命令行可用 `node`、`npm` 和系统自带的 `codesign`。
+仅支持 macOS。需要：`Codex.app` 安装在 `/Applications`，命令行可用 Node.js `>=22.12.0`、`npm` 和系统自带的 `codesign`。
 
 运行 patcher：
 
@@ -106,7 +106,7 @@ q) Quit
 
 ## 故障排查
 
-**脚本一启动就失败** — 确认 `/Applications/Codex.app` 是否存在，再跑一下 `node -v`、`npm -v`、`codesign -h`。
+**脚本一启动就失败** — 确认 `/Applications/Codex.app` 是否存在，再跑一下 `node -v` 是否为 `22.12.0` 或更高版本、`npm -v`、`codesign -h`。
 
 **自动重签名失败（macOS 拒绝写入）** — 手动执行：
 

@@ -11,6 +11,7 @@ This project follows a simple release-oriented changelog format.
 - Migrated the re-sign regression flow from a long shell script to a typed TypeScript test runner with separate bundle fixtures, while preserving the `bash test/re-sign-flow.sh` compatibility entrypoint.
 - Split fake app, fake asar, and script harness helpers out of the re-sign runner to keep future bundle cases smaller.
 - Replaced the maintained shell entrypoint with TypeScript sources under `src/`, and now generate the npm `bin/codexfast` entrypoint directly.
+- Declared and enforced Node.js `>=22.12.0` for the generated CLI.
 - Standardized repository development and release verification commands on `pnpm`.
 
 ## [0.5.3] - 2026-04-25

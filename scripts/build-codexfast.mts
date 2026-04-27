@@ -6,6 +6,7 @@ const rootDir = resolve(new URL("..", import.meta.url).pathname);
 const sourceDir = join(rootDir, "src");
 const outputPath = join(rootDir, "bin", "codexfast");
 const checkOnly = process.argv.includes("--check");
+const minimumNodeVersion = "22.12.0";
 
 const compilerOptions = {
   module: ts.ModuleKind.CommonJS,
@@ -18,9 +19,28 @@ const cliSource = readFileSync(join(sourceDir, "cli.mts"), "utf8").replace(
   "declare const __PATCHER_SOURCE__: string;",
   `const __PATCHER_SOURCE__ = ${JSON.stringify(patcherSource)};`,
 );
-const generated = `#!/usr/bin/env node\n${ts.transpileModule(cliSource, {
+const transpiledCliSource = ts.transpileModule(cliSource, {
   compilerOptions,
-}).outputText}`;
+}).outputText.replace(/^"use strict";\r?\n/, "");
+const nodeVersionGuard = `const MIN_NODE_VERSION = "${minimumNodeVersion}";
+function isNodeVersionSupported(currentVersion, minimumVersion) {
+  const currentParts = currentVersion.split(".").map(Number);
+  const minimumParts = minimumVersion.split(".").map(Number);
+  for (let index = 0; index < minimumParts.length; index += 1) {
+    const currentPart = currentParts[index] || 0;
+    const minimumPart = minimumParts[index] || 0;
+    if (currentPart !== minimumPart) {
+      return currentPart > minimumPart;
+    }
+  }
+  return true;
+}
+if (!isNodeVersionSupported(process.versions.node, MIN_NODE_VERSION)) {
+  console.error("codexfast requires Node.js >= " + MIN_NODE_VERSION + ". Current version: " + process.versions.node + ".");
+  process.exit(1);
+}
+`;
+const generated = `#!/usr/bin/env node\n"use strict";\n${nodeVersionGuard}${transpiledCliSource}`;
 
 if (checkOnly) {
   const current = readFileSync(outputPath, "utf8");

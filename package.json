@@ -13,6 +13,9 @@
   "bin": {
     "codexfast": "bin/codexfast"
   },
+  "engines": {
+    "node": ">=22.12.0"
+  },
   "files": [
     "bin/codexfast",
     "LICENSE",
