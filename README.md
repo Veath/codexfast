@@ -69,7 +69,7 @@ Choose **2) Enable custom API features** when status reports a supported build. 
 - GPT-5.5 in the model list where the supported build still needs the compatibility patch
 - Plugins sidebar access for custom-API users
 
-The first enable run creates backups, updates `app.asar`, refreshes the Electron ASAR integrity hash, and runs an ad-hoc re-sign. Restart `Codex.app` after the script finishes.
+The first enable run creates backups, updates `app.asar`, refreshes the Electron ASAR integrity hash, and runs an ad-hoc re-sign. Because re-signing changes the app identity used by macOS privacy checks, apply also resets the `Codex.app` screen-recording permission record. Restart `Codex.app` after the script finishes and allow Screen & System Audio Recording when macOS asks.
 
 ### Disable or Restore
 
@@ -112,6 +112,8 @@ First apply creates two backups:
 ```bash
 codesign --force --deep --sign - /Applications/Codex.app
 ```
+
+**macOS keeps asking to record this computer's screen and audio** — apply resets the screen-recording permission record after re-signing. Fully quit `Codex.app`, reopen it, and allow Screen & System Audio Recording in System Settings when prompted.
 
 **Target not found / version unsupported** — do not continue, do not hand-patch. The build likely needs a new adaptation.
 

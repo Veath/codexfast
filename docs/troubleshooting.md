@@ -71,6 +71,26 @@ codesign --force --deep --sign - /Applications/Codex.app
 
 If re-sign still fails, restore the archive backup or reinstall `Codex.app`.
 
+## macOS repeatedly asks for screen and audio recording permission
+
+Expected behavior:
+
+- `apply` modifies `app.asar` and then ad-hoc re-signs `Codex.app`.
+- Re-signing changes the code-signing identity macOS uses for privacy permissions.
+- After a successful `apply`, `codexfast` runs `tccutil reset ScreenCapture <bundle id>` so macOS asks for a fresh Screen & System Audio Recording decision on the next launch.
+
+What to do:
+
+1. Fully quit `Codex.app` with `Command+Q`.
+2. Reopen `Codex.app`.
+3. Allow Screen & System Audio Recording when macOS prompts, or enable it in System Settings.
+
+If the reset command fails, run it manually:
+
+```bash
+tccutil reset ScreenCapture com.openai.codex
+```
+
 ## Repeated `Enable custom API features` runs
 
 Expected behavior:

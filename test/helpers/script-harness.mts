@@ -9,6 +9,7 @@ function writeExecutable(path: string, content: string): void {
 }
 
 export function setupStubs(stubBin: string, markerFile: string): void {
+  const tccutilMarkerFile = `${markerFile}.tccutil`;
   mkdirSync(stubBin, { recursive: true });
   writeExecutable(join(stubBin, "clear"), "#!/bin/bash\nexit 0\n");
   writeExecutable(
@@ -28,6 +29,17 @@ fi
 printf '%s\\n' "$*" >> ${JSON.stringify(markerFile)}
 if [ "\${CODEXFAST_TEST_CODESIGN_VERIFY_FAIL:-0}" = "1" ] && [ "$1" = "--verify" ]; then
   printf '%s\\n' "codesign: invalid signature" >&2
+  exit 1
+fi
+exit 0
+`,
+  );
+  writeExecutable(
+    join(stubBin, "tccutil"),
+    `#!/bin/bash
+printf '%s\\n' "$*" >> ${JSON.stringify(tccutilMarkerFile)}
+if [ "\${CODEXFAST_TEST_TCCUTIL_FAIL:-0}" = "1" ]; then
+  printf '%s\\n' "tccutil: reset failed" >&2
   exit 1
 fi
 exit 0
@@ -165,5 +177,23 @@ export function assertCodesignCallContains(expected: string, markerFile: string,
 export function resetCodesignCalls(markerFile: string): void {
   if (existsSync(markerFile)) {
     unlinkSync(markerFile);
+  }
+}
+
+export function assertTccutilCallContains(expected: string, markerFile: string, outputFile: string): void {
+  const tccutilMarkerFile = `${markerFile}.tccutil`;
+  if (!existsSync(tccutilMarkerFile)) {
+    fail("expected tccutil to be invoked", readOutput(outputFile));
+  }
+  const calls = readFileSync(tccutilMarkerFile, "utf8");
+  if (!calls.includes(expected)) {
+    fail(`expected tccutil call to include ${expected}`, `${calls}\n${readOutput(outputFile)}`);
+  }
+}
+
+export function resetTccutilCalls(markerFile: string): void {
+  const tccutilMarkerFile = `${markerFile}.tccutil`;
+  if (existsSync(tccutilMarkerFile)) {
+    unlinkSync(tccutilMarkerFile);
   }
 }

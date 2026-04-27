@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { assertContains, assertNotContains, fail } from "./helpers/assertions.mts";
 import { assertFakeAsarJsParses, extractFakeAsar, readFakeAsarFile, readFakeAsarHeaderHash, writeFakeAsar } from "./helpers/fake-asar.mts";
 import { type AssetProfile, prepareArchivedFakeApp as prepareArchivedFakeAppHelper, prepareLegacyFakeApp as prepareLegacyFakeAppHelper, readInfoPlistHash, writeInfoPlist } from "./helpers/fake-app.mts";
-import { assertCodesignCallContains as assertCodesignCallContainsHelper, assertCodesignCalls as assertCodesignCallsHelper, readOutput, resetCodesignCalls as resetCodesignCallsHelper, runScript as runScriptHelper, setupStubs as setupStubsHelper } from "./helpers/script-harness.mts";
+import { assertCodesignCallContains as assertCodesignCallContainsHelper, assertCodesignCalls as assertCodesignCallsHelper, assertTccutilCallContains as assertTccutilCallContainsHelper, readOutput, resetCodesignCalls as resetCodesignCallsHelper, resetTccutilCalls as resetTccutilCallsHelper, runScript as runScriptHelper, setupStubs as setupStubsHelper } from "./helpers/script-harness.mts";
 
 
 const rootDir = resolve(process.env.CODEXFAST_TEST_ROOT ?? process.cwd());
@@ -55,6 +55,19 @@ function assertCodesignCallContains(expected: string, outputFile: string): void 
 
 function resetCodesignCalls(): void {
   resetCodesignCallsHelper(markerFile);
+}
+
+function assertTccutilCallContains(expected: string, outputFile: string): void {
+  assertTccutilCallContainsHelper(expected, markerFile, outputFile);
+}
+
+function resetTccutilCalls(): void {
+  resetTccutilCallsHelper(markerFile);
+}
+
+function resetNativeToolCalls(): void {
+  resetCodesignCalls();
+  resetTccutilCalls();
 }
 
 function assertNoPersistentUnpackDir(resourcesDir: string, outputFile: string): void {
@@ -175,6 +188,8 @@ function runApplyRestoreCase(caseConfig: {
 
   runScript(caseConfig.appDir, "2\n\nq\n", applyOutput);
   assertCodesignCalls(1, applyOutput);
+  assertTccutilCallContains("reset ScreenCapture com.openai.codex", applyOutput);
+  assertContains(readOutput(applyOutput), "Reset macOS screen recording permission for com.openai.codex.", "expected apply to report TCC reset", readOutput(applyOutput));
   assertNoPersistentUnpackDir(resourcesDir, applyOutput);
   assertFakeAsarJsParses(archivePath);
   caseConfig.applyAssert(archivePath);
@@ -192,7 +207,7 @@ function runApplyRestoreCase(caseConfig: {
   caseConfig.restoreAssert(archivePath, caseConfig.restoreContext);
   assertIntegrityMatches(caseConfig.appDir, archivePath, `expected ElectronAsarIntegrity hash to match restored ${caseConfig.restoreContext} app.asar header`);
   assertContains(readOutput(restoreOutput), "Exit code: 0", "expected archive restore to print a successful exit code", readOutput(restoreOutput));
-  resetCodesignCalls();
+  resetNativeToolCalls();
 }
 
 function main(): void {

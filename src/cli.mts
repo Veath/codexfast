@@ -37,6 +37,7 @@ let nodeBin = "";
 let npmBin = "";
 let codesignBin = "";
 let plistBuddyBin = "";
+let tccutilBin = "";
 
 function printLine(message = ""): void {
   console.log(message);
@@ -286,6 +287,28 @@ function resignAppBundle(reason: string): boolean {
   return true;
 }
 
+function resetScreenRecordingPermission(): void {
+  const bundleIdentifier = readBundlePlistValue("CFBundleIdentifier", "com.openai.codex");
+  const manualCommand = `tccutil reset ScreenCapture ${bundleIdentifier}`;
+  if (!tccutilBin) {
+    printLine("Could not reset macOS screen recording permission because tccutil was not found.");
+    printLine(`Run manually if Codex keeps asking for screen recording permission: ${manualCommand}`);
+    return;
+  }
+
+  const result = run(tccutilBin, ["reset", "ScreenCapture", bundleIdentifier]);
+  if (result.status !== 0) {
+    process.stdout.write(result.stdout);
+    process.stderr.write(result.stderr);
+    printLine("Failed to reset macOS screen recording permission.");
+    printLine(`Run manually if Codex keeps asking for screen recording permission: ${manualCommand}`);
+    return;
+  }
+
+  printLine(`Reset macOS screen recording permission for ${bundleIdentifier}.`);
+  printLine("Open Codex.app again and allow Screen & System Audio Recording when prompted.");
+}
+
 function checkRequirements(): boolean {
   if (!existsSync(appResources)) {
     printLine(`Codex resources directory not found: ${appResources}`);
@@ -297,6 +320,7 @@ function checkRequirements(): boolean {
   npmBin = resolveCommand("npm") ?? "";
   codesignBin = resolveCommand("codesign") ?? "";
   plistBuddyBin = resolvePlistBuddy() ?? "";
+  tccutilBin = resolveCommand("tccutil") ?? "";
 
   if (!npmBin) {
     printLine("npm not found.");
@@ -368,7 +392,13 @@ function finalizeModifiedArchive(action: string): boolean {
   if (!updateAsarIntegrityMetadata()) {
     return false;
   }
-  return resignAppBundle("Codex.app resources were modified. Re-signing now.");
+  if (!resignAppBundle("Codex.app resources were modified. Re-signing now.")) {
+    return false;
+  }
+  if (action === "apply") {
+    resetScreenRecordingPermission();
+  }
+  return true;
 }
 
 function runEmbeddedTool(action: string): number {
