@@ -1,8 +1,7 @@
-// @ts-nocheck
 "use strict";
 
-const fs = require("fs");
-const path = require("path");
+const fs: typeof import("node:fs") = require("fs");
+const path: typeof import("node:path") = require("path");
 
 const [, , command, assetsDirArg, backupSuffix, appVersionKey = "unknown"] = process.argv;
 const assetsDir = path.resolve(assetsDirArg);
@@ -63,7 +62,39 @@ const MODEL_QUERY_GUARDED_SIGNATURE =
 const MODEL_QUERY_PATCHED_SIGNATURE =
   /(\}\}\),)\/\*codexfast-gpt55-select\*\/([A-Za-z_$][\w$]*)\.models\.some\(e=>e\.model===`gpt-5\.5`\)\|\|\2\.models\.push\(\{id:`gpt-5\.5`[^]*?isDefault:!1\}\),([A-Za-z_$][\w$]*)\?\?=\2\.models\.find\(e=>e\.model===([A-Za-z_$][\w$]*)\.defaultModel\)\?\?null,\{modelsByType:\2,defaultModel:\3\}/;
 
-const TARGET_SPECS = [
+type ReplacementCallback = (match: string, ...captures: string[]) => string;
+type Replacement = string | ReplacementCallback;
+
+type TargetSpec = {
+  id: string;
+  label: string;
+  needle: string;
+  guardedSignature: RegExp;
+  patchedSignature: RegExp;
+  legacyPatchedSignature: RegExp | null;
+  applyReplacement: Replacement;
+  normalizeReplacement?: Replacement;
+  restoreReplacement?: Replacement;
+};
+
+type TargetState = {
+  guarded: boolean;
+  patched: boolean;
+  legacyPatched: boolean;
+};
+
+type TargetMatch = TargetState & {
+  spec: TargetSpec;
+};
+
+type FileTarget = {
+  filePath: string;
+  backupPath: string;
+  content: string;
+  matches: TargetMatch[];
+};
+
+const TARGET_SPECS: TargetSpec[] = [
   {
     id: "speed-setting",
     label: "Speed setting",
@@ -154,9 +185,9 @@ const TARGET_SPECS = [
     guardedSignature: MODEL_LIST_GUARDED_SIGNATURE,
     patchedSignature: MODEL_LIST_PATCHED_SIGNATURE,
     legacyPatchedSignature: null,
-    applyReplacement: (_, prefix, managerVar, hostVar, paramsVar, suffix) =>
+    applyReplacement: (_match: string, prefix: string, managerVar: string, hostVar: string, paramsVar: string, suffix: string) =>
       `${prefix}async(${managerVar},{hostId:${hostVar},...${paramsVar}})=>/*codexfast-gpt55*/{let r=await ${managerVar}.sendRequest(\`model/list\`,${paramsVar});return Array.isArray(r.data)&&!r.data.some(e=>e.model===\`gpt-5.5\`)?{...r,data:[...r.data,${GPT_55_MODEL_ENTRY}]}:r}${suffix}`,
-    restoreReplacement: (_, prefix, managerVar, hostVar, paramsVar, resultVar, suffix) =>
+    restoreReplacement: (_match: string, prefix: string, managerVar: string, hostVar: string, paramsVar: string, _resultVar: string, suffix: string) =>
       `${prefix}(${managerVar},{hostId:${hostVar},...${paramsVar}})=>${managerVar}.sendRequest(\`model/list\`,${paramsVar})${suffix}`,
   },
   {
@@ -166,14 +197,40 @@ const TARGET_SPECS = [
     guardedSignature: MODEL_QUERY_GUARDED_SIGNATURE,
     patchedSignature: MODEL_QUERY_PATCHED_SIGNATURE,
     legacyPatchedSignature: null,
-    applyReplacement: (_, prefix, defaultVar, modelsByTypeVar, configVar) =>
+    applyReplacement: (_match: string, prefix: string, defaultVar: string, modelsByTypeVar: string, configVar: string) =>
       `${prefix}/*codexfast-gpt55-select*/${modelsByTypeVar}.models.some(e=>e.model===\`gpt-5.5\`)||${modelsByTypeVar}.models.push(${GPT_55_MODEL_ENTRY}),${defaultVar}??=${modelsByTypeVar}.models.find(e=>e.model===${configVar}.defaultModel)??null,{modelsByType:${modelsByTypeVar},defaultModel:${defaultVar}}`,
-    restoreReplacement: (_, prefix, modelsByTypeVar, defaultVar, configVar) =>
+    restoreReplacement: (_match: string, prefix: string, modelsByTypeVar: string, defaultVar: string, configVar: string) =>
       `${prefix}${defaultVar}??=${modelsByTypeVar}.models.find(e=>e.model===${configVar}.defaultModel)??null,{modelsByType:${modelsByTypeVar},defaultModel:${defaultVar}}`,
   },
 ];
 
-function walkJsFiles(dir) {
+function replaceContent(content: string, signature: RegExp, replacement: Replacement): string {
+  if (typeof replacement === "string") {
+    return content.replace(signature, replacement);
+  }
+
+  return content.replace(signature, (...args: unknown[]) =>
+    replacement(String(args[0] ?? ""), ...args.slice(1).map((value) => String(value))),
+  );
+}
+
+function replaceContentOrThrow(
+  content: string,
+  signature: RegExp | null,
+  replacement: Replacement | undefined,
+  label: string,
+): string {
+  if (!signature || !replacement) {
+    throw new Error(`Missing replacement metadata for ${label}.`);
+  }
+  return replaceContent(content, signature, replacement);
+}
+
+function isPresent<T>(value: T | null): value is T {
+  return value !== null;
+}
+
+function walkJsFiles(dir: string): string[] {
   const entries = fs.readdirSync(dir, { withFileTypes: true });
   const results = [];
 
@@ -191,7 +248,7 @@ function walkJsFiles(dir) {
   return results;
 }
 
-function inspectSpec(content, spec) {
+function inspectSpec(content: string, spec: TargetSpec): TargetMatch | null {
   if (!content.includes(spec.needle)) {
     return null;
   }
@@ -216,11 +273,11 @@ function inspectSpec(content, spec) {
   };
 }
 
-function isGpt55ModelTarget(spec) {
+function isGpt55ModelTarget(spec: TargetSpec): boolean {
   return spec.id === "gpt55-model-list" || spec.id === "gpt55-model-query-selector";
 }
 
-function parseVersionParts(value) {
+function parseVersionParts(value: string): number[] {
   const version = value.split("+", 1)[0];
   return version.split(".").map((part) => {
     const parsed = Number.parseInt(part, 10);
@@ -228,7 +285,7 @@ function parseVersionParts(value) {
   });
 }
 
-function compareVersions(left, right) {
+function compareVersions(left: string, right: string): number {
   const leftParts = parseVersionParts(left);
   const rightParts = parseVersionParts(right);
   const length = Math.max(leftParts.length, rightParts.length);
@@ -244,11 +301,11 @@ function compareVersions(left, right) {
   return 0;
 }
 
-function hasOfficialGpt55ModelList() {
+function hasOfficialGpt55ModelList(): boolean {
   return compareVersions(appVersionKey, GPT_55_OFFICIAL_MODEL_LIST_MIN_VERSION) >= 0;
 }
 
-function isTargetRelevantForCommand(spec, state) {
+function isTargetRelevantForCommand(spec: TargetSpec, state: TargetState): boolean {
   if (!isGpt55ModelTarget(spec) || !hasOfficialGpt55ModelList()) {
     return true;
   }
@@ -264,9 +321,9 @@ function isTargetRelevantForCommand(spec, state) {
   return true;
 }
 
-function inspectFile(filePath) {
+function inspectFile(filePath: string): FileTarget | null {
   const content = fs.readFileSync(filePath, "utf8");
-  const matches = TARGET_SPECS.map((spec) => inspectSpec(content, spec)).filter(Boolean);
+  const matches = TARGET_SPECS.map((spec) => inspectSpec(content, spec)).filter(isPresent);
 
   if (matches.length === 0) {
     return null;
@@ -280,11 +337,11 @@ function inspectFile(filePath) {
   };
 }
 
-function findTargets(dir) {
-  return walkJsFiles(dir).map(inspectFile).filter(Boolean);
+function findTargets(dir: string): FileTarget[] {
+  return walkJsFiles(dir).map(inspectFile).filter(isPresent);
 }
 
-function describeState(match) {
+function describeState(match: TargetMatch): string {
   if (match.guarded) {
     return `${match.spec.label} disabled`;
   }
@@ -294,19 +351,19 @@ function describeState(match) {
   return "Unknown state";
 }
 
-function writeBackupIfNeeded(fileTarget) {
+function writeBackupIfNeeded(fileTarget: FileTarget): void {
   if (fs.existsSync(fileTarget.backupPath)) {
     return;
   }
   fs.writeFileSync(fileTarget.backupPath, fileTarget.content, "utf8");
 }
 
-function resolveSlashCommandEnabledVariable(content) {
+function resolveSlashCommandEnabledVariable(content: string): string {
   const match = content.match(/function OG\(\)\{let [^;]*?,([A-Za-z_$][\w$]*)=Lf\(\),/);
   return match?.[1] ?? "n";
 }
 
-function status() {
+function status(): number {
   const targets = findTargets(assetsDir);
   if (targets.length === 0) {
     console.log(`Feature target file not found: ${assetsDir}`);
@@ -327,7 +384,7 @@ function status() {
   return 0;
 }
 
-function apply() {
+function apply(): number {
   const targets = findTargets(assetsDir);
   if (targets.length === 0) {
     console.log(`Feature target file not found: ${assetsDir}`);
@@ -344,7 +401,7 @@ function apply() {
     for (const match of target.matches) {
       if (match.guarded) {
         writeBackupIfNeeded(target);
-        next = next.replace(match.spec.guardedSignature, match.spec.applyReplacement);
+        next = replaceContent(next, match.spec.guardedSignature, match.spec.applyReplacement);
         console.log(`patched: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
         changed += 1;
         updated = true;
@@ -352,7 +409,12 @@ function apply() {
       }
 
       if (match.legacyPatched) {
-        next = next.replace(match.spec.legacyPatchedSignature, match.spec.normalizeReplacement);
+        next = replaceContentOrThrow(
+          next,
+          match.spec.legacyPatchedSignature,
+          match.spec.normalizeReplacement,
+          match.spec.label,
+        );
         console.log(`normalized: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
         changed += 1;
         updated = true;
@@ -374,7 +436,7 @@ function apply() {
   return 0;
 }
 
-function restore() {
+function restore(): number {
   const targets = findTargets(assetsDir);
   if (targets.length === 0) {
     console.log(`Feature target file not found: ${assetsDir}`);
@@ -405,9 +467,11 @@ function restore() {
         const enabledVariable = resolveSlashCommandEnabledVariable(next);
         next = next.replace(match.spec.patchedSignature, `$1${enabledVariable}$2`);
       } else {
-        next = next.replace(
+        next = replaceContentOrThrow(
+          next,
           match.patched ? match.spec.patchedSignature : match.spec.legacyPatchedSignature,
           match.spec.restoreReplacement,
+          match.spec.label,
         );
       }
 

@@ -7,16 +7,19 @@ const sourceDir = join(rootDir, "src");
 const outputPath = join(rootDir, "bin", "codexfast");
 const checkOnly = process.argv.includes("--check");
 
-const patcherSource = readFileSync(join(sourceDir, "patcher.mts"), "utf8");
+const compilerOptions = {
+  module: ts.ModuleKind.CommonJS,
+  target: ts.ScriptTarget.ES2022,
+};
+const patcherSource = ts.transpileModule(readFileSync(join(sourceDir, "patcher.mts"), "utf8"), {
+  compilerOptions,
+}).outputText;
 const cliSource = readFileSync(join(sourceDir, "cli.mts"), "utf8").replace(
   "declare const __PATCHER_SOURCE__: string;",
   `const __PATCHER_SOURCE__ = ${JSON.stringify(patcherSource)};`,
 );
 const generated = `#!/usr/bin/env node\n${ts.transpileModule(cliSource, {
-  compilerOptions: {
-    module: ts.ModuleKind.CommonJS,
-    target: ts.ScriptTarget.ES2022,
-  },
+  compilerOptions,
 }).outputText}`;
 
 if (checkOnly) {
