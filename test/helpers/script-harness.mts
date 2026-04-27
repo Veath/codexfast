@@ -19,6 +19,10 @@ if [ "\${CODEXFAST_TEST_CODESIGN_FAIL:-0}" = "1" ] && [ "$1" = "--force" ]; then
   exit 1
 fi
 printf '%s\\n' "$*" >> ${JSON.stringify(markerFile)}
+if [ "\${CODEXFAST_TEST_CODESIGN_VERIFY_FAIL:-0}" = "1" ] && [ "$1" = "--verify" ]; then
+  printf '%s\\n' "codesign: invalid signature" >&2
+  exit 1
+fi
 exit 0
 `,
   );
@@ -132,6 +136,16 @@ export function assertCodesignCalls(expectedMin: number, markerFile: string, out
   const callCount = readFileSync(markerFile, "utf8").trim().split("\n").filter(Boolean).length;
   if (callCount < expectedMin) {
     fail(`expected codesign to run at least ${expectedMin} times, got ${callCount}`, `${readFileSync(markerFile, "utf8")}\n${readOutput(outputFile)}`);
+  }
+}
+
+export function assertCodesignCallContains(expected: string, markerFile: string, outputFile: string): void {
+  if (!existsSync(markerFile)) {
+    fail("expected codesign to be invoked", readOutput(outputFile));
+  }
+  const calls = readFileSync(markerFile, "utf8");
+  if (!calls.includes(expected)) {
+    fail(`expected codesign call to include ${expected}`, `${calls}\n${readOutput(outputFile)}`);
   }
 }
 

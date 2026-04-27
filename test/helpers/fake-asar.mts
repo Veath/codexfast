@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import vm from "node:vm";
 import { fail } from "./assertions.mts";
 
@@ -72,6 +72,30 @@ export function readFakeAsarHeaderHash(archivePath: string): string {
   const headerStringSize = archive.readUInt32LE(12);
   const headerString = archive.subarray(16, 16 + headerStringSize).toString("utf8");
   return createHash("sha256").update(headerString).digest("hex");
+}
+
+export function extractFakeAsar(archivePath: string, outputDir: string): void {
+  const archive = readFileSync(archivePath);
+  const headerBufferSize = archive.readUInt32LE(4);
+  const headerStringSize = archive.readUInt32LE(12);
+  const header = JSON.parse(archive.subarray(16, 16 + headerStringSize).toString("utf8")) as AsarNode;
+
+  function walk(node: AsarNode, segments: string[] = []): void {
+    for (const [name, value] of Object.entries(node.files ?? {})) {
+      const nextSegments = [...segments, name];
+      if (value.files) {
+        walk(value, nextSegments);
+        continue;
+      }
+
+      const destination = join(outputDir, ...nextSegments);
+      mkdirSync(dirname(destination), { recursive: true });
+      const fileOffset = 8 + headerBufferSize + Number(value.offset);
+      writeFileSync(destination, archive.subarray(fileOffset, fileOffset + Number(value.size)));
+    }
+  }
+
+  walk(header);
 }
 
 export function assertFakeAsarJsParses(archivePath: string): void {

@@ -97,11 +97,11 @@ Re-run **View current status** after every Codex update.
 First apply creates two backups:
 
 - `app.asar1` — archive-level backup of the original bundle
-- `*.speed-setting.bak` — file-level fallback
+- `*.codexfast.bak` — file-level fallback. Restore also recognizes the legacy `*.speed-setting.bak` suffix from earlier releases.
 
 **Restore** prefers `app.asar1`, falls back to `.bak`, then inline restoration. A future Codex auto-update may overwrite the patched state.
 
-> The local ad-hoc re-sign passes `codesign` integrity checks but replaces the vendor notarization. `spctl --assess` returning `rejected` is expected — use `codesign --verify --deep --strict /Applications/Codex.app` to verify instead.
+> The local ad-hoc re-sign passes `codesign` integrity checks but replaces the vendor notarization. `spctl --assess` returning `rejected` is expected — use `codesign --verify --deep --strict --verbose=2 /Applications/Codex.app` to verify instead.
 
 ## Troubleshooting
 

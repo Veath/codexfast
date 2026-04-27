@@ -1,10 +1,10 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { assertContains, assertNotContains, fail } from "./helpers/assertions.mts";
-import { assertFakeAsarJsParses, readFakeAsarFile, readFakeAsarHeaderHash } from "./helpers/fake-asar.mts";
+import { assertFakeAsarJsParses, extractFakeAsar, readFakeAsarFile, readFakeAsarHeaderHash, writeFakeAsar } from "./helpers/fake-asar.mts";
 import { type AssetProfile, prepareArchivedFakeApp as prepareArchivedFakeAppHelper, prepareLegacyFakeApp as prepareLegacyFakeAppHelper, readInfoPlistHash, writeInfoPlist } from "./helpers/fake-app.mts";
-import { assertCodesignCalls as assertCodesignCallsHelper, readOutput, resetCodesignCalls as resetCodesignCallsHelper, runScript as runScriptHelper, setupStubs as setupStubsHelper } from "./helpers/script-harness.mts";
+import { assertCodesignCallContains as assertCodesignCallContainsHelper, assertCodesignCalls as assertCodesignCallsHelper, readOutput, resetCodesignCalls as resetCodesignCallsHelper, runScript as runScriptHelper, setupStubs as setupStubsHelper } from "./helpers/script-harness.mts";
 
 
 const rootDir = resolve(process.env.CODEXFAST_TEST_ROOT ?? process.cwd());
@@ -33,8 +33,16 @@ function runScriptWithCodesignFailure(appDir: string, input: string, outputFile:
   runScript(appDir, input, outputFile, { CODEXFAST_TEST_CODESIGN_FAIL: "1" });
 }
 
+function runScriptWithCodesignVerifyFailure(appDir: string, input: string, outputFile: string): void {
+  runScript(appDir, input, outputFile, { CODEXFAST_TEST_CODESIGN_VERIFY_FAIL: "1" });
+}
+
 function assertCodesignCalls(expectedMin: number, outputFile: string): void {
   assertCodesignCallsHelper(expectedMin, markerFile, outputFile);
+}
+
+function assertCodesignCallContains(expected: string, outputFile: string): void {
+  assertCodesignCallContainsHelper(expected, markerFile, outputFile);
 }
 
 function resetCodesignCalls(): void {
@@ -121,6 +129,19 @@ function assertGuardedState26422(archivePath: string, context: string): void {
 function assertIntegrityMatches(appDir: string, archivePath: string, message: string): void {
   if (readInfoPlistHash(appDir) !== readFakeAsarHeaderHash(archivePath)) {
     fail(message, readFileSync(join(appDir, "Contents", "Info.plist"), "utf8"));
+  }
+}
+
+function renameBackupSuffixes(dir: string, fromSuffix: string, toSuffix: string): void {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const fullPath = join(dir, entry.name);
+    if (entry.isDirectory()) {
+      renameBackupSuffixes(fullPath, fromSuffix, toSuffix);
+      continue;
+    }
+    if (entry.isFile() && entry.name.endsWith(fromSuffix)) {
+      renameSync(fullPath, `${fullPath.slice(0, -fromSuffix.length)}${toSuffix}`);
+    }
   }
 }
 
@@ -250,6 +271,25 @@ function main(): void {
   assertGuardedState26422(inlineArchive, "26.422 build 2080 inline restore from 0.5.2 state");
   resetCodesignCalls();
 
+  const legacyBackupApp = join(tmpDir, "LegacyFileBackup.app");
+  const legacyBackupResources = join(legacyBackupApp, "Contents", "Resources");
+  const legacyBackupArchive = join(legacyBackupResources, "app.asar");
+  const legacyBackupOutput = join(tmpDir, "legacy-file-backup-restore-output.txt");
+  const legacyBackupExtracted = join(tmpDir, "legacy-file-backup-extracted");
+  prepareArchivedFakeApp(legacyBackupApp, join(tmpDir, "legacy-file-backup-assets"));
+  runScript(legacyBackupApp, "2\n\nq\n", join(tmpDir, "legacy-file-backup-apply-output.txt"));
+  assertApplyState(legacyBackupArchive);
+  rmSync(join(legacyBackupResources, "app.asar1"), { force: true });
+  extractFakeAsar(legacyBackupArchive, legacyBackupExtracted);
+  renameBackupSuffixes(legacyBackupExtracted, ".codexfast.bak", ".speed-setting.bak");
+  writeFakeAsar(legacyBackupExtracted, legacyBackupArchive);
+  writeInfoPlist(legacyBackupApp, readFakeAsarHeaderHash(legacyBackupArchive));
+  runScript(legacyBackupApp, "3\n\nq\n", legacyBackupOutput);
+  assertFakeAsarJsParses(legacyBackupArchive);
+  assertGuardedState(legacyBackupArchive, "legacy file backup restore");
+  assertContains(readOutput(legacyBackupOutput), "restored backup: Speed setting", "expected restore to use legacy file-level backup suffix", readOutput(legacyBackupOutput));
+  resetCodesignCalls();
+
   const futureGptSkipApp = join(tmpDir, "FutureGptSkip.app");
   const futureGptSkipOutput = join(tmpDir, "status-future-gpt-skip-output.txt");
   prepareArchivedFakeApp(futureGptSkipApp, join(tmpDir, "future-gpt-skip-assets"), "26.500.0", "9999", "26422");
@@ -298,6 +338,20 @@ function main(): void {
   const failingText = readOutput(failingOutput);
   assertContains(failingText, `codesign --force --deep --sign - ${failingApp}`, "expected manual re-sign guidance in failure output", failingText);
   assertContains(failingText, "Exit code: 1", "expected a failed action exit code when codesign fails", failingText);
+  resetCodesignCalls();
+
+  const verifyFailingApp = join(tmpDir, "VerifyFailing.app");
+  const verifyFailingResources = join(verifyFailingApp, "Contents", "Resources");
+  const verifyFailingOutput = join(tmpDir, "verify-failing-output.txt");
+  prepareArchivedFakeApp(verifyFailingApp, join(tmpDir, "verify-failing-assets"));
+  runScriptWithCodesignVerifyFailure(verifyFailingApp, "2\n\nq\n", verifyFailingOutput);
+  assertNoPersistentUnpackDir(verifyFailingResources, verifyFailingOutput);
+  assertFakeAsarJsParses(join(verifyFailingResources, "app.asar"));
+  assertCodesignCallContains(`--verify --deep --strict --verbose=2 ${verifyFailingApp}`, verifyFailingOutput);
+  const verifyFailingText = readOutput(verifyFailingOutput);
+  assertContains(verifyFailingText, "Failed to verify the re-signed Codex.app.", "expected verify failure to be reported", verifyFailingText);
+  assertContains(verifyFailingText, `codesign --verify --deep --strict --verbose=2 ${verifyFailingApp}`, "expected manual verify guidance in failure output", verifyFailingText);
+  assertContains(verifyFailingText, "Exit code: 1", "expected a failed action exit code when codesign verify fails", verifyFailingText);
 
   console.log("re-sign flow test passed");
 }

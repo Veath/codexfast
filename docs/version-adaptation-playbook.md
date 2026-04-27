@@ -43,7 +43,7 @@ Determine whether the new build can be supported, update patch logic if needed, 
    - `bash test/re-sign-flow.sh`
    - Manual checks from `docs/real-app-validation.md` when claiming real-app support
 
-8. Only after verification, add the build to the strict whitelist in `src/patcher.mts`.
+8. Only after verification, add the build to the strict whitelist in `src/cli.mts`.
 
 ## Stop Conditions
 

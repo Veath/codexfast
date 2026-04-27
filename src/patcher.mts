@@ -3,8 +3,9 @@
 const fs: typeof import("node:fs") = require("fs");
 const path: typeof import("node:path") = require("path");
 
-const [, , command, assetsDirArg, backupSuffix, appVersionKey = "unknown"] = process.argv;
+const [, , command, assetsDirArg, backupSuffix, legacyBackupSuffix = "", appVersionKey = "unknown"] = process.argv;
 const assetsDir = path.resolve(assetsDirArg);
+const backupSuffixes = [backupSuffix, legacyBackupSuffix].filter((suffix, index, suffixes) => suffix && suffixes.indexOf(suffix) === index);
 const SPEED_LABEL_NEEDLE = "settings.agent.speed.label";
 const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
 const ADD_CONTEXT_SPEED_NEEDLE = "composer.addContext.speed.option.fast.description";
@@ -90,6 +91,7 @@ type TargetMatch = TargetState & {
 type FileTarget = {
   filePath: string;
   backupPath: string;
+  backupPaths: string[];
   content: string;
   matches: TargetMatch[];
 };
@@ -332,6 +334,7 @@ function inspectFile(filePath: string): FileTarget | null {
   return {
     filePath,
     backupPath: `${filePath}${backupSuffix}`,
+    backupPaths: backupSuffixes.map((suffix) => `${filePath}${suffix}`),
     content,
     matches,
   };
@@ -358,6 +361,10 @@ function writeBackupIfNeeded(fileTarget: FileTarget): void {
   fs.writeFileSync(fileTarget.backupPath, fileTarget.content, "utf8");
 }
 
+function findExistingBackupPath(fileTarget: FileTarget): string | undefined {
+  return fileTarget.backupPaths.find((backupPath) => fs.existsSync(backupPath));
+}
+
 function resolveSlashCommandEnabledVariable(content: string): string {
   const match = content.match(/function OG\(\)\{let [^;]*?,([A-Za-z_$][\w$]*)=Lf\(\),/);
   return match?.[1] ?? "n";
@@ -375,8 +382,9 @@ function status(): number {
       console.log(`Current state: ${describeState(match)}`);
       console.log(`Target: ${match.spec.label}`);
       console.log(`Target file: ${path.relative(process.cwd(), target.filePath)}`);
+      const existingBackupPath = findExistingBackupPath(target);
       console.log(
-        `Backup file: ${fs.existsSync(target.backupPath) ? path.relative(process.cwd(), target.backupPath) : "missing"}`,
+        `Backup file: ${existingBackupPath ? path.relative(process.cwd(), existingBackupPath) : "missing"}`,
       );
     }
   }
@@ -446,8 +454,9 @@ function restore(): number {
   let restored = 0;
 
   for (const target of targets) {
-    if (fs.existsSync(target.backupPath)) {
-      fs.writeFileSync(target.filePath, fs.readFileSync(target.backupPath, "utf8"), "utf8");
+    const existingBackupPath = findExistingBackupPath(target);
+    if (existingBackupPath) {
+      fs.writeFileSync(target.filePath, fs.readFileSync(existingBackupPath, "utf8"), "utf8");
       for (const match of target.matches) {
         console.log(`restored backup: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
         restored += 1;

@@ -42,4 +42,4 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - `Settings-side Fast control`, composer `/fast`, and the composer-side `Speed` menu should be treated as one combined Fast feature set.
 - `Plugins` support should not be described as available unless the sidebar gate patch still works cleanly on the target build.
 - `GPT-5.5` model-list support should not be described as provider support. It is only a UI catalog entry.
-- Compatibility claims must also match `docs/compatibility-matrix.md` and the strict whitelist in `src/patcher.mts`.
+- Compatibility claims must also match `docs/compatibility-matrix.md` and the strict whitelist in `src/cli.mts`.

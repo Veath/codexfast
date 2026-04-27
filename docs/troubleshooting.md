@@ -48,7 +48,7 @@ Check:
 
 Meaning:
 
-- The current `CFBundleShortVersionString` + `CFBundleVersion` pair is not on the strict whitelist in `src/patcher.mts`.
+- The current `CFBundleShortVersionString` + `CFBundleVersion` pair is not on the strict whitelist in `src/cli.mts`.
 
 What to do:
 
@@ -82,6 +82,7 @@ Expected behavior:
 Expected files:
 
 - One archive backup: `app.asar1`
-- One same-name backup per patched JS target: `*.speed-setting.bak`
+- One same-name backup per patched JS target: `*.codexfast.bak`
+- Legacy file backups from earlier releases may still use `*.speed-setting.bak`; restore recognizes both suffixes.
 
 The script should not accumulate repeated unpack directories or unlimited duplicate backup files.

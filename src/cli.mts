@@ -21,6 +21,7 @@ const appInfoPlist = join(appBundle, "Contents", "Info.plist");
 const appAsar = join(appResources, "app.asar");
 const appAsarBackup = join(appResources, "app.asar1");
 const backupSuffix = ".codexfast.bak";
+const legacyBackupSuffix = ".speed-setting.bak";
 const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(", ");
 
 let tempRoot = "";
@@ -233,6 +234,7 @@ function restoreFromArchiveBackup(): boolean {
 function printManualResignGuidance(): void {
   printLine("Manual fallback:");
   printLine(`  codesign --force --deep --sign - ${appBundle}`);
+  printLine(`  codesign --verify --deep --strict --verbose=2 ${appBundle}`);
 }
 
 function resignAppBundle(reason: string): boolean {
@@ -246,6 +248,16 @@ function resignAppBundle(reason: string): boolean {
     printManualResignGuidance();
     return false;
   }
+
+  const verifyResult = run(codesignBin, ["--verify", "--deep", "--strict", "--verbose=2", appBundle]);
+  if (verifyResult.status !== 0) {
+    process.stdout.write(verifyResult.stdout);
+    process.stderr.write(verifyResult.stderr);
+    printLine("Failed to verify the re-signed Codex.app.");
+    printManualResignGuidance();
+    return false;
+  }
+
   printLine("Re-sign completed.");
   return true;
 }
@@ -319,7 +331,7 @@ function validateActionRequest(action: string): boolean {
 }
 
 function runEmbeddedPatcher(action: string): number {
-  const result = run(nodeBin, ["-", action, tempAssetsDir, backupSuffix, appVersionKey], {
+  const result = run(nodeBin, ["-", action, tempAssetsDir, backupSuffix, legacyBackupSuffix, appVersionKey], {
     input: __PATCHER_SOURCE__,
   });
   process.stdout.write(result.stdout);

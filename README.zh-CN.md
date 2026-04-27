@@ -98,11 +98,11 @@ q) Quit
 第一次开启时会留下两份备份：
 
 - `app.asar1` — 归档级备份（原始 bundle）
-- `*.speed-setting.bak` — 文件级回退备份
+- `*.codexfast.bak` — 文件级回退备份。恢复流程也会识别早期版本留下的旧 `*.speed-setting.bak` 后缀。
 
 **恢复** 会优先使用 `app.asar1`，其次 `.bak`，最后尝试按内联规则恢复。Codex 未来的自动更新可能覆盖补丁状态。
 
-> 本地 ad-hoc 重签名能通过 `codesign` 完整性校验，但会替换原本的厂商 notarization。`spctl --assess` 报 `rejected` 是预期现象，验证签名请使用 `codesign --verify --deep --strict /Applications/Codex.app`。
+> 本地 ad-hoc 重签名能通过 `codesign` 完整性校验，但会替换原本的厂商 notarization。`spctl --assess` 报 `rejected` 是预期现象，验证签名请使用 `codesign --verify --deep --strict --verbose=2 /Applications/Codex.app`。
 
 ## 故障排查
 
