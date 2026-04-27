@@ -24,7 +24,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 ## Core Rules
 
 - Keep the script self-contained.
-- Edit `src/codexfast/*` as the source of truth, then run `pnpm build` to regenerate `codexfast.sh`.
+- Edit `src/*` as the source of truth, then run `pnpm build` to regenerate `codexfast.sh`.
 - Preserve the packed `app.asar` workflow.
 - Do not leave a persistent `Contents/Resources/app` directory behind.
 - Treat patch-signature and restore changes as one unit. If apply changes, restore must stay symmetrical.

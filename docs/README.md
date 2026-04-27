@@ -12,7 +12,7 @@ Use these docs for decisions, troubleshooting, and bundle adaptations that futur
   - Verified `Codex.app` version/build pairs, support status, and supported feature paths.
 - [`patch-targets.md`](./patch-targets.md)
   - High-level mapping from exposed features to the current patch targets and restore intent.
-- [`../src/codexfast/`](../src/codexfast/)
+- [`../src/`](../src/)
   - Source pieces for the generated `codexfast.sh` entrypoint.
 - [`troubleshooting.md`](./troubleshooting.md)
   - Common failure modes, expected boundaries, and recovery steps.

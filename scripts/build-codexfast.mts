@@ -2,7 +2,7 @@ import { chmodSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const rootDir = resolve(new URL("..", import.meta.url).pathname);
-const sourceDir = join(rootDir, "src", "codexfast");
+const sourceDir = join(rootDir, "src");
 const outputPath = join(rootDir, "codexfast.sh");
 const checkOnly = process.argv.includes("--check");
 

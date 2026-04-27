@@ -6,7 +6,7 @@ Repository guidance for `codexfast`.
 
 - This repo ships a single-file macOS patch script for `Codex.app`.
 - The published entrypoint is generated as [`codexfast.sh`](/Users/veath/abc/code/github.com/Veath/codexfast/codexfast.sh).
-- Maintain source pieces under [`src/codexfast/`](/Users/veath/abc/code/github.com/Veath/codexfast/src/codexfast/) and regenerate the entrypoint with [`scripts/build-codexfast.mts`](/Users/veath/abc/code/github.com/Veath/codexfast/scripts/build-codexfast.mts).
+- Maintain source pieces under [`src/`](/Users/veath/abc/code/github.com/Veath/codexfast/src/) and regenerate the entrypoint with [`scripts/build-codexfast.mts`](/Users/veath/abc/code/github.com/Veath/codexfast/scripts/build-codexfast.mts).
 - The npm shim is [`bin/codexfast`](/Users/veath/abc/code/github.com/Veath/codexfast/bin/codexfast).
 - The main regression test is [`test/re-sign-flow.sh`](/Users/veath/abc/code/github.com/Veath/codexfast/test/re-sign-flow.sh).
 
@@ -26,7 +26,7 @@ Repository guidance for `codexfast`.
 ## Working Rules
 
 - Keep the script self-contained. New runtime dependencies should be avoided unless they are required.
-- Treat `codexfast.sh` as generated. Edit `src/codexfast/*`, run `pnpm build`, and commit the regenerated entrypoint together with its source.
+- Treat `codexfast.sh` as generated. Edit `src/*`, run `pnpm build`, and commit the regenerated entrypoint together with its source.
 - Preserve the packed `app.asar` workflow. Do not reintroduce a persistent `Contents/Resources/app` unpacked layout.
 - Do not commit extracted Codex bundle files, temporary workspaces, or local inspection artifacts.
 - Treat changes to patch signatures and restore logic as high risk. Update tests in the same change.
