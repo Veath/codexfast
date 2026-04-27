@@ -1,47 +1,18 @@
 import { createHash } from "node:crypto";
 import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, chmodSync, copyFileSync, unlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import vm from "node:vm";
 
 type AssetProfile = "standard" | "26417" | "26417-partial" | "26422";
-type FileMap = Record<string, string>;
 type AsarNode = { files?: Record<string, AsarNode>; size?: number; offset?: string };
 
 const rootDir = resolve(process.env.CODEXFAST_TEST_ROOT ?? process.cwd());
 const tmpDir = mkdtempSync(join(tmpdir(), "codexfast-test."));
 const stubBin = join(tmpDir, "bin");
 const markerFile = join(tmpDir, "codesign.log");
-
-const guardedContent =
-  'const label="settings.agent.speed.label";function demo(){let cache=(0,Q.c)(35),fmt=j(),x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let view="general";return {cache,fmt,view,y,z};}';
-const slashCommandGuardedContent =
-  'const label="composer.speedSlashCommand.title";function OG(){let e=(0,Q.c)(24),t=ea(),n=Lf(),{serviceTierSettings:r,setServiceTier:i}=Zf(),a;e[0]===r.serviceTier?a=e[1]:(a=N(r.serviceTier),e[0]=r.serviceTier,e[1]=a);let o=a===`fast`,s;e[2]===o?s=e[3]:(s=e=>{let{className:t}=e;return(0,$.jsx)(o?Wv:EG,{className:X(t,o?`text-token-link-foreground`:void 0)})},e[2]=o,e[3]=s);let c=s,l;e[4]===t?l=e[5]:(l=t.formatMessage(DG.title),e[4]=t,e[5]=l);let u;e[6]!==t||e[7]!==o?(u=t.formatMessage(o?DG.disableDescription:DG.commandDescription),e[6]=t,e[7]=o,e[8]=u):u=e[8];let d;e[9]!==o||e[10]!==i?(d=async()=>{await i(o?null:`fast`,`slash_command`)},e[9]=o,e[10]=i,e[11]=d):d=e[11];let f;e[12]!==n||e[13]!==o||e[14]!==r.isLoading||e[15]!==i?(f=[n,o,r.isLoading,i],e[12]=n,e[13]=o,e[14]=r.isLoading,e[15]=i,e[16]=f):f=e[16];let p;return e[17]!==c||e[18]!==n||e[19]!==l||e[20]!==u||e[21]!==d||e[22]!==f?(p={id:`speed`,title:l,description:u,requiresEmptyComposer:!1,enabled:n,Icon:c,onSelect:d,dependencies:f},e[17]=c,e[18]=n,e[19]=l,e[20]=u,e[21]=d,e[22]=f,e[23]=p):p=e[23],DI(p),null}';
-const addContextSpeedGuardedContent =
-  'const label="composer.addContext.speed.option.fast.description";const IE=[];function zE(){let l=Sn(),D=Cr(),{serviceTierSettings:O,setServiceTier:k}=Ir(r);return D?(0,q.jsx)(Qa.FlyoutSubmenuItem,{LeftIcon:Coe,label:(0,q.jsx)(W,{...FE.label}),contentClassName:`min-w-[160px]`,disabled:O.isLoading,children:IE.map(e=>{let t=e.value===O.serviceTier;return(0,q.jsx)(Qa.Item,{disabled:O.isLoading,RightIcon:t?to:void 0,SubText:(0,q.jsx)(`span`,{className:`text-token-description-foreground`,children:(0,q.jsx)(W,{...FE[e.description]})}),onSelect:()=>{k(e.value,`composer_menu`),x()},children:(0,q.jsx)(W,{...FE[e.label]})},e.label)})}):null}';
-const pluginsSidebarGuardedContent =
-  'const label="sidebarElectron.pluginsDisabledTooltip";function sidebar(){let e=ea(),{authMethod:T}=Nf(),D=Gf(),O=Hl(),k=cf(`533078438`),j=T===`apikey`,M=k&&j,N=O&&!j;return {e,D,O,k,j,M,N};}';
-const guardedContent26417 =
-  'const label="settings.agent.speed.label";function an(){let e=(0,Q.c)(35),t=C(),n=ae(),{serviceTierSettings:r,setServiceTier:a}=se();if(!n)return null;let o;e[0]===r.serviceTier?o=e[1]:(o=i(r.serviceTier),e[0]=r.serviceTier,e[1]=o);let s=o;return {t,n,s,a};}';
-const addContextSpeedGuardedContent26417 =
-  'const label="composer.addContext.speed.option.fast.description";const gD=zr.map(e=>({label:_D(e),description:vD(e),value:e}));function yD({conversationId:r}){let l=Cn(),u=oe(_),d=mD(),f=(0,K.useRef)(!1),p=Tt(uee),{isOpen:m,setIsOpen:h,tooltipOpen:g,triggerRef:v,onTriggerBlur:y,onTriggerPointerLeave:b,handleSelectAndClose:x}=pD(),S=Yl(r),{activeMode:C,modes:w,setSelectedMode:T,isLoading:E}=fD(r),D=cr(),{serviceTierSettings:O,setServiceTier:k}=jr(r),A=o===`connected`,j=C.mode===`plan`,M=O.serviceTier===`fast`;return D?(0,q.jsx)(Qa.FlyoutSubmenuItem,{disabled:O.isLoading,children:gD.map(e=>(0,q.jsx)(Qa.Item,{onSelect:()=>{k(e.value,`composer_menu`),x()}},e.label))}):null}';
-const pluginsSidebarGuardedContent26417 =
-  'const label="sidebarElectron.pluginsDisabledTooltip";function jT(){let e=je(k),t=Pm(),n=nr(fw),r=Bg(),{remoteProjects:i,setSelectedRemoteProjectId:a}=Vp(),o=tg(()=>{r()}),s=ur(Jy),c=d(),l=x(),f=le(),{isDragActive:p,dropHandlers:m}=LT({onDropRoot:VT}),h=u(`/local/:conversationId`),g=u(`/remote/:conversationId`),_=u(`/worktree-init-v2/:pendingId`),[v,y]=(0,Z.useOptimistic)(aC({localId:h?.params.conversationId??null,remoteId:g?.params.conversationId??null,pendingId:_?.params.pendingId??null}),(e,t)=>t),b=tg(e=>{e!==v&&(0,Z.startTransition)(()=>{y(e)})}),S=WT(v),w=pa(),{authMethod:T}=$f(),D=Fs(),O=hf(`533078438`),A=T===`apikey`,j=O&&A,M=D&&!A;return {e,t,n,r,O,A,j,M};}';
-const pluginsSidebarPartialPatchedContent26417 =
-  'const label="sidebarElectron.pluginsDisabledTooltip";function jT(){let e=je(k),t=Pm(),n=nr(fw),r=Bg(),{remoteProjects:i,setSelectedRemoteProjectId:a}=Vp(),o=tg(()=>{r()}),s=ur(Jy),c=d(),l=x(),f=le(),{isDragActive:p,dropHandlers:m}=LT({onDropRoot:VT}),h=u(`/local/:conversationId`),g=u(`/remote/:conversationId`),_=u(`/worktree-init-v2/:pendingId`),[v,y]=(0,Z.useOptimistic)(aC({localId:h?.params.conversationId??null,remoteId:g?.params.conversationId??null,pendingId:_?.params.pendingId??null}),(e,t)=>t),b=tg(e=>{e!==v&&(0,Z.startTransition)(()=>{y(e)})}),S=WT(v),w=pa(),{authMethod:T}=$f(),D=Fs(),O=hf(`533078438`),A=T===`apikey`,j=!1,M=D&&!A;return {e,t,n,r,O,A,j,M};}';
-const guardedContent26422 =
-  'const label="settings.agent.speed.label";function Tn(){let e=(0,Q.c)(35),t=k(),n=P(),{serviceTierSettings:r,setServiceTier:i}=be();if(!n)return null;let a;e[0]===r.serviceTier?a=e[1]:(a=c(r.serviceTier),e[0]=r.serviceTier,e[1]=a);return {t,n,a,r,i};}';
-const slashCommandGuardedContent26422 =
-  'const slashLabel26422="composer.speedSlashCommand.title";function FY(){let e=(0,Q.c)(24),t=ka(),n=_f(),{serviceTierSettings:r,setServiceTier:i}=Jp(),a;e[0]===r.serviceTier?a=e[1]:(a=ye(r.serviceTier),e[0]=r.serviceTier,e[1]=a);let o=a===`fast`,s;e[2]===o?s=e[3]:(s=e=>{let{className:t}=e;return(0,$.jsx)(o?ub:NY,{className:X(t,o?`text-token-link-foreground`:void 0)})},e[2]=o,e[3]=s);let c=s,l;e[4]===t?l=e[5]:(l=t.formatMessage(PY.title),e[4]=t,e[5]=l);let u;e[6]!==t||e[7]!==o?(u=t.formatMessage(o?PY.disableDescription:PY.commandDescription),e[6]=t,e[7]=o,e[8]=u):u=e[8];let d;e[9]!==o||e[10]!==i?(d=async()=>{await i(o?null:`fast`,`slash_command`)},e[9]=o,e[10]=i,e[11]=d):d=e[11];let f;e[12]!==n||e[13]!==o||e[14]!==r.isLoading||e[15]!==i?(f=[n,o,r.isLoading,i],e[12]=n,e[13]=o,e[14]=r.isLoading,e[15]=i,e[16]=f):f=e[16];let p;return e[17]!==c||e[18]!==n||e[19]!==l||e[20]!==u||e[21]!==d||e[22]!==f?(p={id:`speed`,title:l,description:u,requiresEmptyComposer:!1,enabled:n,Icon:c,onSelect:d,dependencies:f},e[17]=c,e[18]=n,e[19]=l,e[20]=u,e[21]=d,e[22]=f,e[23]=p):p=e[23],Iz(p),null}';
-const intelligenceSpeedGuardedContent26422 =
-  'const intelligenceSpeedLabel26422="composer.intelligenceDropdown.speed.title";function menu(){let t=(0,Q.c)(74),{serviceTierSettings:m,setServiceTier:h}=Jp(n),g=_f(),_=z(eU,n),N=m.serviceTier,U=done;let ge;t[56]!==U||t[57]!==g||t[58]!==N||t[59]!==m.isLoading||t[60]!==h?(ge=g?(0,$.jsx)(cU,{selectedServiceTier:N,isLoading:m.isLoading,setServiceTier:h,onSelectComplete:U}):null,t[56]=U,t[57]=g,t[58]=N,t[59]=m.isLoading,t[60]=h,t[61]=ge):ge=t[61];return ge}';
-const pluginsSidebarGuardedContent26422 =
-  'const pluginsLabel26422="sidebarElectron.pluginsDisabledTooltip";function xA(){let e=R(Qe),T=ka(),{authMethod:D}=zp(),O=$f(`533078438`),k=D===`apikey`,A=O&&k,j=T.formatMessage({id:`sidebarElectron.addGenericWorkspaceRoot`}),M=T.formatMessage({id:`sidebarElectron.newThread`}),N=T.formatMessage({id:`sidebarElectron.recentChats`}),P=T.formatMessage({id:`sidebarElectron.pinnedThreads`}),F=Sg(()=>{}),I=$f(`3326157269`),L=W_(),z=J(DD),B=J(kS),V=tx(),H=Py(),U=Ng(),W=Cp(),G=!H,{remoteConnections:K}=jp(),q=g_(K),ee=Ha({hostId:me})&&!k,te=W&&q.length>0;return {e,T,D,O,k,A,ee,te};}';
-const modelListGuardedContent26422 =
-  'const modelListLabel26422="list-models-for-host";const handlers={"list-models-for-host":i9((e,{hostId:t,...n})=>e.sendRequest(`model/list`,n)),"list-plugins":i9((e,{hostId:t,...n})=>e.sendRequest(`plugin/list`,n))};';
-const modelQueryGuardedContent26422 =
-  'function He(){let c=`apikey`,d={useHiddenModels:!0,availableModels:new Set([`gpt-5.4`]),defaultModel:`gpt-5.4`};let g=e=>{let{data:t}=e,n={models:[]},r=null;return t.forEach(e=>{if(d.useHiddenModels?d.availableModels.has(e.model):!e.hidden){let t=c===`copilot`?[e.supportedReasoningEfforts.find(Ue)??{reasoningEffort:`medium`,description:`medium effort`}]:[...e.supportedReasoningEfforts];n.models.push({...e,supportedReasoningEfforts:t}),r=e.isDefault?e:r}}),r??=n.models.find(e=>e.model===d.defaultModel)??null,{modelsByType:n,defaultModel:r}};return g}';
+const fixturesDir = join(rootDir, "test", "fixtures");
 
 function fail(message: string, detail?: string): never {
   console.error(message);
@@ -264,42 +235,21 @@ function readInfoPlistHash(appDir: string): string {
   return match?.[1] ?? fail(`missing ElectronAsarIntegrity hash in ${appDir}`);
 }
 
-function writeFiles(baseDir: string, files: FileMap): void {
-  mkdirSync(baseDir, { recursive: true });
-  for (const [fileName, content] of Object.entries(files)) {
-    writeFileSync(join(baseDir, fileName), `${content}\n`);
+function copyDirectory(sourceDir: string, destinationDir: string): void {
+  mkdirSync(destinationDir, { recursive: true });
+  for (const entry of readdirSync(sourceDir, { withFileTypes: true })) {
+    const sourcePath = join(sourceDir, entry.name);
+    const destinationPath = join(destinationDir, entry.name);
+    if (entry.isDirectory()) {
+      copyDirectory(sourcePath, destinationPath);
+    } else if (entry.isFile()) {
+      copyFileSync(sourcePath, destinationPath);
+    }
   }
 }
 
 function writeAssets(assetsDir: string, profile: AssetProfile): void {
-  if (profile === "standard") {
-    writeFiles(assetsDir, {
-      "general-settings.js": guardedContent,
-      "index.js": slashCommandGuardedContent,
-      "use-model-settings.js": addContextSpeedGuardedContent,
-      "sidebar.js": pluginsSidebarGuardedContent,
-    });
-    return;
-  }
-  if (profile === "26417" || profile === "26417-partial") {
-    writeFiles(assetsDir, {
-      "general-settings-D2eks1ok.js": guardedContent26417,
-      "index-CxBol07n.js": slashCommandGuardedContent,
-      "use-model-settings-ldiRRtPt.js": addContextSpeedGuardedContent26417,
-      "sidebar-CxBol07n.js": profile === "26417" ? pluginsSidebarGuardedContent26417 : pluginsSidebarPartialPatchedContent26417,
-    });
-    return;
-  }
-  writeFiles(assetsDir, {
-    "general-settings-CnVD4YyB.js": guardedContent26422,
-    "index-gATb9Tvd.js": [
-      slashCommandGuardedContent26422,
-      intelligenceSpeedGuardedContent26422,
-      pluginsSidebarGuardedContent26422,
-      modelListGuardedContent26422,
-    ].join("\n"),
-    "font-settings-C9TXXljS.js": modelQueryGuardedContent26422,
-  });
+  copyDirectory(join(fixturesDir, profile, "webview", "assets"), assetsDir);
 }
 
 function prepareArchivedFakeApp(appDir: string, assetsRoot: string, appVersion = "26.415.40636", appBuild = "1799", assetProfile: AssetProfile = "standard"): void {
