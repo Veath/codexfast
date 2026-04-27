@@ -1,4 +1,4 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { assertContains, assertNotContains, fail } from "./helpers/assertions.mts";
@@ -35,6 +35,14 @@ function runScriptWithCodesignFailure(appDir: string, input: string, outputFile:
 
 function runScriptWithCodesignVerifyFailure(appDir: string, input: string, outputFile: string): void {
   runScript(appDir, input, outputFile, { CODEXFAST_TEST_CODESIGN_VERIFY_FAIL: "1" });
+}
+
+function runScriptWithAsarPackFailure(appDir: string, input: string, outputFile: string): void {
+  runScript(appDir, input, outputFile, { CODEXFAST_TEST_ASAR_PACK_FAIL: "1" });
+}
+
+function runScriptWithStartupAsarPackFailure(appDir: string, input: string, outputFile: string): void {
+  runScript(appDir, input, outputFile, { CODEXFAST_TEST_ASAR_PACK_FAIL: "1", CODEXFAST_TEST_ALLOW_NONZERO: "1" });
 }
 
 function assertCodesignCalls(expectedMin: number, outputFile: string): void {
@@ -310,6 +318,49 @@ function main(): void {
   }
   assertGuardedState(join(legacyResources, "app.asar"), "legacy repack");
   assertIntegrityMatches(legacyApp, join(legacyResources, "app.asar"), "expected ElectronAsarIntegrity hash to match migrated app.asar header");
+  resetCodesignCalls();
+
+  const packFailApp = join(tmpDir, "PackFail.app");
+  const packFailResources = join(packFailApp, "Contents", "Resources");
+  const packFailArchive = join(packFailResources, "app.asar");
+  const packFailOutput = join(tmpDir, "pack-fail-output.txt");
+  prepareArchivedFakeApp(packFailApp, join(tmpDir, "pack-fail-assets"));
+  const packFailOriginalArchive = readFileSync(packFailArchive);
+  const packFailOriginalHash = readInfoPlistHash(packFailApp);
+  runScriptWithAsarPackFailure(packFailApp, "2\n\nq\n", packFailOutput);
+  assertNoPersistentUnpackDir(packFailResources, packFailOutput);
+  if (!readFileSync(packFailArchive).equals(packFailOriginalArchive)) {
+    fail("expected failed temp pack to leave installed app.asar unchanged", readOutput(packFailOutput));
+  }
+  if (readInfoPlistHash(packFailApp) !== packFailOriginalHash) {
+    fail("expected failed temp pack to leave ElectronAsarIntegrity unchanged", readOutput(packFailOutput));
+  }
+  const packFailText = readOutput(packFailOutput);
+  assertContains(packFailText, "Failed to repack app.asar.", "expected pack failure to be reported", packFailText);
+  assertContains(packFailText, "Exit code: 1", "expected a failed action exit code when asar pack fails", packFailText);
+  assertNotContains(packFailText, "Running local ad-hoc re-sign", "expected failed pack to stop before re-signing", packFailText);
+  resetCodesignCalls();
+
+  const legacyPackFailApp = join(tmpDir, "LegacyPackFail.app");
+  const legacyPackFailResources = join(legacyPackFailApp, "Contents", "Resources");
+  const legacyPackFailArchive = join(legacyPackFailResources, "app.asar");
+  const legacyPackFailUnpackedDir = join(legacyPackFailResources, "app");
+  const legacyPackFailOutput = join(tmpDir, "legacy-pack-fail-output.txt");
+  prepareLegacyFakeApp(legacyPackFailApp, join(tmpDir, "legacy-pack-fail-unpacked-assets"), join(tmpDir, "legacy-pack-fail-assets"), "legacy-pack-fail-placeholder-hash");
+  writeFileSync(legacyPackFailArchive, readFileSync(join(legacyPackFailResources, "app.asar1")));
+  const legacyPackFailOriginalArchive = readFileSync(legacyPackFailArchive);
+  const legacyPackFailOriginalHash = readInfoPlistHash(legacyPackFailApp);
+  runScriptWithStartupAsarPackFailure(legacyPackFailApp, "1\n\nq\n", legacyPackFailOutput);
+  if (!existsSync(legacyPackFailUnpackedDir)) {
+    fail("expected failed legacy temp pack to preserve Resources/app", readOutput(legacyPackFailOutput));
+  }
+  if (!readFileSync(legacyPackFailArchive).equals(legacyPackFailOriginalArchive)) {
+    fail("expected failed legacy temp pack to leave installed app.asar unchanged", readOutput(legacyPackFailOutput));
+  }
+  if (readInfoPlistHash(legacyPackFailApp) !== legacyPackFailOriginalHash) {
+    fail("expected failed legacy temp pack to leave ElectronAsarIntegrity unchanged", readOutput(legacyPackFailOutput));
+  }
+  assertContains(readOutput(legacyPackFailOutput), "Failed to repack legacy Resources/app directory.", "expected legacy pack failure to be reported", readOutput(legacyPackFailOutput));
   resetCodesignCalls();
 
   const unsupportedApp = join(tmpDir, "Unsupported.app");

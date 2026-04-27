@@ -47,6 +47,10 @@ function walkFiles(dir, segments = [], files = []) {
 }
 
 function writeAsar(sourcePath, archivePath) {
+  if (process.env.CODEXFAST_TEST_ASAR_PACK_FAIL === "1" && archivePath.includes("codexfast.")) {
+    console.error("asar pack failed");
+    process.exit(1);
+  }
   const files = walkFiles(sourcePath);
   let nextOffset = 0;
   const headerRoot = { files: {} };
@@ -120,7 +124,7 @@ export function runScript(options: {
   });
   const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
   writeFileSync(options.outputFile, output);
-  if (result.status !== 0) {
+  if (result.status !== 0 && options.extraEnv?.CODEXFAST_TEST_ALLOW_NONZERO !== "1") {
     fail(`codexfast exited with ${result.status}`, output);
   }
 }

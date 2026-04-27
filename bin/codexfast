@@ -43,6 +43,7 @@ const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(", ");
 let tempRoot = "";
 let tempAppDir = "";
 let tempAssetsDir = "";
+let tempAsar = "";
 let appVersion = "unknown";
 let appBuild = "unknown";
 let appVersionKey = "unknown+unknown";
@@ -95,6 +96,7 @@ function cleanupTempWorkspace() {
     tempRoot = "";
     tempAppDir = "";
     tempAssetsDir = "";
+    tempAsar = "";
 }
 function createTempWorkspace() {
     cleanupTempWorkspace();
@@ -102,6 +104,7 @@ function createTempWorkspace() {
         tempRoot = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), "codexfast."));
         tempAppDir = (0, node_path_1.join)(tempRoot, "app");
         tempAssetsDir = (0, node_path_1.join)(tempAppDir, "webview", "assets");
+        tempAsar = (0, node_path_1.join)(tempRoot, "app.asar");
         return true;
     }
     catch {
@@ -181,11 +184,25 @@ function unpackAppAsarToTemp() {
     return true;
 }
 function packTempAppToAsar() {
-    if (!runAsar(["p", tempAppDir, appAsar])) {
+    if (!tempAsar) {
+        printLine("Temporary archive path is not available.");
+        return false;
+    }
+    if (!runAsar(["p", tempAppDir, tempAsar])) {
         printLine("Failed to repack app.asar.");
         return false;
     }
-    return true;
+    return replaceAppAsarFromTemp();
+}
+function replaceAppAsarFromTemp() {
+    try {
+        (0, node_fs_1.renameSync)(tempAsar, appAsar);
+        return true;
+    }
+    catch {
+        printLine("Failed to replace app.asar with the repacked archive.");
+        return false;
+    }
 }
 function migrateLegacyUnpackedLayout() {
     const unpackedAppDir = (0, node_path_1.join)(appResources, "app");
@@ -193,13 +210,19 @@ function migrateLegacyUnpackedLayout() {
         return true;
     }
     printLine("Detected legacy unpacked Resources/app layout. Repacking into app.asar.");
+    if (!createTempWorkspace()) {
+        return false;
+    }
     if (!(0, node_fs_1.existsSync)(appAsarBackup) && (0, node_fs_1.existsSync)(appAsar)) {
         if (!ensureArchiveBackup()) {
             return false;
         }
     }
-    if (!runAsar(["p", unpackedAppDir, appAsar])) {
+    if (!runAsar(["p", unpackedAppDir, tempAsar])) {
         printLine("Failed to repack legacy Resources/app directory.");
+        return false;
+    }
+    if (!replaceAppAsarFromTemp()) {
         return false;
     }
     (0, node_fs_1.rmSync)(unpackedAppDir, { recursive: true, force: true });
@@ -398,6 +421,7 @@ async function showMenu() {
 }
 async function main() {
     if (!checkRequirements()) {
+        cleanupTempWorkspace();
         return 1;
     }
     return showMenu();
