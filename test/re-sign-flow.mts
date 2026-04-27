@@ -1,12 +1,11 @@
-import { createHash } from "node:crypto";
-import { mkdtempSync, rmSync, existsSync, mkdirSync, writeFileSync, readFileSync, readdirSync, statSync, chmodSync, copyFileSync, unlinkSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { spawnSync } from "node:child_process";
-import vm from "node:vm";
+import { assertContains, assertNotContains, fail } from "./helpers/assertions.mts";
+import { assertFakeAsarJsParses, readFakeAsarFile, readFakeAsarHeaderHash } from "./helpers/fake-asar.mts";
+import { type AssetProfile, prepareArchivedFakeApp as prepareArchivedFakeAppHelper, prepareLegacyFakeApp as prepareLegacyFakeAppHelper, readInfoPlistHash, writeInfoPlist } from "./helpers/fake-app.mts";
+import { assertCodesignCalls as assertCodesignCallsHelper, readOutput, resetCodesignCalls as resetCodesignCallsHelper, runScript as runScriptHelper, setupStubs as setupStubsHelper } from "./helpers/script-harness.mts";
 
-type AssetProfile = "standard" | "26417" | "26417-partial" | "26422";
-type AsarNode = { files?: Record<string, AsarNode>; size?: number; offset?: string };
 
 const rootDir = resolve(process.env.CODEXFAST_TEST_ROOT ?? process.cwd());
 const tmpDir = mkdtempSync(join(tmpdir(), "codexfast-test."));
@@ -14,325 +13,37 @@ const stubBin = join(tmpDir, "bin");
 const markerFile = join(tmpDir, "codesign.log");
 const fixturesDir = join(rootDir, "test", "fixtures");
 
-function fail(message: string, detail?: string): never {
-  console.error(message);
-  if (detail) {
-    console.error(detail);
-  }
-  process.exit(1);
-}
-
-function writeExecutable(path: string, content: string): void {
-  writeFileSync(path, content);
-  chmodSync(path, 0o755);
-}
-
 function setupStubs(): void {
-  mkdirSync(stubBin, { recursive: true });
-  writeExecutable(join(stubBin, "clear"), "#!/bin/bash\nexit 0\n");
-  writeExecutable(
-    join(stubBin, "codesign"),
-    `#!/bin/bash
-if [ "\${CODEXFAST_TEST_CODESIGN_FAIL:-0}" = "1" ] && [ "$1" = "--force" ]; then
-  printf '%s\\n' "codesign: permission denied" >&2
-  exit 1
-fi
-printf '%s\\n' "$*" >> ${JSON.stringify(markerFile)}
-exit 0
-`,
-  );
-  writeExecutable(
-    join(stubBin, "npm"),
-    `#!/usr/bin/env node
-const fs = require("fs");
-const path = require("path");
-const args = process.argv.slice(2);
-const marker = args.indexOf("--");
-if (marker === -1) process.exit(0);
-const asarArgs = args.slice(marker + 1);
-if (asarArgs[0] !== "asar") process.exit(0);
-
-function walkFiles(dir, segments = [], files = []) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) walkFiles(fullPath, [...segments, entry.name], files);
-    else if (entry.isFile()) files.push({ segments: [...segments, entry.name], buffer: fs.readFileSync(fullPath) });
-  }
-  return files;
-}
-
-function writeAsar(sourcePath, archivePath) {
-  const files = walkFiles(sourcePath);
-  let nextOffset = 0;
-  const headerRoot = { files: {} };
-  for (const file of files) {
-    let current = headerRoot;
-    for (const segment of file.segments.slice(0, -1)) {
-      current.files[segment] ??= { files: {} };
-      current = current.files[segment];
-    }
-    current.files[file.segments.at(-1)] = { size: file.buffer.length, offset: String(nextOffset) };
-    nextOffset += file.buffer.length;
-  }
-  const headerStringBuffer = Buffer.from(JSON.stringify(headerRoot), "utf8");
-  const align4 = (value) => value + ((4 - (value % 4)) % 4);
-  const headerPayloadSize = align4(4 + headerStringBuffer.length);
-  const headerBuffer = Buffer.alloc(4 + headerPayloadSize);
-  headerBuffer.writeUInt32LE(headerPayloadSize, 0);
-  headerBuffer.writeUInt32LE(headerStringBuffer.length, 4);
-  headerStringBuffer.copy(headerBuffer, 8);
-  const sizeBuffer = Buffer.alloc(8);
-  sizeBuffer.writeUInt32LE(4, 0);
-  sizeBuffer.writeUInt32LE(headerBuffer.length, 4);
-  fs.writeFileSync(archivePath, Buffer.concat([sizeBuffer, headerBuffer, ...files.map((file) => file.buffer)]));
-}
-
-function extractAsar(archivePath, outputDir) {
-  const archive = fs.readFileSync(archivePath);
-  const headerBufferSize = archive.readUInt32LE(4);
-  const headerStringSize = archive.readUInt32LE(12);
-  const header = JSON.parse(archive.subarray(16, 16 + headerStringSize).toString("utf8"));
-  const files = [];
-  function walk(node, segments = []) {
-    for (const [name, value] of Object.entries(node.files ?? {})) {
-      const nextSegments = [...segments, name];
-      if (value.files) walk(value, nextSegments);
-      else files.push({ relativePath: nextSegments.join("/"), offset: Number(value.offset), size: value.size });
-    }
-  }
-  walk(header);
-  for (const file of files) {
-    const destination = path.join(outputDir, file.relativePath);
-    fs.mkdirSync(path.dirname(destination), { recursive: true });
-    fs.writeFileSync(destination, archive.subarray(8 + headerBufferSize + file.offset, 8 + headerBufferSize + file.offset + file.size));
-  }
-}
-
-const [, mode, sourcePath, targetPath] = asarArgs;
-if (mode === "p") writeAsar(sourcePath, targetPath);
-if (mode === "e") extractAsar(sourcePath, targetPath);
-`,
-  );
-}
-
-function walkFiles(sourcePath: string, segments: string[] = [], files: { segments: string[]; buffer: Buffer }[] = []): { segments: string[]; buffer: Buffer }[] {
-  for (const entry of readdirSync(sourcePath, { withFileTypes: true })) {
-    const fullPath = join(sourcePath, entry.name);
-    if (entry.isDirectory()) {
-      walkFiles(fullPath, [...segments, entry.name], files);
-    } else if (entry.isFile()) {
-      files.push({ segments: [...segments, entry.name], buffer: readFileSync(fullPath) });
-    }
-  }
-  return files;
-}
-
-function writeFakeAsar(sourcePath: string, archivePath: string): void {
-  const sourceStat = statSync(sourcePath);
-  const files = sourceStat.isDirectory()
-    ? walkFiles(sourcePath)
-    : [{ segments: ["webview", "assets", "general-settings.js"], buffer: readFileSync(sourcePath) }];
-  let nextOffset = 0;
-  const headerRoot: AsarNode = { files: {} };
-
-  for (const file of files) {
-    let current = headerRoot;
-    for (const segment of file.segments.slice(0, -1)) {
-      current.files ??= {};
-      current.files[segment] ??= { files: {} };
-      current = current.files[segment];
-    }
-    current.files ??= {};
-    current.files[file.segments[file.segments.length - 1]] = { size: file.buffer.length, offset: String(nextOffset) };
-    nextOffset += file.buffer.length;
-  }
-
-  const headerStringBuffer = Buffer.from(JSON.stringify(headerRoot), "utf8");
-  const align4 = (value: number) => value + ((4 - (value % 4)) % 4);
-  const headerPayloadSize = align4(4 + headerStringBuffer.length);
-  const headerBuffer = Buffer.alloc(4 + headerPayloadSize);
-  headerBuffer.writeUInt32LE(headerPayloadSize, 0);
-  headerBuffer.writeUInt32LE(headerStringBuffer.length, 4);
-  headerStringBuffer.copy(headerBuffer, 8);
-  const sizeBuffer = Buffer.alloc(8);
-  sizeBuffer.writeUInt32LE(4, 0);
-  sizeBuffer.writeUInt32LE(headerBuffer.length, 4);
-  writeFileSync(archivePath, Buffer.concat([sizeBuffer, headerBuffer, ...files.map((file) => file.buffer)]));
-}
-
-function readFakeAsarFile(archivePath: string, relativePath = "webview/assets/general-settings.js"): string {
-  const archive = readFileSync(archivePath);
-  const headerBufferSize = archive.readUInt32LE(4);
-  const headerStringSize = archive.readUInt32LE(12);
-  const header = JSON.parse(archive.subarray(16, 16 + headerStringSize).toString("utf8")) as AsarNode;
-  let current: AsarNode | undefined = header;
-  for (const segment of relativePath.split("/")) {
-    current = current?.files?.[segment];
-  }
-  if (!current || current.offset === undefined || current.size === undefined) {
-    fail(`missing fake asar file: ${relativePath}`);
-  }
-  const fileOffset = 8 + headerBufferSize + Number(current.offset);
-  return archive.subarray(fileOffset, fileOffset + current.size).toString("utf8");
-}
-
-function readFakeAsarHeaderHash(archivePath: string): string {
-  const archive = readFileSync(archivePath);
-  const headerStringSize = archive.readUInt32LE(12);
-  const headerString = archive.subarray(16, 16 + headerStringSize).toString("utf8");
-  return createHash("sha256").update(headerString).digest("hex");
-}
-
-function assertFakeAsarJsParses(archivePath: string): void {
-  const archive = readFileSync(archivePath);
-  const headerBufferSize = archive.readUInt32LE(4);
-  const headerStringSize = archive.readUInt32LE(12);
-  const header = JSON.parse(archive.subarray(16, 16 + headerStringSize).toString("utf8")) as AsarNode;
-  function walk(node: AsarNode): void {
-    for (const value of Object.values(node.files ?? {})) {
-      if (value.files) {
-        walk(value);
-      } else {
-        const fileOffset = 8 + headerBufferSize + Number(value.offset);
-        new vm.Script(archive.subarray(fileOffset, fileOffset + Number(value.size)).toString("utf8"));
-      }
-    }
-  }
-  walk(header);
-}
-
-function writeInfoPlist(appDir: string, hashValue: string, appVersion = "26.415.40636", appBuild = "1799"): void {
-  mkdirSync(join(appDir, "Contents"), { recursive: true });
-  writeFileSync(
-    join(appDir, "Contents", "Info.plist"),
-    `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>CFBundleShortVersionString</key>
-  <string>${appVersion}</string>
-  <key>CFBundleVersion</key>
-  <string>${appBuild}</string>
-  <key>ElectronAsarIntegrity</key>
-  <dict>
-    <key>Resources/app.asar</key>
-    <dict>
-      <key>algorithm</key>
-      <string>SHA256</string>
-      <key>hash</key>
-      <string>${hashValue}</string>
-    </dict>
-  </dict>
-</dict>
-</plist>
-`,
-  );
-}
-
-function readInfoPlistHash(appDir: string): string {
-  const plist = readFileSync(join(appDir, "Contents", "Info.plist"), "utf8");
-  const match = plist.match(/<key>hash<\/key>\s*<string>([^<]+)<\/string>/);
-  return match?.[1] ?? fail(`missing ElectronAsarIntegrity hash in ${appDir}`);
-}
-
-function copyDirectory(sourceDir: string, destinationDir: string): void {
-  mkdirSync(destinationDir, { recursive: true });
-  for (const entry of readdirSync(sourceDir, { withFileTypes: true })) {
-    const sourcePath = join(sourceDir, entry.name);
-    const destinationPath = join(destinationDir, entry.name);
-    if (entry.isDirectory()) {
-      copyDirectory(sourcePath, destinationPath);
-    } else if (entry.isFile()) {
-      copyFileSync(sourcePath, destinationPath);
-    }
-  }
-}
-
-function writeAssets(assetsDir: string, profile: AssetProfile): void {
-  copyDirectory(join(fixturesDir, profile, "webview", "assets"), assetsDir);
+  setupStubsHelper(stubBin, markerFile);
 }
 
 function prepareArchivedFakeApp(appDir: string, assetsRoot: string, appVersion = "26.415.40636", appBuild = "1799", assetProfile: AssetProfile = "standard"): void {
-  const resourcesDir = join(appDir, "Contents", "Resources");
-  const archivePath = join(resourcesDir, "app.asar");
-  mkdirSync(resourcesDir, { recursive: true });
-  writeAssets(join(assetsRoot, "webview", "assets"), assetProfile);
-  writeFakeAsar(assetsRoot, archivePath);
-  writeInfoPlist(appDir, readFakeAsarHeaderHash(archivePath), appVersion, appBuild);
+  prepareArchivedFakeAppHelper({ appDir, assetsRoot, fixturesDir, appVersion, appBuild, assetProfile });
 }
 
 function prepareLegacyFakeApp(appDir: string, unpackedAssetsDir: string, archivedAssetsRoot: string, appBuildHashPlaceholder: string): void {
-  const resourcesDir = join(appDir, "Contents", "Resources");
-  const unpackedRoot = join(resourcesDir, "app", "webview", "assets");
-  mkdirSync(unpackedRoot, { recursive: true });
-  writeAssets(unpackedAssetsDir, "standard");
-  for (const file of ["general-settings.js", "index.js", "use-model-settings.js", "sidebar.js"]) {
-    copyFileSync(join(unpackedAssetsDir, file), join(unpackedRoot, file));
-  }
-  writeAssets(join(archivedAssetsRoot, "webview", "assets"), "standard");
-  writeFakeAsar(archivedAssetsRoot, join(resourcesDir, "app.asar1"));
-  writeInfoPlist(appDir, appBuildHashPlaceholder);
+  prepareLegacyFakeAppHelper({ appDir, unpackedAssetsDir, archivedAssetsRoot, fixturesDir, appBuildHashPlaceholder });
 }
 
 function runScript(appDir: string, input: string, outputFile: string, extraEnv: Record<string, string> = {}): void {
-  const result = spawnSync(join(rootDir, "codexfast.sh"), {
-    input,
-    encoding: "utf8",
-    env: {
-      ...process.env,
-      ...extraEnv,
-      PATH: `${stubBin}:${process.env.PATH ?? ""}`,
-      CODEXFAST_APP_BUNDLE: appDir,
-    },
-  });
-  const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
-  writeFileSync(outputFile, output);
-  if (result.status !== 0) {
-    fail(`codexfast exited with ${result.status}`, output);
-  }
+  runScriptHelper({ rootDir, stubBin, appDir, input, outputFile, extraEnv });
 }
 
 function runScriptWithCodesignFailure(appDir: string, input: string, outputFile: string): void {
   runScript(appDir, input, outputFile, { CODEXFAST_TEST_CODESIGN_FAIL: "1" });
 }
 
-function readOutput(outputFile: string): string {
-  return readFileSync(outputFile, "utf8");
-}
-
 function assertCodesignCalls(expectedMin: number, outputFile: string): void {
-  if (!existsSync(markerFile)) {
-    fail("expected codesign to be invoked", readOutput(outputFile));
-  }
-  const callCount = readFileSync(markerFile, "utf8").trim().split("\n").filter(Boolean).length;
-  if (callCount < expectedMin) {
-    fail(`expected codesign to run at least ${expectedMin} times, got ${callCount}`, `${readFileSync(markerFile, "utf8")}\n${readOutput(outputFile)}`);
-  }
+  assertCodesignCallsHelper(expectedMin, markerFile, outputFile);
 }
 
 function resetCodesignCalls(): void {
-  if (existsSync(markerFile)) {
-    unlinkSync(markerFile);
-  }
+  resetCodesignCallsHelper(markerFile);
 }
 
 function assertNoPersistentUnpackDir(resourcesDir: string, outputFile: string): void {
   if (existsSync(join(resourcesDir, "app"))) {
     fail("expected no persistent Resources/app directory", readOutput(outputFile));
-  }
-}
-
-function assertContains(source: string, expected: string | RegExp, message: string, detail = source): void {
-  const matches = typeof expected === "string" ? source.includes(expected) : expected.test(source);
-  if (!matches) {
-    fail(message, detail);
-  }
-}
-
-function assertNotContains(source: string, unexpected: string | RegExp, message: string, detail = source): void {
-  const matches = typeof unexpected === "string" ? source.includes(unexpected) : unexpected.test(source);
-  if (matches) {
-    fail(message, detail);
   }
 }
 
