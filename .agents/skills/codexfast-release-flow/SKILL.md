@@ -22,6 +22,24 @@ The goal is to turn the current repo state into a verified npm package without l
 
 Do not use this skill for feature implementation. Use `codexfast-development-flow` first, then return here when the code is ready to ship.
 
+## Version Selection
+
+`codexfast` uses `vx.y.z` Git tags, where `v` is only the tag prefix and `x.y.z` is the npm SemVer version.
+
+Choose the version before editing release metadata:
+
+- Use a patch release, such as `0.5.4`, only for fixes to behavior that was already shipped and claimed supported:
+  - patch-signature corrections for an already supported Codex build
+  - restore, backup, integrity, re-sign, status, or packaging fixes
+  - documentation corrections that do not change supported behavior
+- Use a minor release, such as `0.6.0`, for any new supported capability or compatibility surface:
+  - newly supported `Codex.app` version/build pairs
+  - new patch targets, feature paths, UI gates, or user-visible commands
+  - behavior that expands the supported custom-API feature set
+- If one release contains both a feature and a fix, choose the higher level: minor.
+- Even while the package is `0.x`, do not treat new compatibility support as patch-level maintenance. New Codex build support is a compatibility expansion and should be minor.
+- Do not skip version numbers just to repair release confusion. Once a version is published to npm or tagged publicly, leave it immutable and choose the next correct version.
+
 ## Release Workflow
 
 1. Confirm the repo is ready.
@@ -29,6 +47,7 @@ Do not use this skill for feature implementation. Use `codexfast-development-flo
    - Make sure the intended feature work, docs, and tests are already in place.
 
 2. Prepare release metadata.
+   - Classify the release using the Version Selection rules before changing files.
    - Bump `package.json` to the target version.
    - Move the active unreleased notes in `CHANGELOG.md` into a dated version section.
    - Keep README references aligned if usage or release behavior changed.
@@ -106,3 +125,5 @@ Do not use this skill for feature implementation. Use `codexfast-development-flo
 - Forgetting to move `Unreleased` notes into a concrete version section.
 - Claiming publish success from `npm publish` start logs instead of registry confirmation.
 - Forgetting that docs and changelog are part of the release payload, not optional cleanup.
+- Treating new `Codex.app` build support, new patch targets, or new feature paths as patch releases.
+- Retagging or republishing an already public version to hide a previous version-selection mistake.
