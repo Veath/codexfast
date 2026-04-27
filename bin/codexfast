@@ -348,7 +348,6 @@ function runEmbeddedTool(action) {
 }
 async function showMenu() {
     const rl = (0, promises_1.createInterface)({ input: node_process_1.stdin, output: node_process_1.stdout });
-    let lastExitCode = 0;
     try {
         while (true) {
             run("clear", []);
@@ -362,15 +361,15 @@ async function showMenu() {
             const choice = (await rl.question("Select an option: ")).trim();
             switch (choice) {
                 case "1":
-                    lastExitCode = runEmbeddedTool("status");
+                    runEmbeddedTool("status");
                     await rl.question("Press Enter to continue...");
                     break;
                 case "2":
-                    lastExitCode = runEmbeddedTool("apply");
+                    runEmbeddedTool("apply");
                     await rl.question("Press Enter to continue...");
                     break;
                 case "3":
-                    lastExitCode = runEmbeddedTool("restore");
+                    runEmbeddedTool("restore");
                     await rl.question("Press Enter to continue...");
                     break;
                 case "q":
@@ -386,7 +385,6 @@ async function showMenu() {
         rl.close();
         cleanupTempWorkspace();
     }
-    return lastExitCode;
 }
 async function main() {
     if (!checkRequirements()) {

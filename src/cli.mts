@@ -372,7 +372,6 @@ function runEmbeddedTool(action: string): number {
 
 async function showMenu(): Promise<number> {
   const rl = createInterface({ input, output });
-  let lastExitCode = 0;
 
   try {
     while (true) {
@@ -388,15 +387,15 @@ async function showMenu(): Promise<number> {
       const choice = (await rl.question("Select an option: ")).trim();
       switch (choice) {
         case "1":
-          lastExitCode = runEmbeddedTool("status");
+          runEmbeddedTool("status");
           await rl.question("Press Enter to continue...");
           break;
         case "2":
-          lastExitCode = runEmbeddedTool("apply");
+          runEmbeddedTool("apply");
           await rl.question("Press Enter to continue...");
           break;
         case "3":
-          lastExitCode = runEmbeddedTool("restore");
+          runEmbeddedTool("restore");
           await rl.question("Press Enter to continue...");
           break;
         case "q":
@@ -411,8 +410,6 @@ async function showMenu(): Promise<number> {
     rl.close();
     cleanupTempWorkspace();
   }
-
-  return lastExitCode;
 }
 
 async function main(): Promise<number> {
