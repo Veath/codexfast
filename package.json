@@ -15,7 +15,6 @@
   },
   "files": [
     "bin/codexfast",
-    "codexfast.sh",
     "LICENSE",
     "README.md",
     "README.zh-CN.md"

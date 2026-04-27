@@ -104,7 +104,7 @@ export function runScript(options: {
   outputFile: string;
   extraEnv?: Record<string, string>;
 }): void {
-  const result = spawnSync(join(options.rootDir, "codexfast.sh"), {
+  const result = spawnSync(join(options.rootDir, "bin", "codexfast"), {
     input: options.input,
     encoding: "utf8",
     env: {

@@ -111,7 +111,7 @@ Choose the version before editing release metadata:
 
 - `package.json` version matches the intended release.
 - `CHANGELOG.md` has the correct dated section.
-- The shell regression passed before publish.
+- The regression suite passed before publish.
 - The npm package contents look correct.
 - Registry state is verified after publish.
 - The expected `vx.y.z` tag exists on `origin`.

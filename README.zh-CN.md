@@ -42,7 +42,7 @@ npx codexfast
 或在本仓库里直接运行：
 
 ```bash
-./codexfast.sh
+./bin/codexfast
 ```
 
 脚本会打开一个交互菜单：

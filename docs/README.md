@@ -13,7 +13,7 @@ Use these docs for decisions, troubleshooting, and bundle adaptations that futur
 - [`patch-targets.md`](./patch-targets.md)
   - High-level mapping from exposed features to the current patch targets and restore intent.
 - [`../src/`](../src/)
-  - Source pieces for the generated `codexfast.sh` entrypoint.
+  - TypeScript source for the generated `bin/codexfast` entrypoint.
 - [`troubleshooting.md`](./troubleshooting.md)
   - Common failure modes, expected boundaries, and recovery steps.
 - [`real-app-validation.md`](./real-app-validation.md)

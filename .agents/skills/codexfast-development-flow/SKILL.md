@@ -13,7 +13,7 @@ This repo is high risk because it patches a real `/Applications/Codex.app` bundl
 
 ## When To Use
 
-- Adding or updating a patch target in `codexfast.sh`
+- Adding or updating a patch target in `src/patcher.mts`
 - Adapting to a new Codex bundle version
 - Changing compatibility gating or bundle metadata handling
 - Updating restore, re-sign, backup, or archive logic
@@ -23,24 +23,24 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 
 ## Core Rules
 
-- Keep the script self-contained.
-- Edit `src/*` as the source of truth, then run `pnpm build` to regenerate `codexfast.sh`.
+- Keep the generated CLI self-contained.
+- Edit `src/*` as the source of truth, then run `pnpm build` to regenerate `bin/codexfast`.
 - Preserve the packed `app.asar` workflow.
 - Do not leave a persistent `Contents/Resources/app` directory behind.
 - Treat patch-signature and restore changes as one unit. If apply changes, restore must stay symmetrical.
-- Do not claim app behavior is fixed from code inspection alone. The shell regression must pass.
+- Do not claim app behavior is fixed from code inspection alone. The regression suite must pass.
 
 ## Workflow
 
 1. Inspect the current repo state.
-   - Read `AGENTS.md`, `codexfast.sh`, `test/re-sign-flow.sh`, and the relevant README sections.
+   - Read `AGENTS.md`, `src/cli.mts`, `src/patcher.mts`, `test/re-sign-flow.sh`, and the relevant README sections.
    - If the change is bundle-specific, identify the exact gated text key, target file shape, and restore path first.
 
 2. Make the smallest viable code change.
    - Keep patch logic narrow.
    - Prefer adding a new target spec over refactoring unrelated logic.
    - For compatibility gating, update the whitelist and surface the detected version/build clearly in output.
-   - If changing the generated entrypoint, edit the source pieces and regenerate `codexfast.sh`.
+   - If changing the generated entrypoint, edit the source pieces and regenerate `bin/codexfast`.
 
 3. Update regression coverage in the same change.
    - Extend `test/re-sign-flow.sh` for every new target, restore path, or compatibility guard.

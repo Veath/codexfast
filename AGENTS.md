@@ -4,10 +4,9 @@ Repository guidance for `codexfast`.
 
 ## Project Scope
 
-- This repo ships a single-file macOS patch script for `Codex.app`.
-- The published entrypoint is generated as [`codexfast.sh`](/Users/veath/abc/code/github.com/Veath/codexfast/codexfast.sh).
-- Maintain source pieces under [`src/`](/Users/veath/abc/code/github.com/Veath/codexfast/src/) and regenerate the entrypoint with [`scripts/build-codexfast.mts`](/Users/veath/abc/code/github.com/Veath/codexfast/scripts/build-codexfast.mts).
-- The npm shim is [`bin/codexfast`](/Users/veath/abc/code/github.com/Veath/codexfast/bin/codexfast).
+- This repo ships a single-file macOS patcher for `Codex.app`.
+- The published entrypoint is generated as [`bin/codexfast`](/Users/veath/abc/code/github.com/Veath/codexfast/bin/codexfast).
+- Maintain TypeScript source under [`src/`](/Users/veath/abc/code/github.com/Veath/codexfast/src/) and regenerate the entrypoint with [`scripts/build-codexfast.mts`](/Users/veath/abc/code/github.com/Veath/codexfast/scripts/build-codexfast.mts).
 - The main regression test is [`test/re-sign-flow.sh`](/Users/veath/abc/code/github.com/Veath/codexfast/test/re-sign-flow.sh).
 
 ## Docs Index
@@ -25,8 +24,8 @@ Repository guidance for `codexfast`.
 
 ## Working Rules
 
-- Keep the script self-contained. New runtime dependencies should be avoided unless they are required.
-- Treat `codexfast.sh` as generated. Edit `src/*`, run `pnpm build`, and commit the regenerated entrypoint together with its source.
+- Keep the generated CLI self-contained. New runtime dependencies should be avoided unless they are required.
+- Treat `bin/codexfast` as generated. Edit `src/*`, run `pnpm build`, and commit the regenerated entrypoint together with its source.
 - Preserve the packed `app.asar` workflow. Do not reintroduce a persistent `Contents/Resources/app` unpacked layout.
 - Do not commit extracted Codex bundle files, temporary workspaces, or local inspection artifacts.
 - Treat changes to patch signatures and restore logic as high risk. Update tests in the same change.
@@ -36,7 +35,7 @@ Repository guidance for `codexfast`.
 
 - Run `pnpm build:check`, `pnpm typecheck`, and `pnpm test` after changing patch, restore, archive, integrity-hash, or re-sign logic.
 - If package metadata changes, also check `package.json` and `bin/codexfast`.
-- Do not claim macOS app behavior is fixed unless the shell test passes and the real-world limitation is stated clearly.
+- Do not claim macOS app behavior is fixed unless the regression test passes and the real-world limitation is stated clearly.
 - Update the relevant files under `docs/` when compatibility knowledge, bundle notes, or release process knowledge changes.
 
 ## Commit Rules

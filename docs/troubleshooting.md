@@ -48,7 +48,7 @@ Check:
 
 Meaning:
 
-- The current `CFBundleShortVersionString` + `CFBundleVersion` pair is not on the strict whitelist in `codexfast.sh`.
+- The current `CFBundleShortVersionString` + `CFBundleVersion` pair is not on the strict whitelist in `src/patcher.mts`.
 
 What to do:
 

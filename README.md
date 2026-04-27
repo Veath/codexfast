@@ -41,7 +41,7 @@ npx codexfast
 Or from a clone of this repo:
 
 ```bash
-./codexfast.sh
+./bin/codexfast
 ```
 
 The script opens an interactive menu:
