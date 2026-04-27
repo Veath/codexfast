@@ -125,3 +125,7 @@ codesign --force --deep --sign - /Applications/Codex.app
 1. 删除 `/Applications/Codex.app/Contents/Resources/app`
 2. 将 `app.asar1` 改回 `app.asar`
 3. 重新打开 `Codex.app`
+
+## 开源协议
+
+MIT。见 [`LICENSE`](./LICENSE)。

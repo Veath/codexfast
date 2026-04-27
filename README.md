@@ -124,3 +124,7 @@ codesign --force --deep --sign - /Applications/Codex.app
 1. Delete `/Applications/Codex.app/Contents/Resources/app`
 2. Rename `app.asar1` back to `app.asar`
 3. Reopen `Codex.app`
+
+## License
+
+MIT. See [`LICENSE`](./LICENSE).
