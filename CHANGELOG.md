@@ -17,7 +17,7 @@ This project follows a simple release-oriented changelog format.
 - Normalize legacy inline Speed setting patches without emitting invalid replacement groups, and cover direct upgrade from an older applied state.
 - Reuse the current Node.js executable for the embedded patcher so the runtime cannot drift to an older `node` earlier in `PATH`.
 - Print an exit code after archive-backup restore and mention Restore original app when signature verification fails.
-- Reset the macOS ScreenCapture privacy permission record after successful apply re-signing so users get a fresh authorization prompt for the ad-hoc signed app.
+- Reset the macOS ScreenCapture privacy permission record after successful apply and restore re-signing so users get a fresh authorization prompt for the ad-hoc signed app.
 - Standardized repository development and release verification commands on `pnpm`.
 
 ## [0.5.3] - 2026-04-25

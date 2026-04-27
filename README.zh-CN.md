@@ -70,11 +70,11 @@ q) Quit
 - 必要版本上的 GPT-5.5 模型列表兼容
 - custom API 用户的 Plugins 侧边栏入口
 
-第一次开启时脚本会创建备份，更新 `app.asar`，刷新 Electron ASAR integrity hash，并执行本地 ad-hoc 重签名。由于重签名会改变 macOS 隐私权限识别应用时使用的身份，apply 也会重置 `Codex.app` 的屏幕录制权限记录。脚本完成后重启 `Codex.app`，并在 macOS 提示时允许“屏幕与系统音频录制”。
+第一次开启时脚本会创建备份，更新 `app.asar`，刷新 Electron ASAR integrity hash，并执行本地 ad-hoc 重签名。由于重签名会改变 macOS 隐私权限识别应用时使用的身份，apply 会重置 `Codex.app` 的屏幕录制权限记录。脚本完成后重启 `Codex.app`，并在 macOS 提示时允许“屏幕与系统音频录制”。
 
 ### 关闭或恢复
 
-选择 **3) Restore original state** 可以关闭补丁。恢复流程会优先把 `Codex.app` 回滚到备份的原始 vendor bundle，必要时重新签名。
+选择 **3) Restore original state** 可以关闭补丁。恢复流程会优先把 `Codex.app` 回滚到备份的原始 vendor bundle，必要时重新签名。恢复成功并重签名后，脚本也会重置 `Codex.app` 的屏幕录制权限记录，让 macOS 在下次启动时重新询问。
 
 排查问题、测试新的 Codex 更新，或想回到官方原始行为时，都可以先执行恢复。
 
@@ -114,7 +114,7 @@ q) Quit
 codesign --force --deep --sign - /Applications/Codex.app
 ```
 
-**macOS 反复提示想要录制此电脑的屏幕和音频** — apply 会在重签名后重置屏幕录制权限记录。请完全退出 `Codex.app`，重新打开，并在系统设置提示中允许“屏幕与系统音频录制”。
+**macOS 反复提示想要录制此电脑的屏幕和音频** — apply 和 restore 会在重签名后重置屏幕录制权限记录。请完全退出 `Codex.app`，重新打开，并在系统设置提示中允许“屏幕与系统音频录制”。
 
 **找不到目标文件 / 版本不被支持** — 不要继续，也不要手动改 bundle。当前构建可能需要重新适配。
 

@@ -252,7 +252,11 @@ function restoreFromArchiveBackup(): boolean {
   if (!updateAsarIntegrityMetadata()) {
     return false;
   }
-  return resignAppBundle("Original archive was restored. Re-signing now.");
+  if (!resignAppBundle("Original archive was restored. Re-signing now.")) {
+    return false;
+  }
+  resetScreenRecordingPermission();
+  return true;
 }
 
 function printManualResignGuidance(): void {
@@ -395,7 +399,7 @@ function finalizeModifiedArchive(action: string): boolean {
   if (!resignAppBundle("Codex.app resources were modified. Re-signing now.")) {
     return false;
   }
-  if (action === "apply") {
+  if (action === "apply" || action === "restore") {
     resetScreenRecordingPermission();
   }
   return true;

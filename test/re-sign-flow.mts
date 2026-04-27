@@ -194,6 +194,7 @@ function runApplyRestoreCase(caseConfig: {
   assertFakeAsarJsParses(archivePath);
   caseConfig.applyAssert(archivePath);
   caseConfig.postApplyAssert?.(readOutput(applyOutput));
+  resetNativeToolCalls();
 
   if (caseConfig.statusAssert) {
     runScript(caseConfig.appDir, "1\n\nq\n", statusOutput);
@@ -201,7 +202,9 @@ function runApplyRestoreCase(caseConfig: {
   }
 
   runScript(caseConfig.appDir, "3\n\nq\n", restoreOutput);
-  assertCodesignCalls(2, restoreOutput);
+  assertCodesignCalls(1, restoreOutput);
+  assertTccutilCallContains("reset ScreenCapture com.openai.codex", restoreOutput);
+  assertContains(readOutput(restoreOutput), "Reset macOS screen recording permission for com.openai.codex.", "expected restore to report TCC reset", readOutput(restoreOutput));
   assertNoPersistentUnpackDir(resourcesDir, restoreOutput);
   assertFakeAsarJsParses(archivePath);
   caseConfig.restoreAssert(archivePath, caseConfig.restoreContext);
