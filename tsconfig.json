@@ -9,5 +9,5 @@
     "types": ["node"],
     "skipLibCheck": true
   },
-  "include": ["test/**/*.mts"]
+  "include": ["scripts/**/*.mts", "test/**/*.mts"]
 }

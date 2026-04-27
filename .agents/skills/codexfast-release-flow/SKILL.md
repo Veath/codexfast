@@ -53,6 +53,7 @@ Choose the version before editing release metadata:
    - Keep README references aligned if usage or release behavior changed.
 
 3. Run release verification.
+   - Run `pnpm build:check`.
    - Run `pnpm typecheck`.
    - Run `pnpm test`.
    - Run `pnpm pack --dry-run`.

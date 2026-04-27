@@ -24,6 +24,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 ## Core Rules
 
 - Keep the script self-contained.
+- Edit `src/codexfast/*` as the source of truth, then run `pnpm build` to regenerate `codexfast.sh`.
 - Preserve the packed `app.asar` workflow.
 - Do not leave a persistent `Contents/Resources/app` directory behind.
 - Treat patch-signature and restore changes as one unit. If apply changes, restore must stay symmetrical.
@@ -39,6 +40,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
    - Keep patch logic narrow.
    - Prefer adding a new target spec over refactoring unrelated logic.
    - For compatibility gating, update the whitelist and surface the detected version/build clearly in output.
+   - If changing the generated entrypoint, edit the source pieces and regenerate `codexfast.sh`.
 
 3. Update regression coverage in the same change.
    - Extend `test/re-sign-flow.sh` for every new target, restore path, or compatibility guard.
@@ -51,6 +53,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
    - Update `CHANGELOG.md` under the active unreleased or target release section.
 
 5. Verify before calling the work done.
+   - Run `pnpm build:check`.
    - Run `pnpm typecheck`.
    - Run `pnpm test` or `bash test/re-sign-flow.sh`.
    - If package metadata changed, also inspect `package.json` and `bin/codexfast`.

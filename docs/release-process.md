@@ -17,6 +17,7 @@ This document describes the release flow for `codexfast`.
    - Move the active release notes in `CHANGELOG.md` into a dated version section.
 
 3. Verify before publish.
+   - `pnpm build:check`
    - `pnpm typecheck`
    - `pnpm test`
    - `pnpm pack --dry-run`
