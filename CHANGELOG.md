@@ -14,6 +14,9 @@ This project follows a simple release-oriented changelog format.
 - Declared and enforced Node.js `>=22.12.0` for the generated CLI.
 - Run TypeScript build and regression entrypoints through `tsx` so repository verification also works on Node.js `22.12.0`.
 - Verify the app signature after ad-hoc re-signing, and keep restore compatible with legacy `*.speed-setting.bak` file backups.
+- Normalize legacy inline Speed setting patches without emitting invalid replacement groups, and cover direct upgrade from an older applied state.
+- Reuse the current Node.js executable for the embedded patcher so the runtime cannot drift to an older `node` earlier in `PATH`.
+- Print an exit code after archive-backup restore and mention Restore original app when signature verification fails.
 - Standardized repository development and release verification commands on `pnpm`.
 
 ## [0.5.3] - 2026-04-25

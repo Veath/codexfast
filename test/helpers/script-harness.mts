@@ -12,6 +12,13 @@ export function setupStubs(stubBin: string, markerFile: string): void {
   mkdirSync(stubBin, { recursive: true });
   writeExecutable(join(stubBin, "clear"), "#!/bin/bash\nexit 0\n");
   writeExecutable(
+    join(stubBin, "node"),
+    `#!/bin/bash
+printf '%s\\n' "unexpected PATH node invocation" >&2
+exit 66
+`,
+  );
+  writeExecutable(
     join(stubBin, "codesign"),
     `#!/bin/bash
 if [ "\${CODEXFAST_TEST_CODESIGN_FAIL:-0}" = "1" ] && [ "$1" = "--force" ]; then
@@ -28,7 +35,8 @@ exit 0
   );
   writeExecutable(
     join(stubBin, "npm"),
-    `#!/usr/bin/env node
+    `#!/bin/bash
+exec ${JSON.stringify(process.execPath)} - "$@" <<'CODEXFAST_NPM_STUB'
 const fs = require("fs");
 const path = require("path");
 const args = process.argv.slice(2);
@@ -100,6 +108,7 @@ function extractAsar(archivePath, outputDir) {
 const [, mode, sourcePath, targetPath] = asarArgs;
 if (mode === "p") writeAsar(sourcePath, targetPath);
 if (mode === "e") extractAsar(sourcePath, targetPath);
+CODEXFAST_NPM_STUB
 `,
   );
 }
@@ -112,7 +121,7 @@ export function runScript(options: {
   outputFile: string;
   extraEnv?: Record<string, string>;
 }): void {
-  const result = spawnSync(join(options.rootDir, "bin", "codexfast"), {
+  const result = spawnSync(process.execPath, [join(options.rootDir, "bin", "codexfast")], {
     input: options.input,
     encoding: "utf8",
     env: {

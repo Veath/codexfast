@@ -43,7 +43,7 @@ function printLine(message = ""): void {
 }
 
 function resolveCommand(name: string): string | null {
-  const result = spawnSync("command", ["-v", name], { shell: true, encoding: "utf8" });
+  const result = spawnSync("sh", ["-c", 'command -v -- "$1"', "sh", name], { encoding: "utf8" });
   if (result.status !== 0) {
     return null;
   }
@@ -258,6 +258,7 @@ function printManualResignGuidance(): void {
   printLine("Manual fallback:");
   printLine(`  codesign --force --deep --sign - ${appBundle}`);
   printLine(`  codesign --verify --deep --strict --verbose=2 ${appBundle}`);
+  printLine("If verification still fails, run Restore original app or reinstall Codex.app.");
 }
 
 function resignAppBundle(reason: string): boolean {
@@ -292,16 +293,11 @@ function checkRequirements(): boolean {
     return false;
   }
 
-  nodeBin = resolveCommand("node") ?? "";
+  nodeBin = process.execPath;
   npmBin = resolveCommand("npm") ?? "";
   codesignBin = resolveCommand("codesign") ?? "";
   plistBuddyBin = resolvePlistBuddy() ?? "";
 
-  if (!nodeBin) {
-    printLine("External Node runtime not found.");
-    printLine("Make sure node is available in your shell.");
-    return false;
-  }
   if (!npmBin) {
     printLine("npm not found.");
     printLine("Make sure npm is available in your shell.");
@@ -384,7 +380,10 @@ function runEmbeddedTool(action: string): number {
   }
 
   if (action === "restore" && existsSync(appAsarBackup)) {
-    return restoreFromArchiveBackup() ? 0 : 1;
+    exitCode = restoreFromArchiveBackup() ? 0 : 1;
+    printLine("");
+    printLine(`Exit code: ${exitCode}`);
+    return exitCode;
   }
 
   if (!unpackAppAsarToTemp()) {

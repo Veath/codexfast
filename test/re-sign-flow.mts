@@ -191,6 +191,7 @@ function runApplyRestoreCase(caseConfig: {
   assertFakeAsarJsParses(archivePath);
   caseConfig.restoreAssert(archivePath, caseConfig.restoreContext);
   assertIntegrityMatches(caseConfig.appDir, archivePath, `expected ElectronAsarIntegrity hash to match restored ${caseConfig.restoreContext} app.asar header`);
+  assertContains(readOutput(restoreOutput), "Exit code: 0", "expected archive restore to print a successful exit code", readOutput(restoreOutput));
   resetCodesignCalls();
 }
 
@@ -298,6 +299,30 @@ function main(): void {
   assertContains(readOutput(legacyBackupOutput), "restored backup: Speed setting", "expected restore to use legacy file-level backup suffix", readOutput(legacyBackupOutput));
   resetCodesignCalls();
 
+  const legacyInlineApplyApp = join(tmpDir, "LegacyInlineApply.app");
+  const legacyInlineApplyResources = join(legacyInlineApplyApp, "Contents", "Resources");
+  const legacyInlineApplyArchive = join(legacyInlineApplyResources, "app.asar");
+  const legacyInlineApplyExtracted = join(tmpDir, "legacy-inline-apply-extracted");
+  const legacyInlineApplyOutput = join(tmpDir, "legacy-inline-apply-output.txt");
+  prepareArchivedFakeApp(legacyInlineApplyApp, join(tmpDir, "legacy-inline-apply-assets"));
+  extractFakeAsar(legacyInlineApplyArchive, legacyInlineApplyExtracted);
+  const legacyInlineSpeedFile = join(legacyInlineApplyExtracted, "webview", "assets", "general-settings.js");
+  writeFileSync(
+    legacyInlineSpeedFile,
+    readFileSync(legacyInlineSpeedFile, "utf8").replace(
+      "x=_e(),{serviceTierSettings:y,setServiceTier:z}=Ce();if(!x)return null;let ",
+      "x=!0,{serviceTierSettings:y,setServiceTier:z}=Ce();let ",
+    ),
+  );
+  writeFakeAsar(legacyInlineApplyExtracted, legacyInlineApplyArchive);
+  writeInfoPlist(legacyInlineApplyApp, readFakeAsarHeaderHash(legacyInlineApplyArchive));
+  runScript(legacyInlineApplyApp, "2\n\nq\n", legacyInlineApplyOutput);
+  assertNoPersistentUnpackDir(legacyInlineApplyResources, legacyInlineApplyOutput);
+  assertFakeAsarJsParses(legacyInlineApplyArchive);
+  assertApplyState(legacyInlineApplyArchive);
+  assertNotContains(archiveFile(legacyInlineApplyArchive), "$3", "expected legacy inline speed-setting normalization to avoid literal replacement groups");
+  resetCodesignCalls();
+
   const futureGptSkipApp = join(tmpDir, "FutureGptSkip.app");
   const futureGptSkipOutput = join(tmpDir, "status-future-gpt-skip-output.txt");
   prepareArchivedFakeApp(futureGptSkipApp, join(tmpDir, "future-gpt-skip-assets"), "26.500.0", "9999", "26422");
@@ -402,6 +427,7 @@ function main(): void {
   const verifyFailingText = readOutput(verifyFailingOutput);
   assertContains(verifyFailingText, "Failed to verify the re-signed Codex.app.", "expected verify failure to be reported", verifyFailingText);
   assertContains(verifyFailingText, `codesign --verify --deep --strict --verbose=2 ${verifyFailingApp}`, "expected manual verify guidance in failure output", verifyFailingText);
+  assertContains(verifyFailingText, "Restore original app", "expected verify failure guidance to mention restoring the original app", verifyFailingText);
   assertContains(verifyFailingText, "Exit code: 1", "expected a failed action exit code when codesign verify fails", verifyFailingText);
 
   console.log("re-sign flow test passed");

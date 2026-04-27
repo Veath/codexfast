@@ -19,7 +19,7 @@ const GPT_55_MODEL_ENTRY =
 const GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be)\(\);)let /;
+  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(Ce|se|be)\(\);)let /;
 const NORMALIZED_PATCHED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be)\(\);)let /;
 const SLASH_COMMAND_GUARDED_SIGNATURE =
@@ -105,8 +105,8 @@ const TARGET_SPECS: TargetSpec[] = [
     patchedSignature: NORMALIZED_PATCHED_SIGNATURE,
     legacyPatchedSignature: PATCHED_SIGNATURE,
     applyReplacement: "$1=$2$3",
-    normalizeReplacement: "$1=$2$3let ",
-    restoreReplacement: "$1=$2$3if(!$1)return null;let ",
+    normalizeReplacement: normalizeLegacySpeedSetting,
+    restoreReplacement: restoreSpeedSetting,
   },
   {
     id: "add-context-speed-menu-old",
@@ -214,6 +214,42 @@ function replaceContent(content: string, signature: RegExp, replacement: Replace
   return content.replace(signature, (...args: unknown[]) =>
     replacement(String(args[0] ?? ""), ...args.slice(1).map((value) => String(value))),
   );
+}
+
+function resolveSpeedAvailabilityCall(serviceTierFactory: string): string {
+  const availabilityCalls: Record<string, string> = {
+    Ce: "_e",
+    se: "ae",
+    be: "P",
+  };
+  const availabilityCall = availabilityCalls[serviceTierFactory];
+  if (!availabilityCall) {
+    throw new Error(`Unsupported Speed setting service-tier factory: ${serviceTierFactory}.`);
+  }
+  return availabilityCall;
+}
+
+function normalizeLegacySpeedSetting(
+  _match: string,
+  enabledVariable: string,
+  serviceTierSetup: string,
+  serviceTierFactory: string,
+): string {
+  return `${enabledVariable}=${resolveSpeedAvailabilityCall(serviceTierFactory)}(),${serviceTierSetup}let `;
+}
+
+function restoreSpeedSetting(
+  _match: string,
+  enabledVariable: string,
+  availabilityOrServiceTierSetup: string,
+  serviceTierSetupOrFactory: string,
+): string {
+  if (availabilityOrServiceTierSetup.endsWith(",")) {
+    return `${enabledVariable}=${availabilityOrServiceTierSetup}${serviceTierSetupOrFactory}if(!${enabledVariable})return null;let `;
+  }
+  return `${enabledVariable}=${resolveSpeedAvailabilityCall(
+    serviceTierSetupOrFactory,
+  )}(),${availabilityOrServiceTierSetup}if(!${enabledVariable})return null;let `;
 }
 
 function replaceContentOrThrow(
