@@ -17,11 +17,12 @@ This document describes the release flow for `codexfast`.
    - Move the active release notes in `CHANGELOG.md` into a dated version section.
 
 3. Verify before publish.
-   - `bash test/re-sign-flow.sh`
-   - `npm pack --dry-run`
+   - `pnpm typecheck`
+   - `pnpm test`
+   - `pnpm pack --dry-run`
 
 4. Check registry state before publish.
-   - `npm view codexfast version versions --json`
+   - `pnpm view codexfast version versions --json`
 
 5. Commit the release state.
    - Prefer `chore: release x.y.z` unless the user requests a different commit message.
@@ -32,20 +33,20 @@ This document describes the release flow for `codexfast`.
    - Push any missing release tag to `origin`.
 
 7. Publish.
-   - `npm publish`
+   - `pnpm publish`
 
 8. Create or update the GitHub release.
    - Use `gh release create` or `gh release edit`.
    - Keep the release title and notes aligned with the changelog entry.
    - Default behavior: do not upload extra release assets.
-   - If an asset must be uploaded, prefer the `npm pack` tarball for that exact version and confirm it matches the npm package contents first.
+   - If an asset must be uploaded, prefer the `pnpm pack` tarball for that exact version and confirm it matches the npm package contents first.
 
 9. Verify the publish result.
-   - `npm view codexfast version versions --json`
+   - `pnpm view codexfast version versions --json`
    - `gh release list`
    - If npm reports that the version already exists, compare:
-     - `npm view codexfast@x.y.z dist.shasum dist.integrity --json`
-     - local `npm pack --dry-run` output
+     - `pnpm view codexfast@x.y.z dist.shasum dist.integrity --json`
+     - local `pnpm pack --dry-run` output
 
 ## Publish Error Rules
 
@@ -61,7 +62,7 @@ This document describes the release flow for `codexfast`.
 
 - If a manual release asset is being uploaded:
   - Do not upload an arbitrary local file.
-  - Prefer the `npm pack` tarball for the same version.
+  - Prefer the `pnpm pack` tarball for the same version.
   - Confirm the version and checksum expectations before attaching it to the GitHub release.
 
 - If npm returns `E403` because of 2FA or token policy:

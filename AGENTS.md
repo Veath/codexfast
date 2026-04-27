@@ -18,7 +18,7 @@ Repository guidance for `codexfast`.
 - Read [`docs/troubleshooting.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/troubleshooting.md) when the app fails to launch, a UI path breaks, `Plugins` remains partially unavailable, or repeated patch runs behave unexpectedly.
 - Read [`docs/real-app-validation.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/real-app-validation.md) when claiming real installed-app compatibility.
 - Read [`docs/version-adaptation-playbook.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/version-adaptation-playbook.md) when adapting to a new `Codex.app` build.
-- Read [`docs/release-process.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/release-process.md) when preparing a version bump, release commit, or npm publish.
+- Read [`docs/release-process.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/release-process.md) when preparing a version bump, release commit, or package publish.
 - Read the relevant file under [`docs/bundle-notes/`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/bundle-notes/) when adapting to a Codex bundle or investigating a gate/signature change.
 - Keep `docs/` focused on reusable conclusions. Do not store raw conversation transcripts or throwaway debugging logs there.
 
@@ -33,7 +33,7 @@ Repository guidance for `codexfast`.
 ## Validation
 
 - Run `bash test/re-sign-flow.sh` after changing patch, restore, archive, integrity-hash, or re-sign logic.
-- If npm packaging changes, also check `package.json` and `bin/codexfast`.
+- If package metadata changes, also check `package.json` and `bin/codexfast`.
 - Do not claim macOS app behavior is fixed unless the shell test passes and the real-world limitation is stated clearly.
 - Update the relevant files under `docs/` when compatibility knowledge, bundle notes, or release process knowledge changes.
 

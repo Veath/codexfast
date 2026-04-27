@@ -19,7 +19,7 @@ Use these docs for decisions, troubleshooting, and bundle adaptations that futur
 - [`version-adaptation-playbook.md`](./version-adaptation-playbook.md)
   - Step-by-step flow for adapting `codexfast` to a new Codex build safely.
 - [`release-process.md`](./release-process.md)
-  - The repo's release checklist for version bumps, changelog updates, verification, commit, and npm publish.
+  - The repo's release checklist for version bumps, changelog updates, verification, commit, and package publish.
 - [`bundle-notes/`](./bundle-notes/)
   - Bundle-specific adaptation notes for inspected Codex builds.
 

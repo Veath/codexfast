@@ -16,7 +16,7 @@ The goal is to turn the current repo state into a verified npm package without l
 - Bumping the package version
 - Converting `Unreleased` changes into a dated release entry
 - Preparing a release commit
-- Running npm packaging and publish checks
+- Running package registry and publish checks
 - Publishing `codexfast` to npm
 - Verifying whether a version is already live
 
@@ -53,10 +53,11 @@ Choose the version before editing release metadata:
    - Keep README references aligned if usage or release behavior changed.
 
 3. Run release verification.
-   - Run `bash test/re-sign-flow.sh`.
-   - Run `npm pack --dry-run`.
+   - Run `pnpm typecheck`.
+   - Run `pnpm test`.
+   - Run `pnpm pack --dry-run`.
    - Before publishing, check the registry state with:
-     - `npm view codexfast version versions --json`
+     - `pnpm view codexfast version versions --json`
 
 4. Commit the release state.
    - Use a conventional commit, usually `chore: release x.y.z` unless the user asked for a different message.
@@ -67,7 +68,7 @@ Choose the version before editing release metadata:
    - Push any missing release tag to `origin` before creating or editing the GitHub release.
 
 6. Publish.
-   - Run `npm publish`.
+   - Run `pnpm publish`.
    - If npm rejects the publish, read the exact registry error before changing anything.
 
 7. Create or update the GitHub release.
@@ -75,14 +76,14 @@ Choose the version before editing release metadata:
    - Make sure every published tag has release notes on GitHub, not just a tag with no release body.
    - Keep the GitHub release title and notes aligned with the changelog entry for that version.
    - Default behavior: do not upload extra release assets.
-   - If release assets are needed, prefer the `npm pack` tarball for that exact version and confirm it matches the published npm artifact before uploading.
+   - If release assets are needed, prefer the `pnpm pack` tarball for that exact version and confirm it matches the published npm artifact before uploading.
 
 8. Verify the publish result.
-   - Re-check `npm view codexfast version versions --json`.
+   - Re-check `pnpm view codexfast version versions --json`.
    - Re-check `gh release list`.
    - If npm says the version already exists, compare the published tarball metadata with local packaging:
-     - `npm view codexfast@x.y.z dist.shasum dist.integrity --json`
-     - `npm pack --dry-run`
+     - `pnpm view codexfast@x.y.z dist.shasum dist.integrity --json`
+     - `pnpm pack --dry-run`
    - Only describe the release as successful if:
      - the npm registry confirms it or the existing published tarball matches the local artifact exactly
      - the expected GitHub tag exists remotely
@@ -92,7 +93,7 @@ Choose the version before editing release metadata:
 
 - `E403` with “version already exists”:
   - Do not force re-publish.
-  - Compare registry `dist.shasum` and `dist.integrity` against local `npm pack --dry-run`.
+  - Compare registry `dist.shasum` and `dist.integrity` against local `pnpm pack --dry-run`.
   - If they match, report that the release is already live.
   - If they do not match, bump to a new version and publish that instead.
 
@@ -123,7 +124,7 @@ Choose the version before editing release metadata:
 - Having GitHub tags without corresponding GitHub release notes.
 - Uploading a manual GitHub release asset that does not match the npm package for the same version.
 - Forgetting to move `Unreleased` notes into a concrete version section.
-- Claiming publish success from `npm publish` start logs instead of registry confirmation.
+- Claiming publish success from `pnpm publish` start logs instead of registry confirmation.
 - Forgetting that docs and changelog are part of the release payload, not optional cleanup.
 - Treating new `Codex.app` build support, new patch targets, or new feature paths as patch releases.
 - Retagging or republishing an already public version to hide a previous version-selection mistake.

@@ -19,7 +19,7 @@ This repo is high risk because it patches a real `/Applications/Codex.app` bundl
 - Updating restore, re-sign, backup, or archive logic
 - Updating repo docs because behavior, support scope, or release guidance changed
 
-Do not use this skill for npm release-only work. Use `codexfast-release-flow` for that.
+Do not use this skill for release-only work. Use `codexfast-release-flow` for that.
 
 ## Core Rules
 
@@ -51,9 +51,10 @@ Do not use this skill for npm release-only work. Use `codexfast-release-flow` fo
    - Update `CHANGELOG.md` under the active unreleased or target release section.
 
 5. Verify before calling the work done.
-   - Run `bash test/re-sign-flow.sh`.
-   - If npm packaging changed, also inspect `package.json` and `bin/codexfast`.
-   - If packaging or docs changed materially, run `npm pack --dry-run`.
+   - Run `pnpm typecheck`.
+   - Run `pnpm test` or `bash test/re-sign-flow.sh`.
+   - If package metadata changed, also inspect `package.json` and `bin/codexfast`.
+   - If packaging or docs changed materially, run `pnpm pack --dry-run`.
 
 ## Codexfast-Specific Checklist
 
