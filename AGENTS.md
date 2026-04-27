@@ -5,21 +5,21 @@ Repository guidance for `codexfast`.
 ## Project Scope
 
 - This repo ships a single-file macOS patcher for `Codex.app`.
-- The published entrypoint is generated as [`bin/codexfast`](/Users/veath/abc/code/github.com/Veath/codexfast/bin/codexfast).
-- Maintain TypeScript source under [`src/`](/Users/veath/abc/code/github.com/Veath/codexfast/src/) and regenerate the entrypoint with [`scripts/build-codexfast.mts`](/Users/veath/abc/code/github.com/Veath/codexfast/scripts/build-codexfast.mts).
-- The main regression test is [`test/re-sign-flow.sh`](/Users/veath/abc/code/github.com/Veath/codexfast/test/re-sign-flow.sh).
+- The published entrypoint is generated as [`bin/codexfast`](./bin/codexfast).
+- Maintain TypeScript source under [`src/`](./src/) and regenerate the entrypoint with [`scripts/build-codexfast.mts`](./scripts/build-codexfast.mts).
+- The main regression test is [`test/re-sign-flow.sh`](./test/re-sign-flow.sh).
 
 ## Docs Index
 
-- Start with [`docs/README.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/README.md) for the long-lived docs index.
-- Read [`docs/feature-scope.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/feature-scope.md) when you need the current supported feature paths before diving into bundle-specific implementation details.
-- Read [`docs/compatibility-matrix.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/compatibility-matrix.md) before changing the whitelist or describing a Codex build as supported.
-- Read [`docs/patch-targets.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/patch-targets.md) before changing regexes, target specs, or restore mapping.
-- Read [`docs/troubleshooting.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/troubleshooting.md) when the app fails to launch, a UI path breaks, `Plugins` remains partially unavailable, or repeated patch runs behave unexpectedly.
-- Read [`docs/real-app-validation.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/real-app-validation.md) when claiming real installed-app compatibility.
-- Read [`docs/version-adaptation-playbook.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/version-adaptation-playbook.md) when adapting to a new `Codex.app` build.
-- Read [`docs/release-process.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/release-process.md) when preparing a version bump, release commit, or package publish.
-- Read the relevant file under [`docs/bundle-notes/`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/bundle-notes/) when adapting to a Codex bundle or investigating a gate/signature change.
+- Start with [`docs/README.md`](./docs/README.md) for the long-lived docs index.
+- Read [`docs/feature-scope.md`](./docs/feature-scope.md) when you need the current supported feature paths before diving into bundle-specific implementation details.
+- Read [`docs/compatibility-matrix.md`](./docs/compatibility-matrix.md) before changing the whitelist or describing a Codex build as supported.
+- Read [`docs/patch-targets.md`](./docs/patch-targets.md) before changing regexes, target specs, or restore mapping.
+- Read [`docs/troubleshooting.md`](./docs/troubleshooting.md) when the app fails to launch, a UI path breaks, `Plugins` remains partially unavailable, or repeated patch runs behave unexpectedly.
+- Read [`docs/real-app-validation.md`](./docs/real-app-validation.md) when claiming real installed-app compatibility.
+- Read [`docs/version-adaptation-playbook.md`](./docs/version-adaptation-playbook.md) when adapting to a new `Codex.app` build.
+- Read [`docs/release-process.md`](./docs/release-process.md) when preparing a version bump, release commit, or package publish.
+- Read the relevant file under [`docs/bundle-notes/`](./docs/bundle-notes/) when adapting to a Codex bundle or investigating a gate/signature change.
 - Keep `docs/` focused on reusable conclusions. Do not store raw conversation transcripts or throwaway debugging logs there.
 
 ## Working Rules
@@ -28,6 +28,7 @@ Repository guidance for `codexfast`.
 - Treat `bin/codexfast` as generated. Edit `src/*`, run `pnpm build`, and commit the regenerated entrypoint together with its source.
 - Preserve the packed `app.asar` workflow. Do not reintroduce a persistent `Contents/Resources/app` unpacked layout.
 - Do not commit extracted Codex bundle files, temporary workspaces, or local inspection artifacts.
+- Use project-relative paths in docs and code; do not commit personal machine absolute paths.
 - Treat changes to patch signatures and restore logic as high risk. Update tests in the same change.
 - Keep user-facing script output in English unless the task explicitly requires another language.
 
@@ -55,8 +56,8 @@ Repository guidance for `codexfast`.
 Use this checklist for every future Codex bundle adaptation or patch-signature update.
 
 - Confirm the target `CFBundleShortVersionString` + `CFBundleVersion` pair has been validated before adding it to the strict whitelist.
-- Confirm the current feature set still matches [`docs/feature-scope.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/feature-scope.md).
-- Confirm the patch mapping and restore intent still match [`docs/patch-targets.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/patch-targets.md).
+- Confirm the current feature set still matches [`docs/feature-scope.md`](./docs/feature-scope.md).
+- Confirm the patch mapping and restore intent still match [`docs/patch-targets.md`](./docs/patch-targets.md).
 - Confirm `pnpm test` still covers:
   - the Settings-side Fast control
   - the composer `/fast` slash command
@@ -72,8 +73,8 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - compatibility state
 - Do not ship a change that enables only part of the combined Fast feature set.
 - Do not describe Plugins as supported unless the sidebar gate patch still works cleanly.
-- Before claiming real-app support, run the manual checklist in [`docs/real-app-validation.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/real-app-validation.md).
-- When adapting to a new build, follow [`docs/version-adaptation-playbook.md`](/Users/veath/abc/code/github.com/Veath/codexfast/docs/version-adaptation-playbook.md).
+- Before claiming real-app support, run the manual checklist in [`docs/real-app-validation.md`](./docs/real-app-validation.md).
+- When adapting to a new build, follow [`docs/version-adaptation-playbook.md`](./docs/version-adaptation-playbook.md).
 - If a build loses any supported path, update the compatibility docs and README notes before calling the release fully compatible.
 
 ## Release Notes
