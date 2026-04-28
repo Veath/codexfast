@@ -20,6 +20,9 @@ This project follows a simple release-oriented changelog format.
 - Print an exit code after archive-backup restore and mention Restore original app when signature verification fails.
 - Reset the macOS ScreenCapture privacy permission record after successful apply and restore re-signing so users get a fresh authorization prompt for the ad-hoc signed app.
 - Standardized repository development and release verification commands on `pnpm`.
+- Avoid seeding new file backups from legacy-patched content when an older `*.speed-setting.bak` backup already exists.
+- Replace `app.asar` through a target-directory temporary archive, and roll back the previous archive if the Electron ASAR integrity update fails.
+- Clean temporary workspaces on early unpack and legacy migration failures, and skip TCC reset when `CFBundleIdentifier` is unavailable.
 
 ## [0.5.3] - 2026-04-25
 

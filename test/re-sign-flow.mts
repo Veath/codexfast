@@ -1,10 +1,10 @@
-import { existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { assertContains, assertNotContains, fail } from "./helpers/assertions.mts";
 import { assertFakeAsarJsParses, extractFakeAsar, readFakeAsarFile, readFakeAsarHeaderHash, writeFakeAsar } from "./helpers/fake-asar.mts";
 import { type AssetProfile, prepareArchivedFakeApp as prepareArchivedFakeAppHelper, prepareLegacyFakeApp as prepareLegacyFakeAppHelper, readInfoPlistHash, writeInfoPlist } from "./helpers/fake-app.mts";
-import { assertCodesignCallContains as assertCodesignCallContainsHelper, assertCodesignCalls as assertCodesignCallsHelper, assertNpmCallContains as assertNpmCallContainsHelper, assertTccutilCallContains as assertTccutilCallContainsHelper, readOutput, resetCodesignCalls as resetCodesignCallsHelper, resetTccutilCalls as resetTccutilCallsHelper, runScript as runScriptHelper, setupStubs as setupStubsHelper } from "./helpers/script-harness.mts";
+import { assertCodesignCallContains as assertCodesignCallContainsHelper, assertCodesignCalls as assertCodesignCallsHelper, assertNoTccutilCalls as assertNoTccutilCallsHelper, assertNpmCallContains as assertNpmCallContainsHelper, assertTccutilCallContains as assertTccutilCallContainsHelper, readOutput, resetCodesignCalls as resetCodesignCallsHelper, resetTccutilCalls as resetTccutilCallsHelper, runScript as runScriptHelper, setupStubs as setupStubsHelper } from "./helpers/script-harness.mts";
 
 
 const rootDir = resolve(process.env.CODEXFAST_TEST_ROOT ?? process.cwd());
@@ -41,8 +41,16 @@ function runScriptWithAsarPackFailure(appDir: string, input: string, outputFile:
   runScript(appDir, input, outputFile, { CODEXFAST_TEST_ASAR_PACK_FAIL: "1" });
 }
 
+function runScriptWithAsarExtractFailure(appDir: string, input: string, outputFile: string): void {
+  runScript(appDir, input, outputFile, { CODEXFAST_TEST_ASAR_EXTRACT_FAIL: "1", CODEXFAST_TEST_ALLOW_NONZERO: "1" });
+}
+
 function runScriptWithStartupAsarPackFailure(appDir: string, input: string, outputFile: string): void {
   runScript(appDir, input, outputFile, { CODEXFAST_TEST_ASAR_PACK_FAIL: "1", CODEXFAST_TEST_ALLOW_NONZERO: "1" });
+}
+
+function runScriptAllowFailure(appDir: string, input: string, outputFile: string): void {
+  runScript(appDir, input, outputFile, { CODEXFAST_TEST_ALLOW_NONZERO: "1" });
 }
 
 function assertCodesignCalls(expectedMin: number, outputFile: string): void {
@@ -61,6 +69,10 @@ function assertTccutilCallContains(expected: string, outputFile: string): void {
   assertTccutilCallContainsHelper(expected, markerFile, outputFile);
 }
 
+function assertNoTccutilCalls(outputFile: string): void {
+  assertNoTccutilCallsHelper(markerFile, outputFile);
+}
+
 function assertNpmCallContains(expected: string, outputFile: string): void {
   assertNpmCallContainsHelper(expected, markerFile, outputFile);
 }
@@ -77,6 +89,18 @@ function resetNativeToolCalls(): void {
 function assertNoPersistentUnpackDir(resourcesDir: string, outputFile: string): void {
   if (existsSync(join(resourcesDir, "app"))) {
     fail("expected no persistent Resources/app directory", readOutput(outputFile));
+  }
+}
+
+function listCodexfastTempDirs(): Set<string> {
+  return new Set(readdirSync(tmpdir()).filter((entry) => entry.startsWith("codexfast.")).map((entry) => join(tmpdir(), entry)));
+}
+
+function assertNoNewCodexfastTempDirs(before: Set<string>, outputFile: string): void {
+  const after = listCodexfastTempDirs();
+  const leaked = [...after].filter((entry) => !before.has(entry));
+  if (leaked.length > 0) {
+    fail(`expected no leaked codexfast temp directories, found ${leaked.join(", ")}`, readOutput(outputFile));
   }
 }
 
@@ -329,6 +353,30 @@ function main(): void {
   assertContains(readOutput(legacyBackupOutput), "restored backup: Speed setting", "expected restore to use legacy file-level backup suffix", readOutput(legacyBackupOutput));
   resetCodesignCalls();
 
+  const legacyMixedBackupApp = join(tmpDir, "LegacyMixedBackup.app");
+  const legacyMixedBackupResources = join(legacyMixedBackupApp, "Contents", "Resources");
+  const legacyMixedBackupArchive = join(legacyMixedBackupResources, "app.asar");
+  const legacyMixedBackupExtracted = join(tmpDir, "legacy-mixed-backup-extracted");
+  const legacyMixedApplyOutput = join(tmpDir, "legacy-mixed-backup-apply-output.txt");
+  const legacyMixedRestoreOutput = join(tmpDir, "legacy-mixed-backup-restore-output.txt");
+  prepareArchivedFakeApp(legacyMixedBackupApp, join(tmpDir, "legacy-mixed-backup-assets"), "26.422.21637", "2056", "26422");
+  extractFakeAsar(legacyMixedBackupArchive, legacyMixedBackupExtracted);
+  const legacyMixedIndexFile = join(legacyMixedBackupExtracted, "webview", "assets", "index-gATb9Tvd.js");
+  const legacyMixedOriginalIndex = readFileSync(legacyMixedIndexFile, "utf8");
+  writeFileSync(`${legacyMixedIndexFile}.speed-setting.bak`, legacyMixedOriginalIndex);
+  writeFileSync(legacyMixedIndexFile, legacyMixedOriginalIndex.replace("A=O&&k,", "A=!1,"));
+  writeFakeAsar(legacyMixedBackupExtracted, legacyMixedBackupArchive);
+  writeInfoPlist(legacyMixedBackupApp, readFakeAsarHeaderHash(legacyMixedBackupArchive), "26.422.21637", "2056");
+  runScript(legacyMixedBackupApp, "2\n\nq\n", legacyMixedApplyOutput);
+  assertFakeAsarJsParses(legacyMixedBackupArchive);
+  assertApplyState26422(legacyMixedBackupArchive);
+  rmSync(join(legacyMixedBackupResources, "app.asar1"), { force: true });
+  runScript(legacyMixedBackupApp, "3\n\nq\n", legacyMixedRestoreOutput);
+  assertFakeAsarJsParses(legacyMixedBackupArchive);
+  assertGuardedState26422(legacyMixedBackupArchive, "legacy mixed file backup restore");
+  assertContains(readOutput(legacyMixedRestoreOutput), "restored backup: Fast slash command", "expected restore to use existing legacy file backup without seeding a polluted new backup", readOutput(legacyMixedRestoreOutput));
+  resetCodesignCalls();
+
   const legacyInlineApplyApp = join(tmpDir, "LegacyInlineApply.app");
   const legacyInlineApplyResources = join(legacyInlineApplyApp, "Contents", "Resources");
   const legacyInlineApplyArchive = join(legacyInlineApplyResources, "app.asar");
@@ -405,7 +453,9 @@ function main(): void {
   writeFileSync(legacyPackFailArchive, readFileSync(join(legacyPackFailResources, "app.asar1")));
   const legacyPackFailOriginalArchive = readFileSync(legacyPackFailArchive);
   const legacyPackFailOriginalHash = readInfoPlistHash(legacyPackFailApp);
+  const legacyPackFailTempDirs = listCodexfastTempDirs();
   runScriptWithStartupAsarPackFailure(legacyPackFailApp, "1\n\nq\n", legacyPackFailOutput);
+  assertNoNewCodexfastTempDirs(legacyPackFailTempDirs, legacyPackFailOutput);
   if (!existsSync(legacyPackFailUnpackedDir)) {
     fail("expected failed legacy temp pack to preserve Resources/app", readOutput(legacyPackFailOutput));
   }
@@ -416,6 +466,70 @@ function main(): void {
     fail("expected failed legacy temp pack to leave ElectronAsarIntegrity unchanged", readOutput(legacyPackFailOutput));
   }
   assertContains(readOutput(legacyPackFailOutput), "Failed to repack legacy Resources/app directory.", "expected legacy pack failure to be reported", readOutput(legacyPackFailOutput));
+  resetCodesignCalls();
+
+  const extractFailApp = join(tmpDir, "ExtractFail.app");
+  const extractFailOutput = join(tmpDir, "extract-fail-output.txt");
+  prepareArchivedFakeApp(extractFailApp, join(tmpDir, "extract-fail-assets"));
+  const extractFailTempDirs = listCodexfastTempDirs();
+  runScriptWithAsarExtractFailure(extractFailApp, "2\n\nq\n", extractFailOutput);
+  assertNoNewCodexfastTempDirs(extractFailTempDirs, extractFailOutput);
+  assertContains(readOutput(extractFailOutput), "Failed to unpack app.asar.", "expected extract failure to be reported", readOutput(extractFailOutput));
+  assertContains(readOutput(extractFailOutput), "Exit code: 1", "expected failed extract to return exit code 1", readOutput(extractFailOutput));
+  resetCodesignCalls();
+
+  const integrityFailApp = join(tmpDir, "IntegrityFail.app");
+  const integrityFailResources = join(integrityFailApp, "Contents", "Resources");
+  const integrityFailArchive = join(integrityFailResources, "app.asar");
+  const integrityFailOutput = join(tmpDir, "integrity-fail-output.txt");
+  prepareArchivedFakeApp(integrityFailApp, join(tmpDir, "integrity-fail-assets"));
+  const integrityFailOriginalArchive = readFileSync(integrityFailArchive);
+  const integrityFailOriginalHash = readInfoPlistHash(integrityFailApp);
+  chmodSync(join(integrityFailApp, "Contents", "Info.plist"), 0o444);
+  runScriptAllowFailure(integrityFailApp, "2\n\nq\n", integrityFailOutput);
+  chmodSync(join(integrityFailApp, "Contents", "Info.plist"), 0o644);
+  if (!readFileSync(integrityFailArchive).equals(integrityFailOriginalArchive)) {
+    fail("expected failed integrity update during apply to restore the previous app.asar", readOutput(integrityFailOutput));
+  }
+  if (readInfoPlistHash(integrityFailApp) !== integrityFailOriginalHash) {
+    fail("expected failed integrity update during apply to preserve the previous ElectronAsarIntegrity hash", readOutput(integrityFailOutput));
+  }
+  assertContains(readOutput(integrityFailOutput), "ElectronAsarIntegrity hash verification failed after updating Info.plist.", "expected integrity failure to be reported", readOutput(integrityFailOutput));
+  assertContains(readOutput(integrityFailOutput), "Exit code: 1", "expected failed integrity update to return exit code 1", readOutput(integrityFailOutput));
+  resetCodesignCalls();
+
+  const restoreIntegrityFailApp = join(tmpDir, "RestoreIntegrityFail.app");
+  const restoreIntegrityFailResources = join(restoreIntegrityFailApp, "Contents", "Resources");
+  const restoreIntegrityFailArchive = join(restoreIntegrityFailResources, "app.asar");
+  const restoreIntegrityApplyOutput = join(tmpDir, "restore-integrity-fail-apply-output.txt");
+  const restoreIntegrityOutput = join(tmpDir, "restore-integrity-fail-output.txt");
+  prepareArchivedFakeApp(restoreIntegrityFailApp, join(tmpDir, "restore-integrity-fail-assets"));
+  runScript(restoreIntegrityFailApp, "2\n\nq\n", restoreIntegrityApplyOutput);
+  const restoreIntegrityPatchedArchive = readFileSync(restoreIntegrityFailArchive);
+  const restoreIntegrityPatchedHash = readInfoPlistHash(restoreIntegrityFailApp);
+  chmodSync(join(restoreIntegrityFailApp, "Contents", "Info.plist"), 0o444);
+  runScriptAllowFailure(restoreIntegrityFailApp, "3\n\nq\n", restoreIntegrityOutput);
+  chmodSync(join(restoreIntegrityFailApp, "Contents", "Info.plist"), 0o644);
+  if (!readFileSync(restoreIntegrityFailArchive).equals(restoreIntegrityPatchedArchive)) {
+    fail("expected failed integrity update during archive restore to restore the previous app.asar", readOutput(restoreIntegrityOutput));
+  }
+  if (readInfoPlistHash(restoreIntegrityFailApp) !== restoreIntegrityPatchedHash) {
+    fail("expected failed integrity update during archive restore to preserve the previous ElectronAsarIntegrity hash", readOutput(restoreIntegrityOutput));
+  }
+  assertContains(readOutput(restoreIntegrityOutput), "ElectronAsarIntegrity hash verification failed after updating Info.plist.", "expected restore integrity failure to be reported", readOutput(restoreIntegrityOutput));
+  assertContains(readOutput(restoreIntegrityOutput), "Exit code: 1", "expected failed restore integrity update to return exit code 1", readOutput(restoreIntegrityOutput));
+  resetCodesignCalls();
+
+  const missingBundleIdApp = join(tmpDir, "MissingBundleId.app");
+  const missingBundleIdResources = join(missingBundleIdApp, "Contents", "Resources");
+  const missingBundleIdArchive = join(missingBundleIdResources, "app.asar");
+  const missingBundleIdOutput = join(tmpDir, "missing-bundle-id-output.txt");
+  prepareArchivedFakeApp(missingBundleIdApp, join(tmpDir, "missing-bundle-id-assets"));
+  writeInfoPlist(missingBundleIdApp, readFakeAsarHeaderHash(missingBundleIdArchive), "26.415.40636", "1799", null);
+  resetTccutilCalls();
+  runScript(missingBundleIdApp, "2\n\nq\n", missingBundleIdOutput);
+  assertNoTccutilCalls(missingBundleIdOutput);
+  assertContains(readOutput(missingBundleIdOutput), "Could not reset macOS screen recording permission because CFBundleIdentifier was not found.", "expected missing bundle id to skip TCC reset", readOutput(missingBundleIdOutput));
   resetCodesignCalls();
 
   const unsupportedApp = join(tmpDir, "Unsupported.app");

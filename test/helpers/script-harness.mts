@@ -99,6 +99,10 @@ function writeAsar(sourcePath, archivePath) {
 }
 
 function extractAsar(archivePath, outputDir) {
+  if (process.env.CODEXFAST_TEST_ASAR_EXTRACT_FAIL === "1") {
+    console.error("asar extract failed");
+    process.exit(1);
+  }
   const archive = fs.readFileSync(archivePath);
   const headerBufferSize = archive.readUInt32LE(4);
   const headerStringSize = archive.readUInt32LE(12);
@@ -197,6 +201,13 @@ export function resetTccutilCalls(markerFile: string): void {
   const tccutilMarkerFile = `${markerFile}.tccutil`;
   if (existsSync(tccutilMarkerFile)) {
     unlinkSync(tccutilMarkerFile);
+  }
+}
+
+export function assertNoTccutilCalls(markerFile: string, outputFile: string): void {
+  const tccutilMarkerFile = `${markerFile}.tccutil`;
+  if (existsSync(tccutilMarkerFile)) {
+    fail("expected tccutil not to be invoked", `${readFileSync(tccutilMarkerFile, "utf8")}\n${readOutput(outputFile)}`);
   }
 }
 

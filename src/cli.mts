@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { existsSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -39,6 +39,11 @@ let npmBin = "";
 let codesignBin = "";
 let plistBuddyBin = "";
 let tccutilBin = "";
+
+type ArchiveSnapshot = {
+  archivePath: string | null;
+  integrityHash: string;
+};
 
 function printLine(message = ""): void {
   console.log(message);
@@ -121,6 +126,19 @@ function readAsarIntegrityHash(): string {
   return result.status === 0 ? result.stdout.trim() : "";
 }
 
+function writeAsarIntegrityHash(hash: string): boolean {
+  const setResult = run(plistBuddyBin, ["-c", `Set :ElectronAsarIntegrity:Resources/app.asar:hash ${hash}`, appInfoPlist]);
+  if (setResult.status !== 0) {
+    printLine("Failed to update ElectronAsarIntegrity hash in Info.plist.");
+    return false;
+  }
+  if (readAsarIntegrityHash() !== hash) {
+    printLine("ElectronAsarIntegrity hash verification failed after updating Info.plist.");
+    return false;
+  }
+  return true;
+}
+
 function calculateAsarHeaderHash(archivePath = appAsar): string | null {
   try {
     const archive = readFileSync(archivePath);
@@ -144,19 +162,45 @@ function updateAsarIntegrityMetadata(): boolean {
     return true;
   }
 
-  const setResult = run(plistBuddyBin, ["-c", `Set :ElectronAsarIntegrity:Resources/app.asar:hash ${currentHash}`, appInfoPlist]);
-  if (setResult.status !== 0) {
-    printLine("Failed to update ElectronAsarIntegrity hash in Info.plist.");
-    return false;
-  }
-
-  if (readAsarIntegrityHash() !== currentHash) {
-    printLine("ElectronAsarIntegrity hash verification failed after updating Info.plist.");
+  if (!writeAsarIntegrityHash(currentHash)) {
     return false;
   }
 
   printLine("Updated ElectronAsarIntegrity hash in Info.plist.");
   return true;
+}
+
+function createArchiveSnapshot(): ArchiveSnapshot | null {
+  if (!tempRoot && !createTempWorkspace()) {
+    return null;
+  }
+
+  const integrityHash = readAsarIntegrityHash();
+  if (!existsSync(appAsar)) {
+    return { archivePath: null, integrityHash };
+  }
+
+  const archivePath = join(tempRoot, "previous.app.asar");
+  try {
+    copyFileSync(appAsar, archivePath);
+    return { archivePath, integrityHash };
+  } catch {
+    printLine("Failed to snapshot the current app.asar before replacing it.");
+    return null;
+  }
+}
+
+function restoreArchiveSnapshot(snapshot: ArchiveSnapshot): void {
+  printLine("Restoring previous app.asar after failed integrity update.");
+  if (snapshot.archivePath) {
+    replaceAppAsarFrom(snapshot.archivePath, "Failed to restore the previous app.asar after integrity update failure.");
+  } else {
+    rmSync(appAsar, { force: true });
+  }
+
+  if (snapshot.integrityHash && readAsarIntegrityHash() !== snapshot.integrityHash) {
+    writeAsarIntegrityHash(snapshot.integrityHash);
+  }
 }
 
 function ensureArchiveBackup(): boolean {
@@ -194,17 +238,32 @@ function packTempAppToAsar(): boolean {
     printLine("Failed to repack app.asar.");
     return false;
   }
-  return replaceAppAsarFromTemp();
+  return true;
 }
 
-function replaceAppAsarFromTemp(): boolean {
+function replaceAppAsarFrom(sourceArchive: string, failureMessage: string): boolean {
+  const targetTempAsar = join(appResources, `.codexfast.${process.pid}.app.asar.tmp`);
   try {
-    renameSync(tempAsar, appAsar);
+    rmSync(targetTempAsar, { force: true });
+    copyFileSync(sourceArchive, targetTempAsar);
+    renameSync(targetTempAsar, appAsar);
     return true;
   } catch {
-    printLine("Failed to replace app.asar with the repacked archive.");
+    rmSync(targetTempAsar, { force: true });
+    printLine(failureMessage);
     return false;
   }
+}
+
+function commitArchiveWithIntegrity(sourceArchive: string, snapshot: ArchiveSnapshot): boolean {
+  if (!replaceAppAsarFrom(sourceArchive, "Failed to replace app.asar with the repacked archive.")) {
+    return false;
+  }
+  if (updateAsarIntegrityMetadata()) {
+    return true;
+  }
+  restoreArchiveSnapshot(snapshot);
+  return false;
 }
 
 function migrateLegacyUnpackedLayout(): boolean {
@@ -217,47 +276,58 @@ function migrateLegacyUnpackedLayout(): boolean {
   if (!createTempWorkspace()) {
     return false;
   }
-  if (!existsSync(appAsarBackup) && existsSync(appAsar)) {
-    if (!ensureArchiveBackup()) {
+  try {
+    if (!existsSync(appAsarBackup) && existsSync(appAsar)) {
+      if (!ensureArchiveBackup()) {
+        return false;
+      }
+    }
+
+    const snapshot = createArchiveSnapshot();
+    if (!snapshot) {
       return false;
     }
-  }
 
-  if (!runAsar(["p", unpackedAppDir, tempAsar])) {
-    printLine("Failed to repack legacy Resources/app directory.");
-    return false;
-  }
+    if (!runAsar(["p", unpackedAppDir, tempAsar])) {
+      printLine("Failed to repack legacy Resources/app directory.");
+      return false;
+    }
 
-  if (!replaceAppAsarFromTemp()) {
-    return false;
+    if (!commitArchiveWithIntegrity(tempAsar, snapshot)) {
+      return false;
+    }
+    rmSync(unpackedAppDir, { recursive: true, force: true });
+    return resignAppBundle("Legacy unpacked layout was migrated. Re-signing now.");
+  } finally {
+    cleanupTempWorkspace();
   }
-  rmSync(unpackedAppDir, { recursive: true, force: true });
-  if (!updateAsarIntegrityMetadata()) {
-    return false;
-  }
-  return resignAppBundle("Legacy unpacked layout was migrated. Re-signing now.");
 }
 
 function restoreFromArchiveBackup(): boolean {
   if (!existsSync(appAsarBackup)) {
     return false;
   }
-  try {
-    writeFileSync(appAsar, readFileSync(appAsarBackup));
-    printLine(`Restored app.asar from archive backup: ${appAsarBackup}`);
-  } catch {
-    printLine("Failed to restore app.asar from archive backup.");
-    return false;
-  }
 
-  if (!updateAsarIntegrityMetadata()) {
+  if (!createTempWorkspace()) {
     return false;
   }
-  if (!resignAppBundle("Original archive was restored. Re-signing now.")) {
-    return false;
+  try {
+    const snapshot = createArchiveSnapshot();
+    if (!snapshot) {
+      return false;
+    }
+    if (!commitArchiveWithIntegrity(appAsarBackup, snapshot)) {
+      return false;
+    }
+    printLine(`Restored app.asar from archive backup: ${appAsarBackup}`);
+    if (!resignAppBundle("Original archive was restored. Re-signing now.")) {
+      return false;
+    }
+    resetScreenRecordingPermission();
+    return true;
+  } finally {
+    cleanupTempWorkspace();
   }
-  resetScreenRecordingPermission();
-  return true;
 }
 
 function printManualResignGuidance(): void {
@@ -293,7 +363,12 @@ function resignAppBundle(reason: string): boolean {
 }
 
 function resetScreenRecordingPermission(): void {
-  const bundleIdentifier = readBundlePlistValue("CFBundleIdentifier", "com.openai.codex");
+  const bundleIdentifier = readBundlePlistValue("CFBundleIdentifier", "");
+  if (!bundleIdentifier) {
+    printLine("Could not reset macOS screen recording permission because CFBundleIdentifier was not found.");
+    return;
+  }
+
   const manualCommand = `tccutil reset ScreenCapture ${bundleIdentifier}`;
   if (!tccutilBin) {
     printLine("Could not reset macOS screen recording permission because tccutil was not found.");
@@ -391,10 +466,14 @@ function finalizeModifiedArchive(action: string): boolean {
   if (action === "apply" && !ensureArchiveBackup()) {
     return false;
   }
+  const snapshot = createArchiveSnapshot();
+  if (!snapshot) {
+    return false;
+  }
   if (!packTempAppToAsar()) {
     return false;
   }
-  if (!updateAsarIntegrityMetadata()) {
+  if (!commitArchiveWithIntegrity(tempAsar, snapshot)) {
     return false;
   }
   if (!resignAppBundle("Codex.app resources were modified. Re-signing now.")) {
@@ -422,6 +501,9 @@ function runEmbeddedTool(action: string): number {
   }
 
   if (!unpackAppAsarToTemp()) {
+    cleanupTempWorkspace();
+    printLine("");
+    printLine("Exit code: 1");
     return 1;
   }
 

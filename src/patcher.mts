@@ -391,7 +391,7 @@ function describeState(match: TargetMatch): string {
 }
 
 function writeBackupIfNeeded(fileTarget: FileTarget): void {
-  if (fs.existsSync(fileTarget.backupPath)) {
+  if (findExistingBackupPath(fileTarget)) {
     return;
   }
   fs.writeFileSync(fileTarget.backupPath, fileTarget.content, "utf8");

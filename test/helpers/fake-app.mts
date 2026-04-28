@@ -5,7 +5,7 @@ import { readFakeAsarHeaderHash, writeFakeAsar } from "./fake-asar.mts";
 
 export type AssetProfile = "standard" | "26417" | "26417-partial" | "26422";
 
-export function writeInfoPlist(appDir: string, hashValue: string, appVersion = "26.415.40636", appBuild = "1799"): void {
+export function writeInfoPlist(appDir: string, hashValue: string, appVersion = "26.415.40636", appBuild = "1799", bundleIdentifier: string | null = "com.openai.codex"): void {
   mkdirSync(join(appDir, "Contents"), { recursive: true });
   writeFileSync(
     join(appDir, "Contents", "Info.plist"),
@@ -13,7 +13,9 @@ export function writeInfoPlist(appDir: string, hashValue: string, appVersion = "
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <key>CFBundleShortVersionString</key>
+${bundleIdentifier ? `  <key>CFBundleIdentifier</key>
+  <string>${bundleIdentifier}</string>
+` : ""}  <key>CFBundleShortVersionString</key>
   <string>${appVersion}</string>
   <key>CFBundleVersion</key>
   <string>${appBuild}</string>
