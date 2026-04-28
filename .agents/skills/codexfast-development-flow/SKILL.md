@@ -35,6 +35,8 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 1. Inspect the current repo state.
    - Read `AGENTS.md`, `src/cli.mts`, `src/patcher.mts`, `test/re-sign-flow.sh`, and the relevant README sections.
    - If the change is bundle-specific, identify the exact gated text key, target file shape, and restore path first.
+   - Do not trust `status`/matcher output as proof that a feature target is gone. For every expected feature path, search the extracted bundle by stable needles such as `settings.agent.speed.label`, `composer.speedSlashCommand.title`, `composer.intelligenceDropdown.speed.title`, `sidebarElectron.pluginsDisabledTooltip`, and nearby `serviceTierSettings` / auth-method gates.
+   - Distinguish "target absent" from "target present but regex stale". A target is absent only after broad non-locale JS search shows the user-facing needle and adjacent gate are no longer present anywhere in `webview/assets`.
 
 2. Make the smallest viable code change.
    - Keep patch logic narrow.
@@ -77,6 +79,8 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 ## Common Mistakes
 
 - Updating apply regexes without updating restore logic.
+- Treating a missing `status` target as product behavior. First prove whether the bundle still contains the feature needle in a moved file or with a renamed minified hook.
+- Writing a fixture assertion that passes on both guarded and patched code. For hidden-control fixes, assert both the patched replacement and the removal of the original guard, for example `if(!n)return null;` is gone.
 - Describing a Codex build as supported before adding tests and whitelist coverage.
 - Updating only one README and leaving English/Chinese docs out of sync.
 - Publishing behavior changes without moving the maintenance checklist forward.
