@@ -14,7 +14,7 @@
     "codexfast": "bin/codexfast"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=18.12.0"
   },
   "files": [
     "bin/codexfast",
@@ -51,7 +51,7 @@
   },
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^25.6.0",
+    "@types/node": "^18.19.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.3"
   }

@@ -11,8 +11,9 @@ This project follows a simple release-oriented changelog format.
 - Migrated the re-sign regression flow from a long shell script to a typed TypeScript test runner with separate bundle fixtures, while preserving the `bash test/re-sign-flow.sh` compatibility entrypoint.
 - Split fake app, fake asar, and script harness helpers out of the re-sign runner to keep future bundle cases smaller.
 - Replaced the maintained shell entrypoint with TypeScript sources under `src/`, and now generate the npm `bin/codexfast` entrypoint directly.
-- Declared and enforced Node.js `>=22.12.0` for the generated CLI.
-- Run TypeScript build and regression entrypoints through `tsx` so repository verification also works on Node.js `22.12.0`.
+- Declared and enforced Node.js `>=18.12.0` for the generated CLI.
+- Run TypeScript build and regression entrypoints through `tsx` so repository verification also works on Node.js `18.12.0`.
+- Pinned the runtime ASAR helper to `@electron/asar@3.4.1` so `npx codexfast` does not pull a Node 22-only `@electron/asar` release on Node 18.
 - Verify the app signature after ad-hoc re-signing, and keep restore compatible with legacy `*.speed-setting.bak` file backups.
 - Normalize legacy inline Speed setting patches without emitting invalid replacement groups, and cover direct upgrade from an older applied state.
 - Reuse the current Node.js executable for the embedded patcher so the runtime cannot drift to an older `node` earlier in `PATH`.

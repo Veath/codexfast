@@ -22,6 +22,7 @@ const appAsar = join(appResources, "app.asar");
 const appAsarBackup = join(appResources, "app.asar1");
 const backupSuffix = ".codexfast.bak";
 const legacyBackupSuffix = ".speed-setting.bak";
+const asarPackage = "@electron/asar@3.4.1";
 const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(", ");
 
 let tempRoot = "";
@@ -106,7 +107,7 @@ function createTempWorkspace(): boolean {
 }
 
 function runAsar(args: string[]): boolean {
-  const result = run(npmBin, ["exec", "--yes", "--package", "@electron/asar", "--", "asar", ...args]);
+  const result = run(npmBin, ["exec", "--yes", "--package", asarPackage, "--", "asar", ...args]);
   if (result.status !== 0) {
     process.stdout.write(result.stdout);
     process.stderr.write(result.stderr);

@@ -6,7 +6,7 @@ const rootDir = resolve(new URL("..", import.meta.url).pathname);
 const sourceDir = join(rootDir, "src");
 const outputPath = join(rootDir, "bin", "codexfast");
 const checkOnly = process.argv.includes("--check");
-const minimumNodeVersion = "22.12.0";
+const minimumNodeVersion = "18.12.0";
 
 const compilerOptions = {
   module: ts.ModuleKind.CommonJS,

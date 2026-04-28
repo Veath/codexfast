@@ -4,7 +4,7 @@ import { join, resolve } from "node:path";
 import { assertContains, assertNotContains, fail } from "./helpers/assertions.mts";
 import { assertFakeAsarJsParses, extractFakeAsar, readFakeAsarFile, readFakeAsarHeaderHash, writeFakeAsar } from "./helpers/fake-asar.mts";
 import { type AssetProfile, prepareArchivedFakeApp as prepareArchivedFakeAppHelper, prepareLegacyFakeApp as prepareLegacyFakeAppHelper, readInfoPlistHash, writeInfoPlist } from "./helpers/fake-app.mts";
-import { assertCodesignCallContains as assertCodesignCallContainsHelper, assertCodesignCalls as assertCodesignCallsHelper, assertTccutilCallContains as assertTccutilCallContainsHelper, readOutput, resetCodesignCalls as resetCodesignCallsHelper, resetTccutilCalls as resetTccutilCallsHelper, runScript as runScriptHelper, setupStubs as setupStubsHelper } from "./helpers/script-harness.mts";
+import { assertCodesignCallContains as assertCodesignCallContainsHelper, assertCodesignCalls as assertCodesignCallsHelper, assertNpmCallContains as assertNpmCallContainsHelper, assertTccutilCallContains as assertTccutilCallContainsHelper, readOutput, resetCodesignCalls as resetCodesignCallsHelper, resetTccutilCalls as resetTccutilCallsHelper, runScript as runScriptHelper, setupStubs as setupStubsHelper } from "./helpers/script-harness.mts";
 
 
 const rootDir = resolve(process.env.CODEXFAST_TEST_ROOT ?? process.cwd());
@@ -59,6 +59,10 @@ function resetCodesignCalls(): void {
 
 function assertTccutilCallContains(expected: string, outputFile: string): void {
   assertTccutilCallContainsHelper(expected, markerFile, outputFile);
+}
+
+function assertNpmCallContains(expected: string, outputFile: string): void {
+  assertNpmCallContainsHelper(expected, markerFile, outputFile);
 }
 
 function resetTccutilCalls(): void {
@@ -153,6 +157,12 @@ function assertIntegrityMatches(appDir: string, archivePath: string, message: st
   }
 }
 
+function assertGeneratedCliRuntimeRequirements(): void {
+  const generatedCli = readFileSync(join(rootDir, "bin", "codexfast"), "utf8");
+  assertContains(generatedCli, 'const MIN_NODE_VERSION = "18.12.0";', "expected generated CLI to enforce Node.js 18.12.0 or later");
+  assertContains(generatedCli, '"@electron/asar@3.4.1"', "expected generated CLI to pin the Node 18-compatible asar package");
+}
+
 function renameBackupSuffixes(dir: string, fromSuffix: string, toSuffix: string): void {
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const fullPath = join(dir, entry.name);
@@ -187,6 +197,7 @@ function runApplyRestoreCase(caseConfig: {
   prepareArchivedFakeApp(caseConfig.appDir, caseConfig.assetsRoot, caseConfig.appVersion, caseConfig.appBuild, caseConfig.assetProfile);
 
   runScript(caseConfig.appDir, "2\n\nq\n", applyOutput);
+  assertNpmCallContains("--package @electron/asar@3.4.1", applyOutput);
   assertCodesignCalls(1, applyOutput);
   assertTccutilCallContains("reset ScreenCapture com.openai.codex", applyOutput);
   assertContains(readOutput(applyOutput), "Reset macOS screen recording permission for com.openai.codex.", "expected apply to report TCC reset", readOutput(applyOutput));
@@ -214,6 +225,7 @@ function runApplyRestoreCase(caseConfig: {
 }
 
 function main(): void {
+  assertGeneratedCliRuntimeRequirements();
   setupStubs();
 
   runApplyRestoreCase({

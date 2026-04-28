@@ -30,7 +30,7 @@ Patching unpacks `app.asar`, rewrites the frontend assets, repacks, updates the 
 
 ## Usage
 
-macOS only. Requires `Codex.app` at `/Applications`, Node.js `>=22.12.0`, `npm`, and the built-in `codesign`.
+macOS only. Requires `Codex.app` at `/Applications`, Node.js `>=18.12.0`, `npm`, and the built-in `codesign`.
 
 Run the patcher:
 
@@ -105,7 +105,7 @@ First apply creates two backups:
 
 ## Troubleshooting
 
-**Script fails immediately** — check `/Applications/Codex.app` exists, plus `node -v` reports `22.12.0` or later, `npm -v`, and `codesign -h`.
+**Script fails immediately** — check `/Applications/Codex.app` exists, plus `node -v` reports `18.12.0` or later, `npm -v`, and `codesign -h`.
 
 **Re-sign step fails (macOS refused write)** — run manually:
 

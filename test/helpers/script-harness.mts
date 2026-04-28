@@ -10,6 +10,7 @@ function writeExecutable(path: string, content: string): void {
 
 export function setupStubs(stubBin: string, markerFile: string): void {
   const tccutilMarkerFile = `${markerFile}.tccutil`;
+  const npmMarkerFile = `${markerFile}.npm`;
   mkdirSync(stubBin, { recursive: true });
   writeExecutable(join(stubBin, "clear"), "#!/bin/bash\nexit 0\n");
   writeExecutable(
@@ -48,6 +49,7 @@ exit 0
   writeExecutable(
     join(stubBin, "npm"),
     `#!/bin/bash
+printf '%s\\n' "$*" >> ${JSON.stringify(npmMarkerFile)}
 exec ${JSON.stringify(process.execPath)} - "$@" <<'CODEXFAST_NPM_STUB'
 const fs = require("fs");
 const path = require("path");
@@ -195,5 +197,16 @@ export function resetTccutilCalls(markerFile: string): void {
   const tccutilMarkerFile = `${markerFile}.tccutil`;
   if (existsSync(tccutilMarkerFile)) {
     unlinkSync(tccutilMarkerFile);
+  }
+}
+
+export function assertNpmCallContains(expected: string, markerFile: string, outputFile: string): void {
+  const npmMarkerFile = `${markerFile}.npm`;
+  if (!existsSync(npmMarkerFile)) {
+    fail("expected npm to be invoked", readOutput(outputFile));
+  }
+  const calls = readFileSync(npmMarkerFile, "utf8");
+  if (!calls.includes(expected)) {
+    fail(`expected npm call to include ${expected}`, `${calls}\n${readOutput(outputFile)}`);
   }
 }
