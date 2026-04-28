@@ -408,6 +408,18 @@ function main(): void {
   assertNotContains(readOutput(futureGptSkipOutput), "GPT-5.5 model", "expected post-26.422.30944 status to omit unpatched GPT-5.5 compatibility targets", readOutput(futureGptSkipOutput));
   resetCodesignCalls();
 
+  const staleTempApp = join(tmpDir, "StaleTemp.app");
+  const staleTempResources = join(staleTempApp, "Contents", "Resources");
+  const staleTempOutput = join(tmpDir, "stale-temp-output.txt");
+  const staleTempFile = join(staleTempResources, ".codexfast.12345.app.asar.tmp");
+  prepareArchivedFakeApp(staleTempApp, join(tmpDir, "stale-temp-assets"));
+  writeFileSync(staleTempFile, "stale");
+  runScript(staleTempApp, "1\n\nq\n", staleTempOutput);
+  if (existsSync(staleTempFile)) {
+    fail("expected stale app.asar temp file to be removed during startup checks", readOutput(staleTempOutput));
+  }
+  resetCodesignCalls();
+
   const legacyApp = join(tmpDir, "Legacy.app");
   const legacyResources = join(legacyApp, "Contents", "Resources");
   const legacyOutput = join(tmpDir, "legacy-output.txt");

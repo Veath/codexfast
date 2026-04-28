@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -126,14 +126,14 @@ function readAsarIntegrityHash(): string {
   return result.status === 0 ? result.stdout.trim() : "";
 }
 
-function writeAsarIntegrityHash(hash: string): boolean {
+function writeAsarIntegrityHash(hash: string, options: { failureMessage?: string; verificationFailureMessage?: string } = {}): boolean {
   const setResult = run(plistBuddyBin, ["-c", `Set :ElectronAsarIntegrity:Resources/app.asar:hash ${hash}`, appInfoPlist]);
   if (setResult.status !== 0) {
-    printLine("Failed to update ElectronAsarIntegrity hash in Info.plist.");
+    printLine(options.failureMessage ?? "Failed to update ElectronAsarIntegrity hash in Info.plist.");
     return false;
   }
   if (readAsarIntegrityHash() !== hash) {
-    printLine("ElectronAsarIntegrity hash verification failed after updating Info.plist.");
+    printLine(options.verificationFailureMessage ?? "ElectronAsarIntegrity hash verification failed after updating Info.plist.");
     return false;
   }
   return true;
@@ -190,17 +190,30 @@ function createArchiveSnapshot(): ArchiveSnapshot | null {
   }
 }
 
-function restoreArchiveSnapshot(snapshot: ArchiveSnapshot): void {
-  printLine("Restoring previous app.asar after failed integrity update.");
+function restoreArchiveSnapshot(snapshot: ArchiveSnapshot): boolean {
+  let archiveRestored = false;
   if (snapshot.archivePath) {
-    replaceAppAsarFrom(snapshot.archivePath, "Failed to restore the previous app.asar after integrity update failure.");
+    printLine("Restoring previous app.asar after failed integrity update.");
+    archiveRestored = replaceAppAsarFrom(snapshot.archivePath, "Failed to restore the previous app.asar after integrity update failure.");
   } else {
-    rmSync(appAsar, { force: true });
+    printLine("Removing app.asar created during failed integrity update.");
+    try {
+      rmSync(appAsar, { force: true });
+      archiveRestored = true;
+    } catch {
+      printLine("Failed to remove app.asar after integrity update failure.");
+    }
   }
 
+  let integrityRestored = true;
   if (snapshot.integrityHash && readAsarIntegrityHash() !== snapshot.integrityHash) {
-    writeAsarIntegrityHash(snapshot.integrityHash);
+    integrityRestored = writeAsarIntegrityHash(snapshot.integrityHash, {
+      failureMessage: "Failed to restore previous ElectronAsarIntegrity hash in Info.plist.",
+      verificationFailureMessage: "ElectronAsarIntegrity hash verification failed after restoring previous Info.plist hash.",
+    });
   }
+
+  return archiveRestored && integrityRestored;
 }
 
 function ensureArchiveBackup(): boolean {
@@ -262,8 +275,21 @@ function commitArchiveWithIntegrity(sourceArchive: string, snapshot: ArchiveSnap
   if (updateAsarIntegrityMetadata()) {
     return true;
   }
-  restoreArchiveSnapshot(snapshot);
+  if (!restoreArchiveSnapshot(snapshot)) {
+    printLine("Bundle may be in an inconsistent state. Re-run restore or reinstall Codex.app.");
+  }
   return false;
+}
+
+function cleanupStaleArchiveTempFiles(): void {
+  if (!existsSync(appResources)) {
+    return;
+  }
+  for (const entry of readdirSync(appResources)) {
+    if (entry.startsWith(".codexfast.") && entry.endsWith(".app.asar.tmp")) {
+      rmSync(join(appResources, entry), { force: true });
+    }
+  }
 }
 
 function migrateLegacyUnpackedLayout(): boolean {
@@ -316,10 +342,10 @@ function restoreFromArchiveBackup(): boolean {
     if (!snapshot) {
       return false;
     }
+    printLine(`Restoring app.asar from archive backup: ${appAsarBackup}`);
     if (!commitArchiveWithIntegrity(appAsarBackup, snapshot)) {
       return false;
     }
-    printLine(`Restored app.asar from archive backup: ${appAsarBackup}`);
     if (!resignAppBundle("Original archive was restored. Re-signing now.")) {
       return false;
     }
@@ -417,6 +443,8 @@ function checkRequirements(): boolean {
     printLine("This macOS environment cannot update ElectronAsarIntegrity in Info.plist.");
     return false;
   }
+
+  cleanupStaleArchiveTempFiles();
 
   if (!migrateLegacyUnpackedLayout()) {
     return false;

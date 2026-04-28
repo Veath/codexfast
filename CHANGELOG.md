@@ -23,6 +23,7 @@ This project follows a simple release-oriented changelog format.
 - Avoid seeding new file backups from legacy-patched content when an older `*.speed-setting.bak` backup already exists.
 - Replace `app.asar` through a target-directory temporary archive, and roll back the previous archive if the Electron ASAR integrity update fails.
 - Clean temporary workspaces on early unpack and legacy migration failures, and skip TCC reset when `CFBundleIdentifier` is unavailable.
+- Remove stale `.codexfast.*.app.asar.tmp` archives during startup checks and report when integrity rollback cannot fully restore the previous state.
 
 ## [0.5.3] - 2026-04-25
 
