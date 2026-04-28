@@ -6,9 +6,15 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added support for `Codex.app` `26.422.62136` (`build 2176`) after direct installed-bundle inspection confirmed the Settings Fast, `/fast`, composer `Intelligence` Speed menu, and Plugins targets.
+
 ### Changed
 
 - Migrated the re-sign regression flow from a long shell script to a typed TypeScript test runner with separate bundle fixtures, while preserving the `bash test/re-sign-flow.sh` compatibility entrypoint.
+- Expanded the Settings-side Fast signature to cover the newer `xe()` service-tier hook shape.
+- Expanded the 26.422 composer `Intelligence` Speed menu signature to cover the newer `Zp(...)` service-tier hook shape while preserving the older `Jp(...)` shape.
 - Split fake app, fake asar, and script harness helpers out of the re-sign runner to keep future bundle cases smaller.
 - Replaced the maintained shell entrypoint with TypeScript sources under `src/`, and now generate the npm `bin/codexfast` entrypoint directly.
 - Declared and enforced Node.js `>=18.12.0` for the generated CLI.
@@ -26,6 +32,10 @@ This project follows a simple release-oriented changelog format.
 - Remove stale `.codexfast.*.app.asar.tmp` archives during startup checks and report when integrity rollback cannot fully restore the previous state.
 - Preserve recently written archive temp files during cleanup and use random archive temp names to avoid interfering with another active `codexfast` process.
 - Block unsupported apply requests before legacy layout migration, and report a missing extracted `webview/assets` directory without surfacing a raw stack trace.
+
+### Documentation
+
+- Recorded the `26.422.62136` (`build 2176`) support status, including the new Settings-side Fast target shape.
 
 ## [0.5.3] - 2026-04-25
 

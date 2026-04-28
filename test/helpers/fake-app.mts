@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { fail } from "./assertions.mts";
 import { readFakeAsarHeaderHash, writeFakeAsar } from "./fake-asar.mts";
 
-export type AssetProfile = "standard" | "26417" | "26417-partial" | "26422";
+export type AssetProfile = "standard" | "26417" | "26417-partial" | "26422" | "26422-2176";
 
 export function writeInfoPlist(appDir: string, hashValue: string, appVersion = "26.415.40636", appBuild = "1799", bundleIdentifier: string | null = "com.openai.codex"): void {
   mkdirSync(join(appDir, "Contents"), { recursive: true });
