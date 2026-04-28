@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { assertContains, assertNotContains, fail } from "./helpers/assertions.mts";
@@ -565,6 +565,40 @@ function main(): void {
   assertContains(unsupportedText, "Compatibility: unsupported", "expected unsupported compatibility status in output", unsupportedText);
   assertContains(unsupportedText, "Enable custom API features is blocked for this Codex.app version.", "expected apply to be blocked for unsupported versions", unsupportedText);
   assertContains(archiveFile(join(unsupportedResources, "app.asar")), "if(!x)return null;", "expected unsupported version to leave app.asar unchanged");
+  resetCodesignCalls();
+
+  const unsupportedLegacyApp = join(tmpDir, "UnsupportedLegacy.app");
+  const unsupportedLegacyResources = join(unsupportedLegacyApp, "Contents", "Resources");
+  const unsupportedLegacyOutput = join(tmpDir, "unsupported-legacy-output.txt");
+  prepareLegacyFakeApp(unsupportedLegacyApp, join(tmpDir, "unsupported-legacy-unpacked-assets"), join(tmpDir, "unsupported-legacy-assets"), "unsupported-legacy-placeholder-hash");
+  writeInfoPlist(unsupportedLegacyApp, "unsupported-legacy-placeholder-hash", "99.0.0", "9999");
+  runScript(unsupportedLegacyApp, "2\n\nq\n", unsupportedLegacyOutput);
+  const unsupportedLegacyText = readOutput(unsupportedLegacyOutput);
+  assertContains(unsupportedLegacyText, "Compatibility: unsupported", "expected unsupported legacy compatibility status in output", unsupportedLegacyText);
+  assertContains(unsupportedLegacyText, "Enable custom API features is blocked for this Codex.app version.", "expected unsupported legacy apply to be blocked", unsupportedLegacyText);
+  assertNotContains(unsupportedLegacyText, "Detected legacy unpacked Resources/app layout.", "expected unsupported legacy apply to be blocked before legacy migration", unsupportedLegacyText);
+  assertNotContains(unsupportedLegacyText, "Running local ad-hoc re-sign", "expected unsupported legacy apply to be blocked before re-signing", unsupportedLegacyText);
+  if (!existsSync(join(unsupportedLegacyResources, "app"))) {
+    fail("expected unsupported legacy apply to preserve Resources/app", unsupportedLegacyText);
+  }
+  if (existsSync(join(unsupportedLegacyResources, "app.asar"))) {
+    fail("expected unsupported legacy apply not to create app.asar", unsupportedLegacyText);
+  }
+  resetCodesignCalls();
+
+  const missingAssetsApp = join(tmpDir, "MissingAssets.app");
+  const missingAssetsResources = join(missingAssetsApp, "Contents", "Resources");
+  const missingAssetsSource = join(tmpDir, "missing-assets-source");
+  const missingAssetsOutput = join(tmpDir, "missing-assets-output.txt");
+  mkdirSync(missingAssetsResources, { recursive: true });
+  mkdirSync(join(missingAssetsSource, "other"), { recursive: true });
+  writeFileSync(join(missingAssetsSource, "other", "noop.js"), "const noop=true;");
+  writeFakeAsar(missingAssetsSource, join(missingAssetsResources, "app.asar"));
+  writeInfoPlist(missingAssetsApp, readFakeAsarHeaderHash(join(missingAssetsResources, "app.asar")));
+  runScriptAllowFailure(missingAssetsApp, "1\n\nq\n", missingAssetsOutput);
+  assertContains(readOutput(missingAssetsOutput), "Assets directory not found:", "expected missing assets to be reported without a stack trace", readOutput(missingAssetsOutput));
+  assertContains(readOutput(missingAssetsOutput), "Exit code: 1", "expected missing assets to return exit code 1", readOutput(missingAssetsOutput));
+  assertNotContains(readOutput(missingAssetsOutput), "ENOENT", "expected missing assets to avoid raw readdirSync ENOENT", readOutput(missingAssetsOutput));
   resetCodesignCalls();
 
   const failingApp = join(tmpDir, "Failing.app");

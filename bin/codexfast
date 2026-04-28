@@ -234,6 +234,10 @@ function unpackAppAsarToTemp() {
         printLine("Failed to unpack app.asar.");
         return false;
     }
+    if (!(0, node_fs_1.existsSync)(tempAssetsDir)) {
+        printLine(`Assets directory not found: ${tempAssetsDir}`);
+        return false;
+    }
     return true;
 }
 function packTempAppToAsar() {
@@ -430,13 +434,6 @@ function checkRequirements() {
         return false;
     }
     cleanupStaleArchiveTempFiles();
-    if (!migrateLegacyUnpackedLayout()) {
-        return false;
-    }
-    if (!(0, node_fs_1.existsSync)(appAsar)) {
-        printLine(`app.asar not found: ${appAsar}`);
-        return false;
-    }
     loadAppCompatibilityMetadata();
     return true;
 }
@@ -495,6 +492,13 @@ function runEmbeddedTool(action) {
     let exitCode = 1;
     printActionHeader(action);
     if (!validateActionRequest(action)) {
+        return 1;
+    }
+    if (!migrateLegacyUnpackedLayout()) {
+        return 1;
+    }
+    if (!(0, node_fs_1.existsSync)(appAsar)) {
+        printLine(`app.asar not found: ${appAsar}`);
         return 1;
     }
     if (action === "restore" && (0, node_fs_1.existsSync)(appAsarBackup)) {

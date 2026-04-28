@@ -25,6 +25,7 @@ This project follows a simple release-oriented changelog format.
 - Clean temporary workspaces on early unpack and legacy migration failures, and skip TCC reset when `CFBundleIdentifier` is unavailable.
 - Remove stale `.codexfast.*.app.asar.tmp` archives during startup checks and report when integrity rollback cannot fully restore the previous state.
 - Preserve recently written archive temp files during cleanup and use random archive temp names to avoid interfering with another active `codexfast` process.
+- Block unsupported apply requests before legacy layout migration, and report a missing extracted `webview/assets` directory without surfacing a raw stack trace.
 
 ## [0.5.3] - 2026-04-25
 
