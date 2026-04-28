@@ -1,5 +1,5 @@
-import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
+import { copyFileSync, existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
@@ -23,6 +23,7 @@ const appAsarBackup = join(appResources, "app.asar1");
 const backupSuffix = ".codexfast.bak";
 const legacyBackupSuffix = ".speed-setting.bak";
 const asarPackage = "@electron/asar@3.4.1";
+const staleArchiveTempFileMs = 10 * 60 * 1000;
 const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(", ");
 
 let tempRoot = "";
@@ -193,7 +194,7 @@ function createArchiveSnapshot(): ArchiveSnapshot | null {
 function restoreArchiveSnapshot(snapshot: ArchiveSnapshot): boolean {
   let archiveRestored = false;
   if (snapshot.archivePath) {
-    printLine("Restoring previous app.asar after failed integrity update.");
+    printLine("Reverting to the pre-change app.asar after failed integrity update.");
     archiveRestored = replaceAppAsarFrom(snapshot.archivePath, "Failed to restore the previous app.asar after integrity update failure.");
   } else {
     printLine("Removing app.asar created during failed integrity update.");
@@ -255,7 +256,7 @@ function packTempAppToAsar(): boolean {
 }
 
 function replaceAppAsarFrom(sourceArchive: string, failureMessage: string): boolean {
-  const targetTempAsar = join(appResources, `.codexfast.${process.pid}.app.asar.tmp`);
+  const targetTempAsar = join(appResources, `.codexfast.${process.pid}.${randomBytes(6).toString("hex")}.app.asar.tmp`);
   try {
     rmSync(targetTempAsar, { force: true });
     copyFileSync(sourceArchive, targetTempAsar);
@@ -285,9 +286,18 @@ function cleanupStaleArchiveTempFiles(): void {
   if (!existsSync(appResources)) {
     return;
   }
+  const staleBeforeMs = Date.now() - staleArchiveTempFileMs;
   for (const entry of readdirSync(appResources)) {
-    if (entry.startsWith(".codexfast.") && entry.endsWith(".app.asar.tmp")) {
-      rmSync(join(appResources, entry), { force: true });
+    if (!entry.startsWith(".codexfast.") || !entry.endsWith(".app.asar.tmp")) {
+      continue;
+    }
+    const tempFile = join(appResources, entry);
+    try {
+      if (statSync(tempFile).mtimeMs < staleBeforeMs) {
+        rmSync(tempFile, { force: true });
+      }
+    } catch {
+      rmSync(tempFile, { force: true });
     }
   }
 }

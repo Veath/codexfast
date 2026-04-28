@@ -24,6 +24,7 @@ This project follows a simple release-oriented changelog format.
 - Replace `app.asar` through a target-directory temporary archive, and roll back the previous archive if the Electron ASAR integrity update fails.
 - Clean temporary workspaces on early unpack and legacy migration failures, and skip TCC reset when `CFBundleIdentifier` is unavailable.
 - Remove stale `.codexfast.*.app.asar.tmp` archives during startup checks and report when integrity rollback cannot fully restore the previous state.
+- Preserve recently written archive temp files during cleanup and use random archive temp names to avoid interfering with another active `codexfast` process.
 
 ## [0.5.3] - 2026-04-25
 

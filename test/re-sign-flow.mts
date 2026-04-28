@@ -1,4 +1,4 @@
-import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { assertContains, assertNotContains, fail } from "./helpers/assertions.mts";
@@ -412,11 +412,18 @@ function main(): void {
   const staleTempResources = join(staleTempApp, "Contents", "Resources");
   const staleTempOutput = join(tmpDir, "stale-temp-output.txt");
   const staleTempFile = join(staleTempResources, ".codexfast.12345.app.asar.tmp");
+  const activeTempFile = join(staleTempResources, ".codexfast.67890.app.asar.tmp");
   prepareArchivedFakeApp(staleTempApp, join(tmpDir, "stale-temp-assets"));
   writeFileSync(staleTempFile, "stale");
+  writeFileSync(activeTempFile, "active");
+  const staleTime = new Date(Date.now() - 20 * 60 * 1000);
+  utimesSync(staleTempFile, staleTime, staleTime);
   runScript(staleTempApp, "1\n\nq\n", staleTempOutput);
   if (existsSync(staleTempFile)) {
     fail("expected stale app.asar temp file to be removed during startup checks", readOutput(staleTempOutput));
+  }
+  if (!existsSync(activeTempFile)) {
+    fail("expected recent app.asar temp file to be preserved during startup checks", readOutput(staleTempOutput));
   }
   resetCodesignCalls();
 

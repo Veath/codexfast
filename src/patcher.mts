@@ -1,5 +1,7 @@
 "use strict";
 
+// This module is transpiled to CommonJS by scripts/build-codexfast.mts and
+// executed via `node -`, where stdin defaults to CommonJS. Do not import it directly as ESM.
 const fs: typeof import("node:fs") = require("fs");
 const path: typeof import("node:path") = require("path");
 
