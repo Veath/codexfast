@@ -6,6 +6,10 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added support for `Codex.app` `26.422.62136` (`build 2180`) after direct installed-bundle inspection confirmed the same Settings Fast, `/fast`, composer `Intelligence` Speed menu, and Plugins target shapes as build `2176`.
+
 ## [0.6.0] - 2026-04-28
 
 ### Added

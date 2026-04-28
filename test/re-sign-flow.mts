@@ -161,16 +161,16 @@ function assertApplyState26422WithoutGptPatch(archivePath: string): void {
   assertNotContains(archiveFile(archivePath, "webview/assets/font-settings-C9TXXljS.js"), "codexfast-gpt55-select", "expected 26.422 build 2080 apply to leave the model query selector on the official path");
 }
 
-function assertApplyState26422Build2176(archivePath: string): void {
+function assertApplyState26422Build2176Or2180(archivePath: string): void {
   const generalSettings = archiveFile(archivePath, "webview/assets/general-settings-C7RhZXaE.js");
-  assertContains(generalSettings, "{serviceTierSettings:r,setServiceTier:i}=xe();let a;", "expected 26.422 build 2176 apply to remove the guarded Speed settings return");
-  assertNotContains(generalSettings, "if(!n)return null;", "expected 26.422 build 2176 apply to expose the Settings Speed control");
+  assertContains(generalSettings, "{serviceTierSettings:r,setServiceTier:i}=xe();let a;", "expected 26.422 build 2176/2180 apply to remove the guarded Speed settings return");
+  assertNotContains(generalSettings, "if(!n)return null;", "expected 26.422 build 2176/2180 apply to expose the Settings Speed control");
   const index = archiveFile(archivePath, "webview/assets/index-BSTEB47c.js");
-  assertContains(index, "enabled:!0", "expected 26.422 build 2176 apply to enable the Fast slash command");
-  assertContains(index, "g=!0", "expected 26.422 build 2176 apply to enable the composer Intelligence Speed menu");
-  assertContains(index, "A=!1", "expected 26.422 build 2176 apply to remove the Plugins sidebar api-key gate");
-  assertContains(index, /ee=Ha\(\{hostId:me\}\)[,;]/, "expected 26.422 build 2176 apply to expose the Plugins nav label for api-key users");
-  assertNotContains(index, "codexfast-gpt55", "expected 26.422 build 2176 apply to leave the model list handler on the official path");
+  assertContains(index, "enabled:!0", "expected 26.422 build 2176/2180 apply to enable the Fast slash command");
+  assertContains(index, "g=!0", "expected 26.422 build 2176/2180 apply to enable the composer Intelligence Speed menu");
+  assertContains(index, "A=!1", "expected 26.422 build 2176/2180 apply to remove the Plugins sidebar api-key gate");
+  assertContains(index, /ee=Ha\(\{hostId:me\}\)[,;]/, "expected 26.422 build 2176/2180 apply to expose the Plugins nav label for api-key users");
+  assertNotContains(index, "codexfast-gpt55", "expected 26.422 build 2176/2180 apply to leave the model list handler on the official path");
 }
 
 function assertGuardedState26422(archivePath: string, context: string): void {
@@ -187,13 +187,13 @@ function assertGuardedState26422(archivePath: string, context: string): void {
   assertNotContains(fontSettings, "codexfast-gpt55-select", `expected ${context} to remove the GPT-5.5 model query selector injection`);
 }
 
-function assertGuardedState26422Build2176(archivePath: string, context: string): void {
-  assertContains(archiveFile(archivePath, "webview/assets/general-settings-C7RhZXaE.js"), "if(!n)return null;", `expected ${context} to preserve the 26.422 build 2176 guarded Speed settings state`);
+function assertGuardedState26422Build2176Or2180(archivePath: string, context: string): void {
+  assertContains(archiveFile(archivePath, "webview/assets/general-settings-C7RhZXaE.js"), "if(!n)return null;", `expected ${context} to preserve the 26.422 build 2176/2180 guarded Speed settings state`);
   const index = archiveFile(archivePath, "webview/assets/index-BSTEB47c.js");
-  assertContains(index, "enabled:n", `expected ${context} to preserve the 26.422 build 2176 guarded Fast slash command state`);
-  assertContains(index, "g=_f()", `expected ${context} to preserve the 26.422 build 2176 guarded composer Intelligence Speed menu state`);
-  assertContains(index, "A=O&&k", `expected ${context} to preserve the 26.422 build 2176 guarded Plugins sidebar state`);
-  assertContains(index, "ee=Ha({hostId:me})&&!k", `expected ${context} to preserve the 26.422 build 2176 guarded Plugins nav label state`);
+  assertContains(index, "enabled:n", `expected ${context} to preserve the 26.422 build 2176/2180 guarded Fast slash command state`);
+  assertContains(index, "g=_f()", `expected ${context} to preserve the 26.422 build 2176/2180 guarded composer Intelligence Speed menu state`);
+  assertContains(index, "A=O&&k", `expected ${context} to preserve the 26.422 build 2176/2180 guarded Plugins sidebar state`);
+  assertContains(index, "ee=Ha({hostId:me})&&!k", `expected ${context} to preserve the 26.422 build 2176/2180 guarded Plugins nav label state`);
   assertNotContains(index, "codexfast-gpt55", `expected ${context} not to add GPT-5.5 model list injection`);
 }
 
@@ -348,14 +348,32 @@ function main(): void {
     appVersion: "26.422.62136",
     appBuild: "2176",
     assetProfile: "26422-2176",
-    applyAssert: assertApplyState26422Build2176,
-    restoreAssert: assertGuardedState26422Build2176,
+    applyAssert: assertApplyState26422Build2176Or2180,
+    restoreAssert: assertGuardedState26422Build2176Or2180,
     restoreContext: "26.422 build 2176 restore",
     postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2176 apply to skip GPT-5.5 patch targets", output),
     statusAssert: (output) => {
       assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.422 build 2176 status to report the Intelligence Speed target after apply", output);
       assertContains(output, "Current state: Plugins access enabled", "expected 26.422 build 2176 status to report Plugins after apply", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2176 status to omit unpatched GPT-5.5 compatibility targets", output);
+    },
+  });
+
+  runApplyRestoreCase({
+    name: "supported-26422-2180",
+    appDir: join(tmpDir, "Supported26422Build2180.app"),
+    assetsRoot: join(tmpDir, "supported-26422-2180-assets"),
+    appVersion: "26.422.62136",
+    appBuild: "2180",
+    assetProfile: "26422-2176",
+    applyAssert: assertApplyState26422Build2176Or2180,
+    restoreAssert: assertGuardedState26422Build2176Or2180,
+    restoreContext: "26.422 build 2180 restore",
+    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2180 apply to skip GPT-5.5 patch targets", output),
+    statusAssert: (output) => {
+      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.422 build 2180 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Current state: Plugins access enabled", "expected 26.422 build 2180 status to report Plugins after apply", output);
+      assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2180 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });
 
