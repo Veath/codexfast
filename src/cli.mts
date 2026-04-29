@@ -15,6 +15,7 @@ const SUPPORTED_APP_VERSIONS: Record<string, string> = {
   "26.422.30944+2080": "Codex.app 26.422.30944 build 2080",
   "26.422.62136+2176": "Codex.app 26.422.62136 build 2176",
   "26.422.62136+2180": "Codex.app 26.422.62136 build 2180",
+  "26.422.71525+2210": "Codex.app 26.422.71525 build 2210",
 };
 
 const appBundle = process.env.CODEXFAST_APP_BUNDLE ?? "/Applications/Codex.app";

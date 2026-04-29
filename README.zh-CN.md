@@ -17,7 +17,7 @@ npx codexfast
 ```
 
 
-已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）、`26.417.41555`（`build 1858`）、`26.422.21637`（`build 2056`）、`26.422.30944`（`build 2080`）和 `26.422.62136`（`build 2176、2180`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
+已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）、`26.417.41555`（`build 1858`）、`26.422.21637`（`build 2056`）、`26.422.30944`（`build 2080`）、`26.422.62136`（`build 2176、2180`）和 `26.422.71525`（`build 2210`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
 
 ## 作用
 
@@ -87,6 +87,7 @@ q) Quit
 - 已验证版本：`Codex.app` `26.422.21637`（`build 2056`）
 - 已验证版本：`Codex.app` `26.422.30944`（`build 2080`）
 - 已验证版本：`Codex.app` `26.422.62136`（`build 2176、2180`）
+- 已验证版本：`Codex.app` `26.422.71525`（`build 2210`）
 - **开启动作** 只允许在白名单里的 version/build 上执行
 - **查看状态** 和 **恢复** 在任何版本都可用
 - GPT-5.5 模型列表补丁只在仍需要兼容补丁的受支持版本上注入 UI catalog 项。`Codex.app` `26.422.30944` 及之后的版本预期已经通过官方 app 路径展示 GPT-5.5，因此 `codexfast` 会从 `26.422.30944` 起跳过这个 apply 目标；你的 custom API provider 仍然必须支持 `gpt-5.5`

@@ -173,6 +173,18 @@ function assertApplyState26422Build2176Or2180(archivePath: string): void {
   assertNotContains(index, "codexfast-gpt55", "expected 26.422 build 2176/2180 apply to leave the model list handler on the official path");
 }
 
+function assertApplyState26422Build2210(archivePath: string): void {
+  const generalSettings = archiveFile(archivePath, "webview/assets/general-settings-CDNVRswg.js");
+  assertContains(generalSettings, "{serviceTierSettings:r,setServiceTier:i}=ye();let a;", "expected 26.422 build 2210 apply to remove the guarded Speed settings return");
+  assertNotContains(generalSettings, "if(!n)return null;", "expected 26.422 build 2210 apply to expose the Settings Speed control");
+  const index = archiveFile(archivePath, "webview/assets/index-D-3V455n.js");
+  assertContains(index, "enabled:!0", "expected 26.422 build 2210 apply to enable the Fast slash command");
+  assertContains(index, "g=!0", "expected 26.422 build 2210 apply to enable the composer Intelligence Speed menu");
+  assertContains(index, "A=!1", "expected 26.422 build 2210 apply to remove the Plugins sidebar api-key gate");
+  assertContains(index, /q=Ha\(\{hostId:_e\}\)[,;]/, "expected 26.422 build 2210 apply to expose the Plugins nav label for api-key users");
+  assertNotContains(index, "codexfast-gpt55", "expected 26.422 build 2210 apply to leave the model list handler on the official path");
+}
+
 function assertGuardedState26422(archivePath: string, context: string): void {
   assertContains(archiveFile(archivePath, "webview/assets/general-settings-CnVD4YyB.js"), "if(!n)return null;", `expected ${context} to preserve the 26.422 guarded Speed settings state`);
   const index = archiveFile(archivePath, "webview/assets/index-gATb9Tvd.js");
@@ -194,6 +206,16 @@ function assertGuardedState26422Build2176Or2180(archivePath: string, context: st
   assertContains(index, "g=_f()", `expected ${context} to preserve the 26.422 build 2176/2180 guarded composer Intelligence Speed menu state`);
   assertContains(index, "A=O&&k", `expected ${context} to preserve the 26.422 build 2176/2180 guarded Plugins sidebar state`);
   assertContains(index, "ee=Ha({hostId:me})&&!k", `expected ${context} to preserve the 26.422 build 2176/2180 guarded Plugins nav label state`);
+  assertNotContains(index, "codexfast-gpt55", `expected ${context} not to add GPT-5.5 model list injection`);
+}
+
+function assertGuardedState26422Build2210(archivePath: string, context: string): void {
+  assertContains(archiveFile(archivePath, "webview/assets/general-settings-CDNVRswg.js"), "if(!n)return null;", `expected ${context} to preserve the 26.422 build 2210 guarded Speed settings state`);
+  const index = archiveFile(archivePath, "webview/assets/index-D-3V455n.js");
+  assertContains(index, "enabled:n", `expected ${context} to preserve the 26.422 build 2210 guarded Fast slash command state`);
+  assertContains(index, "g=gf()", `expected ${context} to preserve the 26.422 build 2210 guarded composer Intelligence Speed menu state`);
+  assertContains(index, "A=O&&k", `expected ${context} to preserve the 26.422 build 2210 guarded Plugins sidebar state`);
+  assertContains(index, "q=Ha({hostId:_e})&&!k", `expected ${context} to preserve the 26.422 build 2210 guarded Plugins nav label state`);
   assertNotContains(index, "codexfast-gpt55", `expected ${context} not to add GPT-5.5 model list injection`);
 }
 
@@ -374,6 +396,24 @@ function main(): void {
       assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.422 build 2180 status to report the Intelligence Speed target after apply", output);
       assertContains(output, "Current state: Plugins access enabled", "expected 26.422 build 2180 status to report Plugins after apply", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2180 status to omit unpatched GPT-5.5 compatibility targets", output);
+    },
+  });
+
+  runApplyRestoreCase({
+    name: "supported-26422-2210",
+    appDir: join(tmpDir, "Supported26422Build2210.app"),
+    assetsRoot: join(tmpDir, "supported-26422-2210-assets"),
+    appVersion: "26.422.71525",
+    appBuild: "2210",
+    assetProfile: "26422-2210",
+    applyAssert: assertApplyState26422Build2210,
+    restoreAssert: assertGuardedState26422Build2210,
+    restoreContext: "26.422 build 2210 restore",
+    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2210 apply to skip GPT-5.5 patch targets", output),
+    statusAssert: (output) => {
+      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.422 build 2210 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Current state: Plugins access enabled", "expected 26.422 build 2210 status to report Plugins after apply", output);
+      assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2210 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });
 

@@ -19,11 +19,11 @@ const GPT_55_OFFICIAL_MODEL_LIST_MIN_VERSION = "26.422.30944";
 const GPT_55_MODEL_ENTRY =
   "{id:`gpt-5.5`,model:`gpt-5.5`,upgrade:null,upgradeInfo:null,availabilityNux:null,displayName:`GPT-5.5`,description:`Frontier model for complex coding, research, and real-world work.`,hidden:!1,supportedReasoningEfforts:[{reasoningEffort:`low`,description:`Fast responses with lighter reasoning`},{reasoningEffort:`medium`,description:`Balances speed and reasoning depth for everyday tasks`},{reasoningEffort:`high`,description:`Greater reasoning depth for complex problems`},{reasoningEffort:`xhigh`,description:`Extra high reasoning depth for complex problems`}],defaultReasoningEffort:`medium`,inputModalities:[`text`],supportsPersonality:!0,additionalSpeedTiers:[`fast`],isDefault:!1}";
 const GUARDED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=((?:_e|ae|P)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe)\(\);)if\(!\1\)return null;/;
+  /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(Ce|se|be|xe)\(\);)let /;
+  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(Ce|se|be|xe|ye)\(\);)let /;
 const NORMALIZED_PATCHED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=((?:_e|ae|P)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe)\(\);)let /;
+  /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye)\(\);)let /;
 const SLASH_COMMAND_GUARDED_SIGNATURE =
   /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)([A-Za-z_$][\w$]*)(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\w$]*})/;
 const SLASH_COMMAND_PATCHED_SIGNATURE =
@@ -37,9 +37,13 @@ const ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_NEW =
 const ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_NEW =
   /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=jr\([^)]+\)[;,])/;
 const INTELLIGENCE_SPEED_GUARDED_SIGNATURE =
-  /(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=[A-Za-z_$][\w$]*\([^)]*\),)([A-Za-z_$][\w$]*)=_f\(\),/;
+  /(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Jp|Zp)\([^)]*\),)([A-Za-z_$][\w$]*)=_f\(\),/;
 const INTELLIGENCE_SPEED_PATCHED_SIGNATURE =
-  /(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=[A-Za-z_$][\w$]*\([^)]*\),)([A-Za-z_$][\w$]*)=!0,/;
+  /(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Jp|Zp)\([^)]*\),)([A-Za-z_$][\w$]*)=!0,/;
+const INTELLIGENCE_SPEED_GUARDED_SIGNATURE_GF =
+  /(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Yp\([^)]*\),)([A-Za-z_$][\w$]*)=gf\(\),/;
+const INTELLIGENCE_SPEED_PATCHED_SIGNATURE_GF =
+  /(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Yp\([^)]*\),)([A-Za-z_$][\w$]*)=!0,/;
 const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?cf\(`533078438`\),)([A-Za-z_$][\w$]*)=\2===`apikey`,/;
 const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD =
@@ -51,11 +55,11 @@ const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_NEW =
 const PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_NEW =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?)([A-Za-z_$][\w$]*)=Fs\(\),([A-Za-z_$][\w$]*)=hf\(`533078438`\),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([A-Za-z_$][\w$]*)=\3&&!?\5([,;])/;
 const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26422 =
-  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=(\$f\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=\3&&\5,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))&&!\5([,;])/;
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=((?:\$f|Qf)\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=\3&&\5,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))&&!\5([,;])/;
 const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26422 =
-  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=(\$f\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))([,;])/;
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=((?:\$f|Qf)\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))([,;])/;
 const PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26422 =
-  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=(\$f\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))&&!\5([,;])/;
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=((?:\$f|Qf)\(`533078438`\)),([A-Za-z_$][\w$]*)=\2===`apikey`,([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=(Ha\(\{hostId:[^}]+\}\))&&!\5([,;])/;
 const MODEL_LIST_GUARDED_SIGNATURE =
   /("list-models-for-host":i9\()\(([A-Za-z_$][\w$]*),\{hostId:([A-Za-z_$][\w$]*),\.\.\.([A-Za-z_$][\w$]*)\}\)=>\2\.sendRequest\(`model\/list`,\4\)(\))/;
 const MODEL_LIST_PATCHED_SIGNATURE =
@@ -141,6 +145,16 @@ const TARGET_SPECS: TargetSpec[] = [
     restoreReplacement: "$1$2=_f(),",
   },
   {
+    id: "intelligence-speed-menu-gf",
+    label: "Composer Intelligence Speed menu",
+    needle: INTELLIGENCE_SPEED_NEEDLE,
+    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_GF,
+    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_GF,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1$2=!0,",
+    restoreReplacement: "$1$2=gf(),",
+  },
+  {
     id: "fast-slash-command",
     label: "Fast slash command",
     needle: SPEED_SLASH_COMMAND_NEEDLE,
@@ -224,6 +238,7 @@ function resolveSpeedAvailabilityCall(serviceTierFactory: string): string {
     se: "ae",
     be: "P",
     xe: "P",
+    ye: "N",
   };
   const availabilityCall = availabilityCalls[serviceTierFactory];
   if (!availabilityCall) {

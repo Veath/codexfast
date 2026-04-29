@@ -16,7 +16,7 @@
 npx codexfast
 ```
 
-Verified for `Codex.app` `26.415.40636` (`build 1799`), `26.417.41555` (`build 1858`), `26.422.21637` (`build 2056`), `26.422.30944` (`build 2080`), and `26.422.62136` (`builds 2176, 2180`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
+Verified for `Codex.app` `26.415.40636` (`build 1799`), `26.417.41555` (`build 1858`), `26.422.21637` (`build 2056`), `26.422.30944` (`build 2080`), `26.422.62136` (`builds 2176, 2180`), and `26.422.71525` (`build 2210`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
 
 ## What It Does
 
@@ -86,6 +86,7 @@ The script does not use an official API — it matches code signatures in fronte
 - Verified on `Codex.app` `26.422.21637` (`build 2056`)
 - Verified on `Codex.app` `26.422.30944` (`build 2080`)
 - Verified on `Codex.app` `26.422.62136` (`builds 2176, 2180`)
+- Verified on `Codex.app` `26.422.71525` (`build 2210`)
 - **Enable** is blocked unless the installed version/build is whitelisted
 - **View status** and **Restore** work on any version
 - The GPT-5.5 model-list patch only injects the UI catalog entry on supported builds that still need it. `Codex.app` `26.422.30944` and later builds are expected to expose GPT-5.5 through the official app path, so `codexfast` skips that apply target from `26.422.30944` onward. Your configured provider must still support `gpt-5.5`
