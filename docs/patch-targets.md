@@ -13,6 +13,8 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 | Composer Speed menu on `26.415.40636` and `26.417.41555` | `Add-context Speed menu` | `use-model-settings-*.js` | `composer.addContext.speed.option.fast.description` | Force the menu gate to enabled so the `Speed` submenu renders. |
 | Composer Speed menu on `26.422.21637`, `26.422.30944`, `26.422.62136`, `26.422.71525`, and `26.429.20946` | `Composer Intelligence Speed menu` | `index-*.js` or `composer-*.js` | `composer.intelligenceDropdown.speed.title` | Force the Intelligence dropdown speed gate to enabled so the `Speed` submenu renders. |
 | Plugins sidebar access | `Plugins access` | `index-*.js` or a nearby sidebar asset | `sidebarElectron.pluginsDisabledTooltip` | Remove the API-key gate for both the disabled Plugins nav item and any adjacent unified Skills/Plugins label state in the matched local assignments. |
+| Plugins page content on `26.429.20946` | `Plugins page content` | `skills-page-*.js` | `skills.pluginsAuthBlockedToast.title` | Force the `/skills` route to render the Plugins page content instead of falling back to the skills-only view for API-key users. |
+| Plugin detail deep links on `26.429.20946` | `Plugin detail access` | `plugin-detail-page-*.js` | `pluginDeepLinkAuthBlocked` | Remove the API-key redirect that sends plugin detail deep links back to `/skills`. |
 | GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model list` | `index-*.js` | `"list-models-for-host"` | Wrap the app bridge model-list handler so it appends a Codex-shaped `gpt-5.5` entry when the returned list does not already include it. |
 | GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model query selector` | `font-settings-*.js` | `modelsByType` | Append the same Codex-shaped `gpt-5.5` entry after the model query selector filters raw models into `modelsByType.models`. |
 
@@ -28,6 +30,10 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
   - Restore the original gate local assignment (`_f()`, `gf()`, or `qs(...)` depending on build)
 - `Plugins access`
   - Restore the original auth-method-derived disabled-nav and label assignments for the matched build
+- `Plugins page content`
+  - Restore the original API-key-derived page-content gate local assignment
+- `Plugin detail access`
+  - Restore the original API-key redirect guard around plugin detail deep links
 - `GPT-5.5 model list`
   - Restore the original `list-models-for-host` bridge handler without the `codexfast-gpt55` injection wrapper
 - `GPT-5.5 model query selector`
@@ -39,7 +45,7 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 - Restore still recognizes those GPT-5.5 patch markers on `26.422.30944` and later builds to recover apps that were patched by `codexfast` `0.5.2`.
 - On `26.422.62136`, the Settings-side Fast target remains in `general-settings-*.js`, but the service-tier hook changed to `xe()`.
 - On `26.422.71525`, the Settings-side Fast target remains in `general-settings-*.js`, but the availability/service-tier hook shape changed to `N()` with `ye()`. The composer Intelligence Speed gate changed from `_f()` to `gf()` with `Yp()`, and the Plugins experiment helper changed from `$f("533078438")` to `Qf("533078438")`.
-- On `26.429.20946`, the Settings-side Fast target remains in `general-settings-*.js`, but the availability/service-tier hook shape changed to `de()` with `Ve()`. The `/fast` slash command and Intelligence Speed target moved to `composer-*.js`; Intelligence Speed now renders from a `qs(...)` gate, and Plugins uses `ms("533078438")` with `ed(authMethod)`.
+- On `26.429.20946`, the Settings-side Fast target remains in `general-settings-*.js`, but the availability/service-tier hook shape changed to `de()` with `Ve()`. The `/fast` slash command and Intelligence Speed target moved to `composer-*.js`; Intelligence Speed now renders from a `qs(...)` gate. Plugins uses `ms("533078438")` with `ed(authMethod)` in the sidebar, and also has separate `/skills` page-content and plugin-detail redirect auth gates.
 
 ## Update Rules
 

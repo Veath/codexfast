@@ -68,7 +68,7 @@ q) Quit
 - composer 里的 `/fast` slash command
 - composer 里的 Speed 菜单
 - 必要版本上的 GPT-5.5 模型列表兼容
-- custom API 用户的 Plugins 侧边栏入口
+- custom API 用户的 Plugins 入口
 
 第一次开启时脚本会创建备份，更新 `app.asar`，刷新 Electron ASAR integrity hash，并执行本地 ad-hoc 重签名。由于重签名会改变 macOS 隐私权限识别应用时使用的身份，apply 会重置 `Codex.app` 的屏幕录制权限记录。脚本完成后重启 `Codex.app`，并在 macOS 提示时允许“屏幕与系统音频录制”。
 
@@ -92,7 +92,7 @@ q) Quit
 - **开启动作** 只允许在白名单里的 version/build 上执行
 - **查看状态** 和 **恢复** 在任何版本都可用
 - GPT-5.5 模型列表补丁只在仍需要兼容补丁的受支持版本上注入 UI catalog 项。`Codex.app` `26.422.30944` 及之后的版本预期已经通过官方 app 路径展示 GPT-5.5，因此 `codexfast` 会从 `26.422.30944` 起跳过这个 apply 目标；你的 custom API provider 仍然必须支持 `gpt-5.5`
-- Plugins 仅移除 custom API 用户的侧边栏鉴权 gate；插件最终是否可用仍取决于 connector 可用性、插件自身状态以及应用内管理侧限制
+- Plugins 会移除受支持版本上打开 Plugins 侧边栏和页面路径所需的 custom API gate；插件最终是否可用仍取决于 connector 可用性、插件自身状态以及应用内管理侧限制
 
 每次 Codex 更新后都建议重新跑一次 **查看当前状态**。
 
@@ -121,7 +121,7 @@ codesign --force --deep --sign - /Applications/Codex.app
 
 **找不到目标文件 / 版本不被支持** — 不要继续，也不要手动改 bundle。当前构建可能需要重新适配。
 
-**Plugins 已可见但插件仍无法使用** — 与本脚本无关，请检查 connector 可用性、插件自身状态或管理侧限制。
+**Plugins 已可见但某个具体插件仍无法使用** — 与本脚本无关，请检查 connector 可用性、插件自身状态或管理侧限制。
 
 **GPT-5.5 已可见但请求失败** — UI 项已经存在，但你的 custom API provider 仍需接受 `model: "gpt-5.5"`。
 

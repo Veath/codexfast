@@ -26,7 +26,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 ### Plugins sidebar access for custom API users
 
 - Exposes the `Plugins` sidebar/page access path for custom API users on supported builds.
-- This removes the sidebar auth-method gate for API-key users.
+- This removes the relevant auth-method gates for API-key users. On newer builds this includes the sidebar entry, the `/skills` Plugins page content gate, and plugin detail deep-link redirects.
 - This does not guarantee that every plugin install or connector flow is available. Connector availability, plugin state, or admin-side restrictions may still block a specific plugin.
 
 ### GPT-5.5 model-list entry for custom API users
@@ -40,6 +40,6 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 ## Scope Rules
 
 - `Settings-side Fast control`, composer `/fast`, and the composer-side `Speed` menu should be treated as one combined Fast feature set.
-- `Plugins` support should not be described as available unless the sidebar gate patch still works cleanly on the target build.
+- `Plugins` support should not be described as available unless the sidebar/page gates still work cleanly on the target build.
 - `GPT-5.5` model-list support should not be described as provider support. It is only a UI catalog entry.
 - Compatibility claims must also match `docs/compatibility-matrix.md` and the strict whitelist in `src/cli.mts`.

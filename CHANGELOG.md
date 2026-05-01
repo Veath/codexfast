@@ -6,6 +6,10 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Fixed
+
+- Expanded `Codex.app` `26.429.20946` (`build 2312`) Plugins support beyond the sidebar entry so the `/skills` Plugins page content and plugin detail deep links are no longer blocked by the API-key auth gate.
+
 ## [0.9.0] - 2026-05-01
 
 ### Added

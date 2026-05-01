@@ -13,6 +13,8 @@ const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
 const ADD_CONTEXT_SPEED_NEEDLE = "composer.addContext.speed.option.fast.description";
 const INTELLIGENCE_SPEED_NEEDLE = "composer.intelligenceDropdown.speed.title";
 const PLUGINS_SIDEBAR_NEEDLE = "sidebarElectron.pluginsDisabledTooltip";
+const PLUGINS_PAGE_CONTENT_NEEDLE = "skills.pluginsAuthBlockedToast.title";
+const PLUGIN_DETAIL_AUTH_NEEDLE = "pluginDeepLinkAuthBlocked";
 const MODEL_LIST_NEEDLE = "\"list-models-for-host\"";
 const MODEL_QUERY_NEEDLE = "modelsByType";
 const GPT_55_OFFICIAL_MODEL_LIST_MIN_VERSION = "26.422.30944";
@@ -70,6 +72,14 @@ const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26429 =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=ms\(`533078438`\),([A-Za-z_$][\w$]*)=ed\(\2\),([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*\(\{hostId:[^}]+\}\))([,;])/;
 const PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26429 =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=ms\(`533078438`\),([A-Za-z_$][\w$]*)=ed\(\2\),([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*\(\{hostId:[^}]+\}\))&&!\4([,;])/;
+const PLUGINS_PAGE_CONTENT_GUARDED_SIGNATURE =
+  /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*);(if\(e\[\d+\]!==[A-Za-z_$][\w$]*\|\|e\[\d+\]!==\2\|\|)/;
+const PLUGINS_PAGE_CONTENT_PATCHED_SIGNATURE =
+  /(let )([A-Za-z_$][\w$]*)=!1,([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*);(if\(e\[\d+\]!==[A-Za-z_$][\w$]*\|\|e\[\d+\]!==\2\|\|)/;
+const PLUGIN_DETAIL_AUTH_GUARDED_SIGNATURE =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=pe\(\);)if\(qe\(\2\)\)\{/;
+const PLUGIN_DETAIL_AUTH_PATCHED_SIGNATURE =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=pe\(\);)if\(!1\)\{/;
 const MODEL_LIST_GUARDED_SIGNATURE =
   /("list-models-for-host":i9\()\(([A-Za-z_$][\w$]*),\{hostId:([A-Za-z_$][\w$]*),\.\.\.([A-Za-z_$][\w$]*)\}\)=>\2\.sendRequest\(`model\/list`,\4\)(\))/;
 const MODEL_LIST_PATCHED_SIGNATURE =
@@ -226,6 +236,26 @@ const TARGET_SPECS: TargetSpec[] = [
     applyReplacement: "$1$3=ms(`533078438`),$4=ed($2),$5=!1,$6$7=$8$9",
     normalizeReplacement: "$1$3=ms(`533078438`),$4=ed($2),$5=!1,$6$7=$8$9",
     restoreReplacement: "$1$3=ms(`533078438`),$4=ed($2),$5=$3&&$4,$6$7=$8&&!$4$9",
+  },
+  {
+    id: "plugins-page-content-26429",
+    label: "Plugins page content",
+    needle: PLUGINS_PAGE_CONTENT_NEEDLE,
+    guardedSignature: PLUGINS_PAGE_CONTENT_GUARDED_SIGNATURE,
+    patchedSignature: PLUGINS_PAGE_CONTENT_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1$2=!1,$4,$5;$6",
+    restoreReplacement: "$1$2=$3,$4,$5;$6",
+  },
+  {
+    id: "plugin-detail-access-26429",
+    label: "Plugin detail access",
+    needle: PLUGIN_DETAIL_AUTH_NEEDLE,
+    guardedSignature: PLUGIN_DETAIL_AUTH_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_DETAIL_AUTH_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1if(!1){",
+    restoreReplacement: "$1if(qe($2)){",
   },
   {
     id: "gpt55-model-list",
