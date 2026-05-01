@@ -15,6 +15,8 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 | Plugins sidebar access | `Plugins access` | `index-*.js` or a nearby sidebar asset | `sidebarElectron.pluginsDisabledTooltip` | Remove the API-key gate for both the disabled Plugins nav item and any adjacent unified Skills/Plugins label state in the matched local assignments. |
 | Plugins page content on `26.429.20946` | `Plugins page content` | `skills-page-*.js` | `skills.pluginsAuthBlockedToast.title` | Force the `/skills` route to render the Plugins page content instead of falling back to the skills-only view for API-key users. |
 | Plugin detail deep links on `26.429.20946` | `Plugin detail access` | `plugin-detail-page-*.js` | `pluginDeepLinkAuthBlocked` | Remove the API-key redirect that sends plugin detail deep links back to `/skills`. |
+| Plugin install buttons on `26.429.20946` | `Plugin install availability` | `use-plugin-install-flow-*.js` | `plugins.install.connectorUnavailable` | Stop the aggregate `connector-unavailable` state from disabling the top-level install action while preserving the `disabled-by-admin` block. |
+| Plugin install modal details on `26.429.20946` | `Plugin install modal content` | `use-plugin-install-flow-*.js` | `plugins.installModal.about` | Keep the modal's basic plugin information visible for `ON_INSTALL` app plugins instead of relying only on connector disclosure data. |
 | GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model list` | `index-*.js` | `"list-models-for-host"` | Wrap the app bridge model-list handler so it appends a Codex-shaped `gpt-5.5` entry when the returned list does not already include it. |
 | GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model query selector` | `font-settings-*.js` | `modelsByType` | Append the same Codex-shaped `gpt-5.5` entry after the model query selector filters raw models into `modelsByType.models`. |
 
@@ -34,6 +36,10 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
   - Restore the original API-key-derived page-content gate local assignment
 - `Plugin detail access`
   - Restore the original API-key redirect guard around plugin detail deep links
+- `Plugin install availability`
+  - Restore the original aggregate `connector-unavailable` install block while preserving the existing admin-disabled branch
+- `Plugin install modal content`
+  - Restore the original `ON_INSTALL` disclosure-only modal content gate
 - `GPT-5.5 model list`
   - Restore the original `list-models-for-host` bridge handler without the `codexfast-gpt55` injection wrapper
 - `GPT-5.5 model query selector`
@@ -45,7 +51,7 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 - Restore still recognizes those GPT-5.5 patch markers on `26.422.30944` and later builds to recover apps that were patched by `codexfast` `0.5.2`.
 - On `26.422.62136`, the Settings-side Fast target remains in `general-settings-*.js`, but the service-tier hook changed to `xe()`.
 - On `26.422.71525`, the Settings-side Fast target remains in `general-settings-*.js`, but the availability/service-tier hook shape changed to `N()` with `ye()`. The composer Intelligence Speed gate changed from `_f()` to `gf()` with `Yp()`, and the Plugins experiment helper changed from `$f("533078438")` to `Qf("533078438")`.
-- On `26.429.20946`, the Settings-side Fast target remains in `general-settings-*.js`, but the availability/service-tier hook shape changed to `de()` with `Ve()`. The `/fast` slash command and Intelligence Speed target moved to `composer-*.js`; Intelligence Speed now renders from a `qs(...)` gate. Plugins uses `ms("533078438")` with `ed(authMethod)` in the sidebar, and also has separate `/skills` page-content and plugin-detail redirect auth gates.
+- On `26.429.20946`, the Settings-side Fast target remains in `general-settings-*.js`, but the availability/service-tier hook shape changed to `de()` with `Ve()`. The `/fast` slash command and Intelligence Speed target moved to `composer-*.js`; Intelligence Speed now renders from a `qs(...)` gate. Plugins uses `ms("533078438")` with `ed(authMethod)` in the sidebar, and also has separate `/skills` page-content, plugin-detail redirect, plugin-install availability, and plugin-install modal content gates.
 
 ## Update Rules
 

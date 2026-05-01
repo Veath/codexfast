@@ -35,11 +35,12 @@ What to do:
 
 Expected boundary:
 
-- `codexfast` only removes the sidebar auth-method gate for custom API users.
-- It does not guarantee that every plugin, connector, or app integration is available.
+- `codexfast` removes the known custom-API Plugins gates for supported builds. On newer builds this can include sidebar access, page content, plugin detail redirects, install-button availability, and install-modal content.
+- It does not guarantee that every plugin, connector runtime, or app integration is available after those gates are patched.
 
 Check:
 
+- `View current status` reports every expected Plugins target as `enabled` for the current supported build
 - Connector/app integration availability
 - Plugin package state
 - Admin-side or upstream restrictions

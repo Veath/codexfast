@@ -15,6 +15,8 @@ const INTELLIGENCE_SPEED_NEEDLE = "composer.intelligenceDropdown.speed.title";
 const PLUGINS_SIDEBAR_NEEDLE = "sidebarElectron.pluginsDisabledTooltip";
 const PLUGINS_PAGE_CONTENT_NEEDLE = "skills.pluginsAuthBlockedToast.title";
 const PLUGIN_DETAIL_AUTH_NEEDLE = "pluginDeepLinkAuthBlocked";
+const PLUGIN_INSTALL_AVAILABILITY_NEEDLE = "plugins.install.connectorUnavailable";
+const PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE = "plugins.installModal.about";
 const MODEL_LIST_NEEDLE = "\"list-models-for-host\"";
 const MODEL_QUERY_NEEDLE = "modelsByType";
 const GPT_55_OFFICIAL_MODEL_LIST_MIN_VERSION = "26.422.30944";
@@ -80,6 +82,14 @@ const PLUGIN_DETAIL_AUTH_GUARDED_SIGNATURE =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=pe\(\);)if\(qe\(\2\)\)\{/;
 const PLUGIN_DETAIL_AUTH_PATCHED_SIGNATURE =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=pe\(\);)if\(!1\)\{/;
+const PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE =
+  /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.length>0&&([A-Za-z_$][\w$]*)===\3\.length\?([A-Za-z_$][\w$]*)\?`disabled-by-admin`:`connector-unavailable`:null,([A-Za-z_$][\w$]*);/;
+const PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE =
+  /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.length>0&&([A-Za-z_$][\w$]*)===\3\.length&&([A-Za-z_$][\w$]*)\?`disabled-by-admin`:null,([A-Za-z_$][\w$]*);/;
+const PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE =
+  /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)=\(([A-Za-z_$][\w$]*)\?\.apps\.length\?\?0\)>0&&\5\?\.summary\.authPolicy===`ON_INSTALL`,([A-Za-z_$][\w$]*);/;
+const PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE =
+  /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)=\(([A-Za-z_$][\w$]*)\?\.apps\.length\?\?0\)>0&&!1,([A-Za-z_$][\w$]*);/;
 const MODEL_LIST_GUARDED_SIGNATURE =
   /("list-models-for-host":i9\()\(([A-Za-z_$][\w$]*),\{hostId:([A-Za-z_$][\w$]*),\.\.\.([A-Za-z_$][\w$]*)\}\)=>\2\.sendRequest\(`model\/list`,\4\)(\))/;
 const MODEL_LIST_PATCHED_SIGNATURE =
@@ -256,6 +266,26 @@ const TARGET_SPECS: TargetSpec[] = [
     legacyPatchedSignature: null,
     applyReplacement: "$1if(!1){",
     restoreReplacement: "$1if(qe($2)){",
+  },
+  {
+    id: "plugin-install-availability-26429",
+    label: "Plugin install availability",
+    needle: PLUGIN_INSTALL_AVAILABILITY_NEEDLE,
+    guardedSignature: PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1$2=$3.length>0&&$4===$3.length&&$5?`disabled-by-admin`:null,$6;",
+    restoreReplacement: "$1$2=$3.length>0&&$4===$3.length?$5?`disabled-by-admin`:`connector-unavailable`:null,$6;",
+  },
+  {
+    id: "plugin-install-modal-content-26429",
+    label: "Plugin install modal content",
+    needle: PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE,
+    guardedSignature: PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1$2=$3,$4=($5?.apps.length??0)>0&&!1,$6;",
+    restoreReplacement: "$1$2=$3,$4=($5?.apps.length??0)>0&&$5?.summary.authPolicy===`ON_INSTALL`,$6;",
   },
   {
     id: "gpt55-model-list",

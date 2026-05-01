@@ -6,6 +6,11 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed `Codex.app` `26.429.20946` (`build 2312`) plugin install buttons being blocked by the aggregate `connector-unavailable` state while preserving the admin-disabled plugin restriction.
+- Fixed the `26.429.20946` plugin install modal hiding its basic plugin information for `ON_INSTALL` app plugins when disclosure data is unavailable.
+
 ## [0.10.0] - 2026-05-01
 
 ### Fixed

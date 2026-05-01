@@ -35,7 +35,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 1. Inspect the current repo state.
    - Read `AGENTS.md`, `src/cli.mts`, `src/patcher.mts`, `test/re-sign-flow.sh`, and the relevant README sections.
    - If the change is bundle-specific, identify the exact gated text key, target file shape, and restore path first.
-   - Do not trust `status`/matcher output as proof that a feature target is gone. For every expected feature path, search the extracted bundle by stable needles such as `settings.agent.speed.label`, `composer.speedSlashCommand.title`, `composer.intelligenceDropdown.speed.title`, `sidebarElectron.pluginsDisabledTooltip`, and nearby `serviceTierSettings` / auth-method gates.
+   - Do not trust `status`/matcher output as proof that a feature target is gone. For every expected feature path, search the extracted bundle by stable needles such as `settings.agent.speed.label`, `composer.speedSlashCommand.title`, `composer.intelligenceDropdown.speed.title`, `sidebarElectron.pluginsDisabledTooltip`, `skills.pluginsAuthBlockedToast.title`, `pluginDeepLinkAuthBlocked`, `plugins.install.connectorUnavailable`, `plugins.installModal.about`, and nearby `serviceTierSettings` / auth-method gates.
    - Distinguish "target absent" from "target present but regex stale". A target is absent only after broad non-locale JS search shows the user-facing needle and adjacent gate are no longer present anywhere in `webview/assets`.
 
 2. Make the smallest viable code change.
@@ -68,7 +68,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 - Composer-side `Speed` menu patch still works for the target bundle:
   - `Add files and more / +` Speed submenu on builds that still expose the add-context path.
   - Composer `Intelligence` dropdown Speed submenu on newer builds where the add-context Speed entry moved.
-- Plugins sidebar gate patch still works.
+- Every Plugins gate required by the target build still works, including sidebar access, page content, plugin detail redirects, install-button availability, and install-modal content where present.
 - Unsupported versions are blocked before unpack, backup creation, or re-sign.
 - Restore still works even when apply is blocked for unsupported versions.
 - Status output still shows:

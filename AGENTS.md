@@ -62,7 +62,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - the Settings-side Fast control
   - the composer `/fast` slash command
   - the composer-side `Speed` menu, whether exposed through add-context or Intelligence UI
-  - the Plugins sidebar auth-method gate
+  - every Plugins gate required by the target build, including sidebar access, page content, plugin detail redirects, install-button availability, and install-modal content where present
   - the GPT-5.5 model-list bridge and model query selector injection targets
   - unsupported-version blocking before unpack, backup, and re-sign
   - restore symmetry for all patched paths
@@ -72,7 +72,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - detected build
   - compatibility state
 - Do not ship a change that enables only part of the combined Fast feature set.
-- Do not describe Plugins as supported unless the sidebar gate patch still works cleanly.
+- Do not describe Plugins as supported unless every Plugins gate required by that build still works cleanly.
 - Before claiming real-app support, run the manual checklist in [`docs/real-app-validation.md`](./docs/real-app-validation.md).
 - When adapting to a new build, follow [`docs/version-adaptation-playbook.md`](./docs/version-adaptation-playbook.md).
 - If a build loses any supported path, update the compatibility docs and README notes before calling the release fully compatible.

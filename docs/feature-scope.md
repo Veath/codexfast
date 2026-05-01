@@ -26,8 +26,8 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 ### Plugins sidebar access for custom API users
 
 - Exposes the `Plugins` sidebar/page access path for custom API users on supported builds.
-- This removes the relevant auth-method gates for API-key users. On newer builds this includes the sidebar entry, the `/skills` Plugins page content gate, and plugin detail deep-link redirects.
-- This does not guarantee that every plugin install or connector flow is available. Connector availability, plugin state, or admin-side restrictions may still block a specific plugin.
+- This removes the relevant auth-method gates for API-key users. On newer builds this includes the sidebar entry, the `/skills` Plugins page content gate, plugin detail deep-link redirects, the aggregate connector-unavailable install block, and the install-modal disclosure-only content gate when present.
+- This does not guarantee that every plugin or connector flow is available. Plugin state, connector runtime behavior, or admin-side restrictions may still block a specific plugin.
 
 ### GPT-5.5 model-list entry for custom API users
 

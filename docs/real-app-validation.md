@@ -25,7 +25,10 @@ Run these checks after any meaningful bundle change, patch-signature update, or 
 
 - The `Plugins` sidebar entry is visible for custom API users
 - Opening `Plugins` does not fail only because of the auth-method gate
-- At least one plugin install or connect path is not blocked solely by `authMethod === "apikey"`
+- On builds with separate Plugins page/detail gates, plugin cards and plugin detail views show plugin-related content instead of falling back to skills-only or redirecting to `/skills`
+- On builds with install-flow gates, at least one plugin install button is not blocked solely by aggregate connector-unavailable state
+- On builds with install-modal content gates, the install modal shows basic plugin details such as About, Includes, or Capabilities instead of an empty information card
+- At least one plugin install or connect path is not blocked solely by `authMethod === "apikey"` or another patched custom-API gate
 
 ## Model List
 
