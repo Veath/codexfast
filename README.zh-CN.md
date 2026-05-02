@@ -17,7 +17,7 @@ npx codexfast
 ```
 
 
-已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）、`26.417.41555`（`build 1858`）、`26.422.21637`（`build 2056`）、`26.422.30944`（`build 2080`）、`26.422.62136`（`build 2176、2180`）、`26.422.71525`（`build 2210`）和 `26.429.20946`（`build 2312`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
+已验证兼容：`Codex.app` `26.415.40636`（`build 1799`）、`26.417.41555`（`build 1858`）、`26.422.21637`（`build 2056`）、`26.422.30944`（`build 2080`）、`26.422.62136`（`build 2176、2180`）、`26.422.71525`（`build 2210`）、`26.429.20946`（`build 2312`）和 `26.429.30905`（`build 2345`）。能力定义见 [`docs/feature-scope.md`](./docs/feature-scope.md)。
 
 ## 作用
 
@@ -89,10 +89,11 @@ q) Quit
 - 已验证版本：`Codex.app` `26.422.62136`（`build 2176、2180`）
 - 已验证版本：`Codex.app` `26.422.71525`（`build 2210`）
 - 已验证版本：`Codex.app` `26.429.20946`（`build 2312`）
+- 已验证版本：`Codex.app` `26.429.30905`（`build 2345`）
 - **开启动作** 只允许在白名单里的 version/build 上执行
 - **查看状态** 和 **恢复** 在任何版本都可用
 - GPT-5.5 模型列表补丁只在仍需要兼容补丁的受支持版本上注入 UI catalog 项。`Codex.app` `26.422.30944` 及之后的版本预期已经通过官方 app 路径展示 GPT-5.5，因此 `codexfast` 会从 `26.422.30944` 起跳过这个 apply 目标；你的 custom API provider 仍然必须支持 `gpt-5.5`
-- Plugins 会移除受支持版本上打开 Plugins 侧边栏和页面路径所需的 custom API gate；在 `26.429.20946` 上也会移除安装按钮的聚合 connector-unavailable 阻断，并保留安装弹窗中的插件详情。插件实际行为仍可能取决于插件状态、connector 运行时行为或管理侧限制
+- Plugins 会移除受支持版本上打开 Plugins 侧边栏和页面路径所需的 custom API gate；在 `26.429.20946` 和 `26.429.30905` 上也会移除安装按钮的聚合 connector-unavailable 阻断，并保留安装弹窗中的插件详情。插件实际行为仍可能取决于插件状态、connector 运行时行为或管理侧限制
 
 每次 Codex 更新后都建议重新跑一次 **查看当前状态**。
 
@@ -121,7 +122,7 @@ codesign --force --deep --sign - /Applications/Codex.app
 
 **找不到目标文件 / 版本不被支持** — 不要继续，也不要手动改 bundle。当前构建可能需要重新适配。
 
-**Plugins 已可见但某个具体插件仍无法使用** — 请先跑 **查看当前状态**。在 `26.429.20946` 上，`Plugin install availability enabled` 表示顶层 connector-unavailable 安装阻断已被 patch，`Plugin install modal content enabled` 表示安装弹窗空详情卡片的 gate 已被 patch；剩余失败通常来自插件状态、connector 运行时行为或管理侧限制。
+**Plugins 已可见但某个具体插件仍无法使用** — 请先跑 **查看当前状态**。在 `26.429.20946` 和 `26.429.30905` 上，`Plugin install availability enabled` 表示顶层 connector-unavailable 安装阻断已被 patch，`Plugin install modal content enabled` 表示安装弹窗空详情卡片的 gate 已被 patch；剩余失败通常来自插件状态、connector 运行时行为或管理侧限制。
 
 **GPT-5.5 已可见但请求失败** — UI 项已经存在，但你的 custom API provider 仍需接受 `model: "gpt-5.5"`。
 

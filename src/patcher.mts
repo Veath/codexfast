@@ -49,9 +49,9 @@ const INTELLIGENCE_SPEED_GUARDED_SIGNATURE_GF =
 const INTELLIGENCE_SPEED_PATCHED_SIGNATURE_GF =
   /(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=Yp\([^)]*\),)([A-Za-z_$][\w$]*)=!0,/;
 const INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QS =
-  /(let )([A-Za-z_$][\w$]*)=qs\(([^)]+)\),(v=zr\(ER,n\),)/;
+  /(let )([A-Za-z_$][\w$]*)=qs\(([^)]+)\),([A-Za-z_$][\w$]*=zr\([A-Za-z_$][\w$]*,n\),)/;
 const INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QS =
-  /(let )([A-Za-z_$][\w$]*)=!0,(v=zr\(ER,n\),)/;
+  /(let )([A-Za-z_$][\w$]*)=!0,([A-Za-z_$][\w$]*=zr\([A-Za-z_$][\w$]*,n\),)/;
 const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?cf\(`533078438`\),)([A-Za-z_$][\w$]*)=\2===`apikey`,/;
 const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD =

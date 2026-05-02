@@ -16,7 +16,7 @@
 npx codexfast
 ```
 
-Verified for `Codex.app` `26.415.40636` (`build 1799`), `26.417.41555` (`build 1858`), `26.422.21637` (`build 2056`), `26.422.30944` (`build 2080`), `26.422.62136` (`builds 2176, 2180`), `26.422.71525` (`build 2210`), and `26.429.20946` (`build 2312`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
+Verified for `Codex.app` `26.415.40636` (`build 1799`), `26.417.41555` (`build 1858`), `26.422.21637` (`build 2056`), `26.422.30944` (`build 2080`), `26.422.62136` (`builds 2176, 2180`), `26.422.71525` (`build 2210`), `26.429.20946` (`build 2312`), and `26.429.30905` (`build 2345`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
 
 ## What It Does
 
@@ -88,10 +88,11 @@ The script does not use an official API — it matches code signatures in fronte
 - Verified on `Codex.app` `26.422.62136` (`builds 2176, 2180`)
 - Verified on `Codex.app` `26.422.71525` (`build 2210`)
 - Verified on `Codex.app` `26.429.20946` (`build 2312`)
+- Verified on `Codex.app` `26.429.30905` (`build 2345`)
 - **Enable** is blocked unless the installed version/build is whitelisted
 - **View status** and **Restore** work on any version
 - The GPT-5.5 model-list patch only injects the UI catalog entry on supported builds that still need it. `Codex.app` `26.422.30944` and later builds are expected to expose GPT-5.5 through the official app path, so `codexfast` skips that apply target from `26.422.30944` onward. Your configured provider must still support `gpt-5.5`
-- For Plugins, the script removes the custom-API gates needed to open the Plugins sidebar/page path on supported builds. On `26.429.20946`, it also removes the aggregate connector-unavailable install block and keeps install-modal plugin details visible. Actual plugin behavior can still depend on plugin state, connector runtime behavior, or admin restrictions
+- For Plugins, the script removes the custom-API gates needed to open the Plugins sidebar/page path on supported builds. On `26.429.20946` and `26.429.30905`, it also removes the aggregate connector-unavailable install block and keeps install-modal plugin details visible. Actual plugin behavior can still depend on plugin state, connector runtime behavior, or admin restrictions
 
 Re-run **View current status** after every Codex update.
 
@@ -120,7 +121,7 @@ codesign --force --deep --sign - /Applications/Codex.app
 
 **Target not found / version unsupported** — do not continue, do not hand-patch. The build likely needs a new adaptation.
 
-**Plugins visible but a specific plugin is still unusable** — run **View current status** first. On `26.429.20946`, `Plugin install availability enabled` means the top-level connector-unavailable install block is patched, and `Plugin install modal content enabled` means the empty install-modal detail card gate is patched. Remaining failures usually come from plugin state, connector runtime behavior, or admin-side restrictions.
+**Plugins visible but a specific plugin is still unusable** — run **View current status** first. On `26.429.20946` and `26.429.30905`, `Plugin install availability enabled` means the top-level connector-unavailable install block is patched, and `Plugin install modal content enabled` means the empty install-modal detail card gate is patched. Remaining failures usually come from plugin state, connector runtime behavior, or admin-side restrictions.
 
 **GPT-5.5 visible but requests fail** — the UI entry is present, but your custom API provider still needs to accept `model: "gpt-5.5"`.
 

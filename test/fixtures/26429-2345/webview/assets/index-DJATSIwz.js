@@ -1,0 +1,2 @@
+const pluginsLabel26429Build2312="sidebarElectron.pluginsDisabledTooltip";function Ub(){let e=di(G),C=jo(),{authMethod:w}=pc(),T=ms(`533078438`),E=ed(w),D=T&&E,O=C.formatMessage({id:`sidebarElectron.addGenericWorkspaceRoot`}),k=C.formatMessage({id:`sidebarElectron.newThread`}),B=bs(),{remoteConnections:U}=Ss(),W=cf(U),te=g({hostId:Or})&&!E,re=B&&W.length>0;return{e,C,w,T,E,D,O,k,B,U,W,te,re}}
+const modelListBridge26429Build2312={"list-models-for-host":mT((e,{hostId:t,...n})=>e.sendRequest(`model/list`,n))};
