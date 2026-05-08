@@ -75,7 +75,7 @@ npx codexfast version
 q) Quit
 ```
 
-这些动作也可以用非交互命令直接执行：`status`、`apply`、`repair`、`restore`、`install-watcher` 和 `uninstall-watcher`。
+这些动作也可以用非交互命令直接执行：`status`、`apply`、`restore`、`install-watcher` 和 `uninstall-watcher`。
 
 ### 命令说明
 
@@ -83,7 +83,6 @@ q) Quit
 | --- | --- |
 | `npx codexfast status` | 检查当前安装的 `Codex.app`，显示检测到的版本、build、兼容性状态和各 patch 目标状态，不修改 app。 |
 | `npx codexfast apply` | 对兼容 build 应用当前支持的补丁集合，创建备份，刷新 Electron ASAR integrity，本地 ad-hoc 重签名，并重置屏幕录制权限记录。 |
-| `npx codexfast repair` | 安全地重新应用缺失补丁。它是幂等的，已 patch 的归档不会被改写，不支持的 build 会跳过且不修改 app。 |
 | `npx codexfast restore` | 先移除已安装的 auto-repair watcher，再通过备份或内联恢复规则还原 vendor bundle，必要时重新签名，并在恢复成功后重置屏幕录制权限记录。 |
 | `npx codexfast install-watcher` | 安装当前用户的 macOS `launchd` auto-repair watcher，监听 `app.asar`，在受支持的 Codex 更新后运行 `repair`。 |
 | `npx codexfast uninstall-watcher` | 删除 auto-repair watcher 的 plist 和本地 watcher runtime。这个清理命令不依赖一个健康的 `Codex.app` 安装。 |

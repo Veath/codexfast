@@ -74,7 +74,7 @@ The script opens an interactive menu:
 q) Quit
 ```
 
-The same actions are also available as non-interactive commands: `status`, `apply`, `repair`, `restore`, `install-watcher`, and `uninstall-watcher`.
+The same actions are also available as non-interactive commands: `status`, `apply`, `restore`, `install-watcher`, and `uninstall-watcher`.
 
 ### Command Reference
 
@@ -82,7 +82,6 @@ The same actions are also available as non-interactive commands: `status`, `appl
 | --- | --- |
 | `npx codexfast status` | Inspect the installed `Codex.app`, print the detected version/build, compatibility state, and target patch status without changing the app. |
 | `npx codexfast apply` | Apply the supported patch set to a compatible build, create backups, refresh Electron ASAR integrity, ad-hoc re-sign, and reset the screen-recording permission record. |
-| `npx codexfast repair` | Re-apply missing patches safely. It is idempotent, leaves already-patched archives untouched, and skips unsupported builds without modifying the app. |
 | `npx codexfast restore` | Remove the auto-repair watcher if installed, restore the vendor bundle from backup or inline restore rules, re-sign if needed, and reset the screen-recording permission record after a successful restore. |
 | `npx codexfast install-watcher` | Install the per-user macOS `launchd` auto-repair watcher that monitors `app.asar` and runs `repair` after supported Codex updates. |
 | `npx codexfast uninstall-watcher` | Remove the auto-repair watcher plist and local watcher runtime. This cleanup command does not require a healthy `Codex.app` installation. |
