@@ -35,6 +35,7 @@ let appCompatibility = "unsupported";
 let appVersionSupported = false;
 let nodeBin = "";
 let npmBin = "";
+let npxBin = "";
 let codesignBin = "";
 let plistBuddyBin = "";
 let tccutilBin = "";
@@ -111,11 +112,6 @@ function watcherPlistPath(): string {
 
 function watcherCliPath(): string {
   return join(codexfastSupportDir(), "codexfast-watcher.js");
-}
-
-function currentScriptPath(): string | null {
-  const scriptPath = process.argv[1] ?? "";
-  return scriptPath && existsSync(scriptPath) ? scriptPath : null;
 }
 
 function launchctlDomain(): string {
@@ -505,12 +501,18 @@ function checkRequirements(options: { command?: string } = {}): boolean {
   }
 
   npmBin = resolveCommand("npm") ?? "";
+  npxBin = resolveCommand("npx") ?? "";
   codesignBin = resolveCommand("codesign") ?? "";
   tccutilBin = resolveCommand("tccutil") ?? "";
 
   if (!npmBin) {
     printLine("npm not found.");
     printLine("Make sure npm is available in your shell.");
+    return false;
+  }
+  if (options.command === "install-watcher" && !npxBin) {
+    printLine("npx not found.");
+    printLine("Make sure npx is available in your shell.");
     return false;
   }
   if (!codesignBin) {
@@ -669,19 +671,39 @@ function runEmbeddedTool(action: string): number {
   return exitCode;
 }
 
-function writeWatcherCliCopy(): boolean {
-  const scriptPath = currentScriptPath();
-  if (!scriptPath) {
-    printLine("Could not locate the current codexfast script path for watcher installation.");
+function watcherRunnerSource(): string {
+  return `#!/usr/bin/env node
+const { spawnSync } = require("node:child_process");
+
+const result = spawnSync(${JSON.stringify(npxBin)}, ["--yes", "codexfast@latest", "repair"], {
+  stdio: "inherit",
+  env: process.env,
+});
+
+if (result.error) {
+  console.error(result.error.message);
+}
+
+process.exit(result.status ?? 1);
+`;
+}
+
+function writeWatcherRunner(): boolean {
+  if (!npxBin) {
+    npxBin = resolveCommand("npx") ?? "";
+  }
+  if (!npxBin) {
+    printLine("npx not found.");
+    printLine("Make sure npx is available in your shell.");
     return false;
   }
   try {
     mkdirSync(codexfastSupportDir(), { recursive: true });
-    copyFileSync(scriptPath, watcherCliPath());
+    writeFileSync(watcherCliPath(), watcherRunnerSource(), "utf8");
     chmodSync(watcherCliPath(), 0o755);
     return true;
   } catch {
-    printLine("Failed to install the watcher codexfast runtime copy.");
+    printLine("Failed to install the watcher runner.");
     return false;
   }
 }
@@ -705,7 +727,6 @@ function watcherPlist(): string {
   <array>
     <string>${escapeXml(process.execPath)}</string>
     <string>${escapeXml(watcherCliPath())}</string>
-    <string>repair</string>
   </array>
   <key>EnvironmentVariables</key>
   <dict>
@@ -751,7 +772,7 @@ function installWatcher(): number {
     printLine("Exit code: 1");
     return 1;
   }
-  if (!writeWatcherCliCopy()) {
+  if (!writeWatcherRunner()) {
     printLine("");
     printLine("Exit code: 1");
     return 1;

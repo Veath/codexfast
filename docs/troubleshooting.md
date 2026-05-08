@@ -67,9 +67,10 @@ Check:
 
 Expected behavior:
 
-- Supported builds run `repair` when `/Applications/Codex.app/Contents/Resources/app.asar` changes.
+- Supported builds run `npx --yes codexfast@latest repair` when `/Applications/Codex.app/Contents/Resources/app.asar` changes.
 - Unsupported builds are skipped quietly and leave the app untouched.
 - Already patched builds report no changes and leave `app.asar`, `Info.plist`, and the app signature untouched.
+- The watcher needs `npx` and registry access when it runs so it can use the latest published compatibility logic.
 
 If needed, reinstall the watcher:
 

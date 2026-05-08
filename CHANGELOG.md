@@ -8,6 +8,7 @@ This project follows a simple release-oriented changelog format.
 
 ### Changed
 
+- Changed new watcher installs to write a small `codexfast@latest` runner instead of copying the current CLI snapshot.
 - Removed the watcher-only `repair` command from the public command reference.
 
 ## [0.13.1] - 2026-05-08

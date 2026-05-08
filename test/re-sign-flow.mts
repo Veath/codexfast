@@ -544,14 +544,23 @@ function main(): void {
   resetNativeToolCalls();
   runScriptCommand(watcherApp, ["install-watcher"], watcherOutput, { HOME: watcherHome });
   const watcherPlist = join(watcherHome, "Library", "LaunchAgents", "com.codexfast.watcher.plist");
+  const watcherRuntime = join(watcherHome, "Library", "Application Support", "codexfast", "codexfast-watcher.js");
   if (!existsSync(watcherPlist)) {
     fail("expected install-watcher to create a launchd plist", readOutput(watcherOutput));
   }
+  if (!existsSync(watcherRuntime)) {
+    fail("expected install-watcher to create a watcher runner", readOutput(watcherOutput));
+  }
   const watcherPlistText = readFileSync(watcherPlist, "utf8");
+  const watcherRuntimeText = readFileSync(watcherRuntime, "utf8");
   assertContains(watcherPlistText, "<key>WatchPaths</key>", "expected watcher plist to use WatchPaths", watcherPlistText);
   assertContains(watcherPlistText, join(watcherApp, "Contents", "Resources", "app.asar"), "expected watcher plist to watch app.asar", watcherPlistText);
-  assertContains(watcherPlistText, "repair", "expected watcher plist to run repair", watcherPlistText);
+  assertContains(watcherPlistText, watcherRuntime, "expected watcher plist to run the local watcher runner", watcherPlistText);
+  assertNotContains(watcherPlistText, "<string>repair</string>", "expected watcher plist not to pass repair as a runner argument", watcherPlistText);
   assertNotContains(watcherPlistText, "--quiet", "expected new watcher plists not to use the legacy quiet marker", watcherPlistText);
+  assertContains(watcherRuntimeText, "codexfast@latest", "expected watcher runner to use the latest published codexfast package", watcherRuntimeText);
+  assertContains(watcherRuntimeText, "repair", "expected watcher runner to run repair", watcherRuntimeText);
+  assertNotContains(watcherRuntimeText, "__PATCHER_SOURCE__", "expected watcher runner not to copy the full generated CLI snapshot", watcherRuntimeText);
   assertContains(watcherPlistText, "<key>ThrottleInterval</key>", "expected watcher plist to throttle relaunches", watcherPlistText);
   assertNotContains(watcherPlistText, "StandardOutPath", "expected watcher plist not to write stdout to a log file", watcherPlistText);
   assertNotContains(watcherPlistText, "StandardErrorPath", "expected watcher plist not to write stderr to a log file", watcherPlistText);

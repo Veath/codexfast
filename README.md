@@ -83,7 +83,7 @@ The same actions are also available as non-interactive commands: `status`, `appl
 | `npx codexfast status` | Inspect the installed `Codex.app`, print the detected version/build, compatibility state, and target patch status without changing the app. |
 | `npx codexfast apply` | Apply the supported patch set to a compatible build, create backups, refresh Electron ASAR integrity, ad-hoc re-sign, and reset the screen-recording permission record. |
 | `npx codexfast restore` | Remove the auto-repair watcher if installed, restore the vendor bundle from backup or inline restore rules, re-sign if needed, and reset the screen-recording permission record after a successful restore. |
-| `npx codexfast install-watcher` | Install the per-user macOS `launchd` auto-repair watcher that monitors `app.asar` and runs `repair` after supported Codex updates. |
+| `npx codexfast install-watcher` | Install the per-user macOS `launchd` auto-repair watcher that monitors `app.asar` and runs the latest published `repair` after supported Codex updates. |
 | `npx codexfast uninstall-watcher` | Remove the auto-repair watcher plist and local watcher runtime. This cleanup command does not require a healthy `Codex.app` installation. |
 
 ### View Status
@@ -118,7 +118,7 @@ Choose **4) Install auto-repair watcher** or run:
 npx codexfast install-watcher
 ```
 
-This installs a per-user macOS `launchd` agent at `~/Library/LaunchAgents/com.codexfast.watcher.plist`. The agent watches `/Applications/Codex.app/Contents/Resources/app.asar` and runs a local copy of `codexfast repair` when Codex replaces the archive during an app update.
+This installs a per-user macOS `launchd` agent at `~/Library/LaunchAgents/com.codexfast.watcher.plist`. The agent watches `/Applications/Codex.app/Contents/Resources/app.asar` and runs `npx --yes codexfast@latest repair` when Codex replaces the archive during an app update.
 
 The watcher only applies changes when the newly installed version/build is already in the strict compatibility whitelist. Unsupported builds are skipped quietly and leave the app untouched.
 

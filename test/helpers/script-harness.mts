@@ -137,6 +137,13 @@ if (mode === "e") extractAsar(sourcePath, targetPath);
 CODEXFAST_NPM_STUB
 `,
   );
+  writeExecutable(
+    join(stubBin, "npx"),
+    `#!/bin/bash
+printf '%s\\n' "$*" >> ${JSON.stringify(npmMarkerFile)}
+exit 0
+`,
+  );
 }
 
 export function runScript(options: {

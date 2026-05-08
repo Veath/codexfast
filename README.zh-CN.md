@@ -84,7 +84,7 @@ q) Quit
 | `npx codexfast status` | 检查当前安装的 `Codex.app`，显示检测到的版本、build、兼容性状态和各 patch 目标状态，不修改 app。 |
 | `npx codexfast apply` | 对兼容 build 应用当前支持的补丁集合，创建备份，刷新 Electron ASAR integrity，本地 ad-hoc 重签名，并重置屏幕录制权限记录。 |
 | `npx codexfast restore` | 先移除已安装的 auto-repair watcher，再通过备份或内联恢复规则还原 vendor bundle，必要时重新签名，并在恢复成功后重置屏幕录制权限记录。 |
-| `npx codexfast install-watcher` | 安装当前用户的 macOS `launchd` auto-repair watcher，监听 `app.asar`，在受支持的 Codex 更新后运行 `repair`。 |
+| `npx codexfast install-watcher` | 安装当前用户的 macOS `launchd` auto-repair watcher，监听 `app.asar`，在受支持的 Codex 更新后运行最新发布版的 `repair`。 |
 | `npx codexfast uninstall-watcher` | 删除 auto-repair watcher 的 plist 和本地 watcher runtime。这个清理命令不依赖一个健康的 `Codex.app` 安装。 |
 
 ### 查看状态
@@ -119,7 +119,7 @@ q) Quit
 npx codexfast install-watcher
 ```
 
-这会安装一个当前用户的 macOS `launchd` agent：`~/Library/LaunchAgents/com.codexfast.watcher.plist`。它会监听 `/Applications/Codex.app/Contents/Resources/app.asar`，当 Codex 更新替换这个归档后，自动运行本地副本里的 `codexfast repair`。
+这会安装一个当前用户的 macOS `launchd` agent：`~/Library/LaunchAgents/com.codexfast.watcher.plist`。它会监听 `/Applications/Codex.app/Contents/Resources/app.asar`，当 Codex 更新替换这个归档后，自动运行 `npx --yes codexfast@latest repair`。
 
 watcher 只有在新安装的 version/build 已经命中严格兼容白名单时才会应用补丁。不支持的 build 会静默跳过，并保持 app 不变。
 
