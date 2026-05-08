@@ -96,9 +96,9 @@ The first enable run creates backups, updates `app.asar`, refreshes the Electron
 
 ### Disable or Restore
 
-Choose **3) Restore original state** to turn the patch off. Restore rolls `Codex.app` back to the vendor bundle when the archive backup is available, then re-signs if needed. After a successful restore re-sign, the script also resets the `Codex.app` screen-recording permission record so macOS asks for a fresh decision on next launch.
+Choose **3) Restore original state** to turn the patch off. Restore first removes the auto-repair watcher if it is installed, then rolls `Codex.app` back to the vendor bundle when the archive backup is available and re-signs if needed. After a successful restore re-sign, the script also resets the `Codex.app` screen-recording permission record so macOS asks for a fresh decision on next launch.
 
-Use restore before troubleshooting, before testing a fresh Codex update, or whenever you want to return to the original app behavior.
+Use restore before troubleshooting, before testing a fresh Codex update, or whenever you want to return to the original app behavior. If you want auto-repair again after restoring, reinstall the watcher explicitly.
 
 ### Auto-Repair Watcher
 
@@ -149,7 +149,7 @@ First apply creates two backups:
 - `app.asar1` — archive-level backup of the original bundle
 - `*.codexfast.bak` — file-level fallback. Restore also recognizes the legacy `*.speed-setting.bak` suffix from earlier releases.
 
-**Restore** prefers `app.asar1`, falls back to `.bak`, then inline restoration. A future Codex auto-update may overwrite the patched state.
+**Restore** removes the auto-repair watcher before changing `app.asar`, then prefers `app.asar1`, falls back to `.bak`, then inline restoration. A future Codex auto-update may overwrite the patched state.
 
 > The local ad-hoc re-sign passes `codesign` integrity checks but replaces the vendor notarization. `spctl --assess` returning `rejected` is expected — use `codesign --verify --deep --strict --verbose=2 /Applications/Codex.app` to verify instead.
 

@@ -99,6 +99,7 @@ Expected behavior:
 - `apply` modifies `app.asar` and then ad-hoc re-signs `Codex.app`.
 - Re-signing changes the code-signing identity macOS uses for privacy permissions.
 - After a successful `apply` or `restore`, `codexfast` runs `tccutil reset ScreenCapture <bundle id>` so macOS asks for a fresh Screen & System Audio Recording decision on the next launch.
+- `restore` removes the auto-repair watcher before changing `app.asar`, so a restored app is not immediately re-patched by `repair --quiet`.
 
 What to do:
 

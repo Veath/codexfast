@@ -97,9 +97,9 @@ q) Quit
 
 ### 关闭或恢复
 
-选择 **3) Restore original state** 可以关闭补丁。恢复流程会优先把 `Codex.app` 回滚到备份的原始 vendor bundle，必要时重新签名。恢复成功并重签名后，脚本也会重置 `Codex.app` 的屏幕录制权限记录，让 macOS 在下次启动时重新询问。
+选择 **3) Restore original state** 可以关闭补丁。恢复流程会先移除已安装的 auto-repair watcher，再优先把 `Codex.app` 回滚到备份的原始 vendor bundle，必要时重新签名。恢复成功并重签名后，脚本也会重置 `Codex.app` 的屏幕录制权限记录，让 macOS 在下次启动时重新询问。
 
-排查问题、测试新的 Codex 更新，或想回到官方原始行为时，都可以先执行恢复。
+排查问题、测试新的 Codex 更新，或想回到官方原始行为时，都可以先执行恢复。如果恢复后还想继续自动修复，请再显式安装 watcher。
 
 ### 自动修复 watcher
 
@@ -150,7 +150,7 @@ npx codexfast uninstall-watcher
 - `app.asar1` — 归档级备份（原始 bundle）
 - `*.codexfast.bak` — 文件级回退备份。恢复流程也会识别早期版本留下的旧 `*.speed-setting.bak` 后缀。
 
-**恢复** 会优先使用 `app.asar1`，其次 `.bak`，最后尝试按内联规则恢复。Codex 未来的自动更新可能覆盖补丁状态。
+**恢复** 会先移除 auto-repair watcher，再优先使用 `app.asar1`，其次 `.bak`，最后尝试按内联规则恢复。Codex 未来的自动更新可能覆盖补丁状态。
 
 > 本地 ad-hoc 重签名能通过 `codesign` 完整性校验，但会替换原本的厂商 notarization。`spctl --assess` 报 `rejected` 是预期现象，验证签名请使用 `codesign --verify --deep --strict --verbose=2 /Applications/Codex.app`。
 

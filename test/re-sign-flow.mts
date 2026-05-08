@@ -557,6 +557,29 @@ function main(): void {
   assertNotContains(watcherPlistText, "watcher.log", "expected watcher plist not to create a watcher log file", watcherPlistText);
   assertLaunchctlCallContains("bootstrap", watcherOutput);
 
+  const restoreUninstallsWatcherApp = join(tmpDir, "RestoreUninstallsWatcher.app");
+  const restoreUninstallsWatcherArchive = join(restoreUninstallsWatcherApp, "Contents", "Resources", "app.asar");
+  const restoreUninstallsWatcherHome = join(tmpDir, "restore-uninstalls-watcher-home");
+  const restoreUninstallsWatcherInstallOutput = join(tmpDir, "restore-uninstalls-watcher-install-output.txt");
+  const restoreUninstallsWatcherApplyOutput = join(tmpDir, "restore-uninstalls-watcher-apply-output.txt");
+  const restoreUninstallsWatcherOutput = join(tmpDir, "restore-uninstalls-watcher-output.txt");
+  prepareArchivedFakeApp(restoreUninstallsWatcherApp, join(tmpDir, "restore-uninstalls-watcher-assets"), "26.429.61741", "2429", "26429-2345");
+  runScriptCommand(restoreUninstallsWatcherApp, ["install-watcher"], restoreUninstallsWatcherInstallOutput, { HOME: restoreUninstallsWatcherHome });
+  const restoreUninstallsWatcherPlist = join(restoreUninstallsWatcherHome, "Library", "LaunchAgents", "com.codexfast.watcher.plist");
+  const restoreUninstallsWatcherRuntime = join(restoreUninstallsWatcherHome, "Library", "Application Support", "codexfast", "codexfast-watcher.js");
+  if (!existsSync(restoreUninstallsWatcherPlist) || !existsSync(restoreUninstallsWatcherRuntime)) {
+    fail("expected install-watcher to create files before restore", readOutput(restoreUninstallsWatcherInstallOutput));
+  }
+  runScriptCommand(restoreUninstallsWatcherApp, ["apply"], restoreUninstallsWatcherApplyOutput, { HOME: restoreUninstallsWatcherHome });
+  assertApplyState26429Build2345(restoreUninstallsWatcherArchive);
+  runScriptCommand(restoreUninstallsWatcherApp, ["restore"], restoreUninstallsWatcherOutput, { HOME: restoreUninstallsWatcherHome });
+  if (existsSync(restoreUninstallsWatcherPlist) || existsSync(restoreUninstallsWatcherRuntime)) {
+    fail("expected restore to remove the auto-repair watcher before restoring app.asar", readOutput(restoreUninstallsWatcherOutput));
+  }
+  assertGuardedState26429Build2345(restoreUninstallsWatcherArchive, "restore after uninstalling watcher");
+  assertContains(readOutput(restoreUninstallsWatcherOutput), "Removed auto-repair watcher before restore.", "expected restore to report watcher removal", readOutput(restoreUninstallsWatcherOutput));
+  resetNativeToolCalls();
+
   const inlineApp = join(tmpDir, "Supported26422Build2080InlineRestore.app");
   const inlineResources = join(inlineApp, "Contents", "Resources");
   const inlineArchive = join(inlineResources, "app.asar");

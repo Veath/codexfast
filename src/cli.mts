@@ -553,6 +553,21 @@ function validateActionRequest(action: string): boolean {
   return true;
 }
 
+function removeWatcherFiles(options: { quietLaunchctl?: boolean; reportRemoved?: boolean } = {}): boolean {
+  const hadWatcherFiles = existsSync(watcherPlistPath()) || existsSync(watcherCliPath());
+  runLaunchctl(["bootout", launchctlDomain(), watcherPlistPath()], { quiet: options.quietLaunchctl });
+  try {
+    rmSync(watcherPlistPath(), { force: true });
+    rmSync(watcherCliPath(), { force: true });
+  } catch {
+    return false;
+  }
+  if (hadWatcherFiles && options.reportRemoved) {
+    printLine("Removed auto-repair watcher before restore.");
+  }
+  return true;
+}
+
 function parseApplySummary(output: string): ApplySummary | null {
   const match = output.match(/summary: changed=(\d+), alreadyPatched=(\d+)/);
   if (!match) {
@@ -603,6 +618,11 @@ function runEmbeddedTool(action: string): number {
 
   if (!validateActionRequest(action)) {
     return action === "repair" ? 0 : 1;
+  }
+
+  if (action === "restore" && !removeWatcherFiles({ quietLaunchctl: true, reportRemoved: true })) {
+    printLine("Warning: failed to remove the auto-repair watcher before restore.");
+    printLine("Run uninstall-watcher manually if restore is re-applied automatically.");
   }
 
   if (!migrateLegacyUnpackedLayout()) {
@@ -762,11 +782,7 @@ function installWatcher(): number {
 
 function uninstallWatcher(): number {
   printActionHeader("uninstall-watcher");
-  runLaunchctl(["bootout", launchctlDomain(), watcherPlistPath()]);
-  try {
-    rmSync(watcherPlistPath(), { force: true });
-    rmSync(watcherCliPath(), { force: true });
-  } catch {
+  if (!removeWatcherFiles()) {
     printLine("Failed to remove all watcher files.");
     printLine("");
     printLine("Exit code: 1");

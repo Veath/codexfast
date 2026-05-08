@@ -4,6 +4,12 @@ All notable changes to `codexfast` will be documented in this file.
 
 This project follows a simple release-oriented changelog format.
 
+## [Unreleased]
+
+### Changed
+
+- Restore now removes the auto-repair watcher before modifying `app.asar`, preventing a watched restore from being immediately re-patched by `repair --quiet`.
+
 ## [0.13.0] - 2026-05-08
 
 ### Added
