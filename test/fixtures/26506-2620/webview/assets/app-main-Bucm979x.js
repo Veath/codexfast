@@ -1,0 +1,2 @@
+const sidebarGate26506Build2620="sidebarElectron.pluginsDisabledTooltip";function gy({desktopNavItemsEnabled:e,localProjectActionsEnabled:t}){let n=U(K),r=W(Os),i=Oo(),a=Ur(),o=Zr(),s=Ia(),{authMethod:c}=Gs(),l=Qo(`533078438`),u=Xc(c),d=e&&l&&u,f=Nc({hostId:Ya}),p=e&&f&&!u,m=qs(),h=t&&!m;return{n,r,i,a,o,s,d,p,m,h}}
+const modelListBridge26506Build2620={"list-models-for-host":ZE((e,t)=>e.sendRequest(`model/list`,t))};

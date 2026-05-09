@@ -6,6 +6,10 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added support for `Codex.app` `26.506.31421` (`build 2620`) after direct installed-bundle inspection and real app apply/status validation confirmed the updated asset names and Plugins sidebar gate shape.
+
 ### Changed
 
 - Changed new watcher installs to write a small `codexfast@latest` runner instead of copying the current CLI snapshot.

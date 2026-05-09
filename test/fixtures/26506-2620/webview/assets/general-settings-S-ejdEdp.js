@@ -1,0 +1,1 @@
+const label26506Build2620="settings.agent.speed.label";function jn(){let e=(0,Q.c)(35),t=F(),n=ie(),{serviceTierSettings:r,setServiceTier:i}=de();if(!n)return null;let o;e[0]===r.serviceTier?o=e[1]:(o=a(r.serviceTier),e[0]=r.serviceTier,e[1]=o);return{t,n,o,r,i}}

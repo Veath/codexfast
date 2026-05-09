@@ -15,6 +15,7 @@ import {
   assertApplyState26429Build2312,
   assertApplyState26429Build2345,
   assertApplyState26506Build2575,
+  assertApplyState26506Build2620,
   assertGuardedState,
   assertGuardedState26417,
   assertGuardedState26422,
@@ -23,6 +24,7 @@ import {
   assertGuardedState26429Build2312,
   assertGuardedState26429Build2345,
   assertGuardedState26506Build2575,
+  assertGuardedState26506Build2620,
 } from "./helpers/patch-state-assertions.mts";
 import { assertCodesignCallContains as assertCodesignCallContainsHelper, assertCodesignCalls as assertCodesignCallsHelper, assertLaunchctlCallContains as assertLaunchctlCallContainsHelper, assertNoCodesignCalls as assertNoCodesignCallsHelper, assertNoNpmCalls as assertNoNpmCallsHelper, assertNoTccutilCalls as assertNoTccutilCallsHelper, assertNpmCallContains as assertNpmCallContainsHelper, assertTccutilCallContains as assertTccutilCallContainsHelper, readOutput, resetCodesignCalls as resetCodesignCallsHelper, resetNpmCalls as resetNpmCallsHelper, resetTccutilCalls as resetTccutilCallsHelper, runScript as runScriptHelper, setupStubs as setupStubsHelper } from "./helpers/script-harness.mts";
 import { TARGET_SPECS } from "../src/patcher-targets.mts";
@@ -482,6 +484,30 @@ function main(): void {
       assertContains(output, "Current state: Plugin install availability enabled", "expected 26.506 build 2575 status to report Plugin install availability after apply", output);
       assertContains(output, "Current state: Plugin install modal content enabled", "expected 26.506 build 2575 status to report Plugin install modal content after apply", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.506 build 2575 status to omit unpatched GPT-5.5 compatibility targets", output);
+    },
+  });
+
+  runApplyRestoreCase({
+    name: "supported-26506-2620",
+    appDir: join(tmpDir, "Supported26506Build2620.app"),
+    assetsRoot: join(tmpDir, "supported-26506-2620-assets"),
+    appVersion: "26.506.31421",
+    appBuild: "2620",
+    assetProfile: "26506-2620",
+    applyAssert: assertApplyState26506Build2620,
+    restoreAssert: assertGuardedState26506Build2620,
+    restoreContext: "26.506 build 2620 restore",
+    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.506 build 2620 apply to skip GPT-5.5 patch targets", output),
+    statusAssert: (output) => {
+      assertContains(output, "Current state: Speed setting enabled", "expected 26.506 build 2620 status to report the Settings Speed target after apply", output);
+      assertContains(output, "Current state: Fast slash command enabled", "expected 26.506 build 2620 status to report the Fast slash command after apply", output);
+      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.506 build 2620 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Current state: Plugins access enabled", "expected 26.506 build 2620 status to report Plugins after apply", output);
+      assertContains(output, "Current state: Plugins page content enabled", "expected 26.506 build 2620 status to report Plugins page content after apply", output);
+      assertContains(output, "Current state: Plugin detail access enabled", "expected 26.506 build 2620 status to report Plugin detail access after apply", output);
+      assertContains(output, "Current state: Plugin install availability enabled", "expected 26.506 build 2620 status to report Plugin install availability after apply", output);
+      assertContains(output, "Current state: Plugin install modal content enabled", "expected 26.506 build 2620 status to report Plugin install modal content after apply", output);
+      assertNotContains(output, "GPT-5.5 model", "expected 26.506 build 2620 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });
 

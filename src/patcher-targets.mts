@@ -68,6 +68,10 @@ const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506 =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=rs\(`533078438`\),([A-Za-z_$][\w$]*)=Xc\(\2\),([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)&&\3&&\4,([^]*?)([A-Za-z_$][\w$]*)=\6&&([A-Za-z_$][\w$]*)&&!\4([,;])/;
 const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506 =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=rs\(`533078438`\),([A-Za-z_$][\w$]*)=Xc\(\2\),([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)&&([A-Za-z_$][\w$]*)([,;])/;
+const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506_QO =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=Qo\(`533078438`\),([A-Za-z_$][\w$]*)=Xc\(\2\),([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)&&\3&&\4,([^]*?)([A-Za-z_$][\w$]*)=\6&&([A-Za-z_$][\w$]*)&&!\4([,;])/;
+const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506_QO =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=Qo\(`533078438`\),([A-Za-z_$][\w$]*)=Xc\(\2\),([A-Za-z_$][\w$]*)=!1,([^]*?)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)&&([A-Za-z_$][\w$]*)([,;])/;
 const PLUGINS_PAGE_CONTENT_GUARDED_SIGNATURE =
   /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*);(if\(e\[\d+\]!==[A-Za-z_$][\w$]*\|\|e\[\d+\]!==\2\|\|)/;
 const PLUGINS_PAGE_CONTENT_PATCHED_SIGNATURE =
@@ -164,6 +168,22 @@ function restoreSpeedSetting(
   return `${enabledVariable}=${resolveSpeedAvailabilityCall(
     serviceTierSetupOrFactory,
   )}(),${availabilityOrServiceTierSetup}if(!${enabledVariable})return null;let `;
+}
+
+function restorePluginsSidebar26506Qo(
+  _match: string,
+  prefix: string,
+  authMethodVariable: string,
+  pluginsExperimentVariable: string,
+  authGateVariable: string,
+  disabledPluginsVariable: string,
+  between: string,
+  pluginsLabelVariable: string,
+  desktopNavVariable: string,
+  pluginsEnabledVariable: string,
+  delimiter: string,
+): string {
+  return `${prefix}${pluginsExperimentVariable}=Qo(\`533078438\`),${authGateVariable}=Xc(${authMethodVariable}),${disabledPluginsVariable}=${desktopNavVariable}&&${pluginsExperimentVariable}&&${authGateVariable},${between}${pluginsLabelVariable}=${desktopNavVariable}&&${pluginsEnabledVariable}&&!${authGateVariable}${delimiter}`;
 }
 
 export const TARGET_SPECS: TargetSpec[] = [
@@ -290,6 +310,16 @@ export const TARGET_SPECS: TargetSpec[] = [
     legacyPatchedSignature: null,
     applyReplacement: "$1$3=rs(`533078438`),$4=Xc($2),$5=!1,$7$8=$6&&$9$10",
     restoreReplacement: "$1$3=rs(`533078438`),$4=Xc($2),$5=$6&&$3&&$4,$7$8=$6&&$9&&!$4$10",
+  },
+  {
+    id: "plugins-access-26506-qo",
+    label: "Plugins access",
+    needle: PLUGINS_SIDEBAR_NEEDLE,
+    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506_QO,
+    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506_QO,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1$3=Qo(`533078438`),$4=Xc($2),$5=!1,$7$8=$6&&$9$10",
+    restoreReplacement: restorePluginsSidebar26506Qo,
   },
   {
     id: "plugins-page-content-26429",

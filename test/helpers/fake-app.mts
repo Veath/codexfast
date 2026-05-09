@@ -12,7 +12,8 @@ export type AssetProfile =
   | "26422-2210"
   | "26429-2312"
   | "26429-2345"
-  | "26506";
+  | "26506"
+  | "26506-2620";
 
 export function writeInfoPlist(appDir: string, hashValue: string, appVersion = "26.415.40636", appBuild = "1799", bundleIdentifier: string | null = "com.openai.codex"): void {
   mkdirSync(join(appDir, "Contents"), { recursive: true });

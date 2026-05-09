@@ -16,7 +16,7 @@
 npx codexfast
 ```
 
-Verified for `Codex.app` `26.506.21252` (`build 2575`), `26.429.61741` (`build 2429`), `26.429.30905` (`build 2345`), `26.429.20946` (`build 2312`), `26.422.71525` (`build 2210`), `26.422.62136` (`builds 2180, 2176`), `26.422.30944` (`build 2080`), `26.422.21637` (`build 2056`), `26.417.41555` (`build 1858`), and `26.415.40636` (`build 1799`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
+Verified for `Codex.app` `26.506.31421` (`build 2620`), `26.506.21252` (`build 2575`), `26.429.61741` (`build 2429`), `26.429.30905` (`build 2345`), `26.429.20946` (`build 2312`), `26.422.71525` (`build 2210`), `26.422.62136` (`builds 2180, 2176`), `26.422.30944` (`build 2080`), `26.422.21637` (`build 2056`), `26.417.41555` (`build 1858`), and `26.415.40636` (`build 1799`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
 
 ## What It Does
 
@@ -134,6 +134,7 @@ npx codexfast uninstall-watcher
 
 The script does not use an official API — it matches code signatures in frontend build output, so it can break after a Codex update.
 
+- Verified on `Codex.app` `26.506.31421` (`build 2620`)
 - Verified on `Codex.app` `26.506.21252` (`build 2575`)
 - Verified on `Codex.app` `26.429.61741` (`build 2429`)
 - Verified on `Codex.app` `26.429.30905` (`build 2345`)
@@ -148,7 +149,7 @@ The script does not use an official API — it matches code signatures in fronte
 - **Auto-repair** also skips unsupported version/build pairs quietly and does not modify the app
 - **View status** and **Restore** work on any version
 - The GPT-5.5 model-list patch only injects the UI catalog entry on supported builds that still need it. `Codex.app` `26.422.30944` and later builds are expected to expose GPT-5.5 through the official app path, so `codexfast` skips that apply target from `26.422.30944` onward. Your configured provider must still support `gpt-5.5`
-- For Plugins, the script removes the custom-API gates needed to open the Plugins sidebar/page path on supported builds. On `26.429.20946`, `26.429.30905`, `26.429.61741`, and `26.506.21252`, it also removes the aggregate connector-unavailable install block and keeps install-modal plugin details visible. Actual plugin behavior can still depend on plugin state, connector runtime behavior, or admin restrictions
+- For Plugins, the script removes the custom-API gates needed to open the Plugins sidebar/page path on supported builds. On `26.429.20946`, `26.429.30905`, `26.429.61741`, `26.506.21252`, and `26.506.31421`, it also removes the aggregate connector-unavailable install block and keeps install-modal plugin details visible. Actual plugin behavior can still depend on plugin state, connector runtime behavior, or admin restrictions
 
 Re-run **View current status** after every Codex update.
 
