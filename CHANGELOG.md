@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-05-09
+
 ### Added
 
 - Added support for `Codex.app` `26.506.31421` (`build 2620`) after direct installed-bundle inspection and real app apply/status validation confirmed the updated asset names and Plugins sidebar gate shape.
