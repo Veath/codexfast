@@ -22,7 +22,7 @@ Verified for `Codex.app` `26.506.31421` (`build 2620`), `26.506.21252` (`build 2
 
 Menu actions on the installed app:
 
-1. **View current status** — detect version, target files, and whether patching is safe
+1. **View current status** — detect version, compatibility, and whether each feature is enabled
 2. **Enable custom API features** — restore the feature set above
 3. **Restore original state** — roll back to the vendor bundle
 4. **Install auto-repair watcher** — re-apply after a supported Codex update replaces `app.asar`
@@ -88,7 +88,7 @@ The same actions are also available as non-interactive commands: `status`, `appl
 
 ### View Status
 
-Choose **1) View current status** before changing anything. Status checks the installed `Codex.app`, reports the detected version/build, shows whether the build is `supported`, and lists the patch targets found in the app bundle.
+Choose **1) View current status** before changing anything. Status checks the installed `Codex.app`, reports the detected version/build, shows whether the build is `supported`, and lists whether each supported feature is enabled.
 
 Use this after every Codex update. If compatibility is not `supported`, do not enable the patch on that build.
 

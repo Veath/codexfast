@@ -6,6 +6,10 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Changed
+
+- Simplified `status`, `apply`, and `restore` output to report feature states and actions without internal target, backup, or temporary file paths.
+
 ## [0.14.0] - 2026-05-09
 
 ### Added

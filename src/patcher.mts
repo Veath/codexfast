@@ -172,23 +172,6 @@ function findExistingBackupPath(fileTarget: FileTarget): string | undefined {
   return fileTarget.backupPaths.find((backupPath) => fs.existsSync(backupPath));
 }
 
-function toPosixPath(filePath: string): string {
-  return filePath.split(path.sep).join("/");
-}
-
-function formatStatusPath(filePath: string): string {
-  const assetRelativePath = path.relative(assetsDir, filePath);
-  if (
-    assetRelativePath &&
-    assetRelativePath !== ".." &&
-    !assetRelativePath.startsWith(`..${path.sep}`) &&
-    !path.isAbsolute(assetRelativePath)
-  ) {
-    return `webview/assets/${toPosixPath(assetRelativePath)}`;
-  }
-  return toPosixPath(path.relative(process.cwd(), filePath));
-}
-
 function resolveSlashCommandEnabledVariable(content: string): string {
   const match = content.match(/function OG\(\)\{let [^;]*?,([A-Za-z_$][\w$]*)=Lf\(\),/);
   return match?.[1] ?? "n";
@@ -203,11 +186,7 @@ function status(): number {
 
   for (const target of targets) {
     for (const match of target.matches) {
-      console.log(`Current state: ${describeState(match)}`);
-      console.log(`Target: ${match.spec.label}`);
-      console.log(`Target file: ${formatStatusPath(target.filePath)}`);
-      const existingBackupPath = findExistingBackupPath(target);
-      console.log(`Backup file: ${existingBackupPath ? formatStatusPath(existingBackupPath) : "missing"}`);
+      console.log(`Status: ${describeState(match)}`);
     }
   }
 
@@ -232,7 +211,7 @@ function apply(): number {
       if (match.guarded) {
         writeBackupIfNeeded(target);
         next = replaceContent(next, match.spec.guardedSignature, match.spec.applyReplacement);
-        console.log(`patched: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
+        console.log(`patched: ${match.spec.label}`);
         changed += 1;
         updated = true;
         continue;
@@ -245,14 +224,14 @@ function apply(): number {
           match.spec.normalizeReplacement,
           match.spec.label,
         );
-        console.log(`normalized: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
+        console.log(`normalized: ${match.spec.label}`);
         changed += 1;
         updated = true;
         continue;
       }
 
       if (match.patched) {
-        console.log(`already patched: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
+        console.log(`already patched: ${match.spec.label}`);
         alreadyPatched += 1;
       }
     }
@@ -280,7 +259,7 @@ function restore(): number {
     if (existingBackupPath) {
       fs.writeFileSync(target.filePath, fs.readFileSync(existingBackupPath, "utf8"), "utf8");
       for (const match of target.matches) {
-        console.log(`restored backup: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
+        console.log(`restored backup: ${match.spec.label}`);
         restored += 1;
       }
       continue;
@@ -306,7 +285,7 @@ function restore(): number {
         );
       }
 
-      console.log(`restored inline: ${match.spec.label} (${path.relative(process.cwd(), target.filePath)})`);
+      console.log(`restored inline: ${match.spec.label}`);
       restored += 1;
       updated = true;
     }

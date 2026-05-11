@@ -822,7 +822,7 @@ function printUsage(): void {
   printLine("  codexfast <command>");
   printLine("");
   printLine("Commands:");
-  printLine("  status             Check version, compatibility, and patch target state");
+  printLine("  status             Check version, compatibility, and feature state");
   printLine("  apply              Enable custom API features on a supported build");
   printLine("  repair             Safely re-apply missing patches; no-op on unsupported or already patched builds");
   printLine("  restore            Restore the original app archive or file backups");

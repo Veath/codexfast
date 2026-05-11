@@ -121,6 +121,16 @@ function assertLaunchctlCallContains(expected: string, outputFile: string): void
   assertLaunchctlCallContainsHelper(expected, markerFile, outputFile);
 }
 
+function assertNoPatcherInternalPaths(output: string, context: string): void {
+  for (const line of output.split(/\r?\n/)) {
+    if (/^(patched|normalized|already patched|restored backup|restored inline): .+\(.+\)$/.test(line)) {
+      fail(`expected ${context} to omit patcher file paths`, output);
+    }
+  }
+  assertNotContains(output, "Target file:", `expected ${context} to omit target file paths`, output);
+  assertNotContains(output, "Backup file:", `expected ${context} to omit backup file paths`, output);
+}
+
 function resetTccutilCalls(): void {
   resetTccutilCallsHelper(markerFile);
 }
@@ -211,11 +221,13 @@ function runApplyRestoreCase(caseConfig: {
   assertNoPersistentUnpackDir(resourcesDir, applyOutput);
   assertFakeAsarJsParses(archivePath);
   caseConfig.applyAssert(archivePath);
+  assertNoPatcherInternalPaths(readOutput(applyOutput), `${caseConfig.name} apply output`);
   caseConfig.postApplyAssert?.(readOutput(applyOutput));
   resetNativeToolCalls();
 
   if (caseConfig.statusAssert) {
     runScript(caseConfig.appDir, "1\n\nq\n", statusOutput);
+    assertNoPatcherInternalPaths(readOutput(statusOutput), `${caseConfig.name} status output`);
     caseConfig.statusAssert(readOutput(statusOutput));
   }
 
@@ -226,6 +238,7 @@ function runApplyRestoreCase(caseConfig: {
   assertNoPersistentUnpackDir(resourcesDir, restoreOutput);
   assertFakeAsarJsParses(archivePath);
   caseConfig.restoreAssert(archivePath, caseConfig.restoreContext);
+  assertNoPatcherInternalPaths(readOutput(restoreOutput), `${caseConfig.name} restore output`);
   assertIntegrityMatches(caseConfig.appDir, archivePath, `expected ElectronAsarIntegrity hash to match restored ${caseConfig.restoreContext} app.asar header`);
   assertContains(readOutput(restoreOutput), "Exit code: 0", "expected archive restore to print a successful exit code", readOutput(restoreOutput));
   resetNativeToolCalls();
@@ -324,8 +337,8 @@ function main(): void {
     restoreAssert: assertGuardedState26422,
     restoreContext: "26.422 restore",
     statusAssert: (output) => {
-      assertNotContains(output, "Current state: GPT-5.5 model query selector disabled", "expected 26.422 status to report the GPT-5.5 model query selector as enabled after apply", output);
-      assertContains(output, "Current state: GPT-5.5 model query selector enabled", "expected 26.422 status to include the GPT-5.5 model query selector target", output);
+      assertNotContains(output, "Status: GPT-5.5 model query selector disabled", "expected 26.422 status to report the GPT-5.5 model query selector as enabled after apply", output);
+      assertContains(output, "Status: GPT-5.5 model query selector enabled", "expected 26.422 status to include the GPT-5.5 model query selector target", output);
     },
   });
 
@@ -355,8 +368,8 @@ function main(): void {
     restoreContext: "26.422 build 2176 restore",
     postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2176 apply to skip GPT-5.5 patch targets", output),
     statusAssert: (output) => {
-      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.422 build 2176 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Current state: Plugins access enabled", "expected 26.422 build 2176 status to report Plugins after apply", output);
+      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.422 build 2176 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Status: Plugins access enabled", "expected 26.422 build 2176 status to report Plugins after apply", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2176 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });
@@ -373,8 +386,8 @@ function main(): void {
     restoreContext: "26.422 build 2180 restore",
     postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2180 apply to skip GPT-5.5 patch targets", output),
     statusAssert: (output) => {
-      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.422 build 2180 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Current state: Plugins access enabled", "expected 26.422 build 2180 status to report Plugins after apply", output);
+      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.422 build 2180 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Status: Plugins access enabled", "expected 26.422 build 2180 status to report Plugins after apply", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2180 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });
@@ -391,8 +404,8 @@ function main(): void {
     restoreContext: "26.422 build 2210 restore",
     postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2210 apply to skip GPT-5.5 patch targets", output),
     statusAssert: (output) => {
-      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.422 build 2210 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Current state: Plugins access enabled", "expected 26.422 build 2210 status to report Plugins after apply", output);
+      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.422 build 2210 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Status: Plugins access enabled", "expected 26.422 build 2210 status to report Plugins after apply", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2210 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });
@@ -409,12 +422,12 @@ function main(): void {
     restoreContext: "26.429 build 2312 restore",
     postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.429 build 2312 apply to skip GPT-5.5 patch targets", output),
     statusAssert: (output) => {
-      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.429 build 2312 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Current state: Plugins access enabled", "expected 26.429 build 2312 status to report Plugins after apply", output);
-      assertContains(output, "Current state: Plugins page content enabled", "expected 26.429 build 2312 status to report Plugins page content after apply", output);
-      assertContains(output, "Current state: Plugin detail access enabled", "expected 26.429 build 2312 status to report Plugin detail access after apply", output);
-      assertContains(output, "Current state: Plugin install availability enabled", "expected 26.429 build 2312 status to report Plugin install availability after apply", output);
-      assertContains(output, "Current state: Plugin install modal content enabled", "expected 26.429 build 2312 status to report Plugin install modal content after apply", output);
+      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.429 build 2312 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Status: Plugins access enabled", "expected 26.429 build 2312 status to report Plugins after apply", output);
+      assertContains(output, "Status: Plugins page content enabled", "expected 26.429 build 2312 status to report Plugins page content after apply", output);
+      assertContains(output, "Status: Plugin detail access enabled", "expected 26.429 build 2312 status to report Plugin detail access after apply", output);
+      assertContains(output, "Status: Plugin install availability enabled", "expected 26.429 build 2312 status to report Plugin install availability after apply", output);
+      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.429 build 2312 status to report Plugin install modal content after apply", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.429 build 2312 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });
@@ -431,12 +444,12 @@ function main(): void {
     restoreContext: "26.429 build 2345 restore",
     postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.429 build 2345 apply to skip GPT-5.5 patch targets", output),
     statusAssert: (output) => {
-      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.429 build 2345 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Current state: Plugins access enabled", "expected 26.429 build 2345 status to report Plugins after apply", output);
-      assertContains(output, "Current state: Plugins page content enabled", "expected 26.429 build 2345 status to report Plugins page content after apply", output);
-      assertContains(output, "Current state: Plugin detail access enabled", "expected 26.429 build 2345 status to report Plugin detail access after apply", output);
-      assertContains(output, "Current state: Plugin install availability enabled", "expected 26.429 build 2345 status to report Plugin install availability after apply", output);
-      assertContains(output, "Current state: Plugin install modal content enabled", "expected 26.429 build 2345 status to report Plugin install modal content after apply", output);
+      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.429 build 2345 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Status: Plugins access enabled", "expected 26.429 build 2345 status to report Plugins after apply", output);
+      assertContains(output, "Status: Plugins page content enabled", "expected 26.429 build 2345 status to report Plugins page content after apply", output);
+      assertContains(output, "Status: Plugin detail access enabled", "expected 26.429 build 2345 status to report Plugin detail access after apply", output);
+      assertContains(output, "Status: Plugin install availability enabled", "expected 26.429 build 2345 status to report Plugin install availability after apply", output);
+      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.429 build 2345 status to report Plugin install modal content after apply", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.429 build 2345 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });
@@ -453,12 +466,12 @@ function main(): void {
     restoreContext: "26.429 build 2429 restore",
     postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.429 build 2429 apply to skip GPT-5.5 patch targets", output),
     statusAssert: (output) => {
-      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.429 build 2429 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Current state: Plugins access enabled", "expected 26.429 build 2429 status to report Plugins after apply", output);
-      assertContains(output, "Current state: Plugins page content enabled", "expected 26.429 build 2429 status to report Plugins page content after apply", output);
-      assertContains(output, "Current state: Plugin detail access enabled", "expected 26.429 build 2429 status to report Plugin detail access after apply", output);
-      assertContains(output, "Current state: Plugin install availability enabled", "expected 26.429 build 2429 status to report Plugin install availability after apply", output);
-      assertContains(output, "Current state: Plugin install modal content enabled", "expected 26.429 build 2429 status to report Plugin install modal content after apply", output);
+      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.429 build 2429 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Status: Plugins access enabled", "expected 26.429 build 2429 status to report Plugins after apply", output);
+      assertContains(output, "Status: Plugins page content enabled", "expected 26.429 build 2429 status to report Plugins page content after apply", output);
+      assertContains(output, "Status: Plugin detail access enabled", "expected 26.429 build 2429 status to report Plugin detail access after apply", output);
+      assertContains(output, "Status: Plugin install availability enabled", "expected 26.429 build 2429 status to report Plugin install availability after apply", output);
+      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.429 build 2429 status to report Plugin install modal content after apply", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.429 build 2429 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });
@@ -475,14 +488,14 @@ function main(): void {
     restoreContext: "26.506 build 2575 restore",
     postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.506 build 2575 apply to skip GPT-5.5 patch targets", output),
     statusAssert: (output) => {
-      assertContains(output, "Current state: Speed setting enabled", "expected 26.506 build 2575 status to report the Settings Speed target after apply", output);
-      assertContains(output, "Current state: Fast slash command enabled", "expected 26.506 build 2575 status to report the Fast slash command after apply", output);
-      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.506 build 2575 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Current state: Plugins access enabled", "expected 26.506 build 2575 status to report Plugins after apply", output);
-      assertContains(output, "Current state: Plugins page content enabled", "expected 26.506 build 2575 status to report Plugins page content after apply", output);
-      assertContains(output, "Current state: Plugin detail access enabled", "expected 26.506 build 2575 status to report Plugin detail access after apply", output);
-      assertContains(output, "Current state: Plugin install availability enabled", "expected 26.506 build 2575 status to report Plugin install availability after apply", output);
-      assertContains(output, "Current state: Plugin install modal content enabled", "expected 26.506 build 2575 status to report Plugin install modal content after apply", output);
+      assertContains(output, "Status: Speed setting enabled", "expected 26.506 build 2575 status to report the Settings Speed target after apply", output);
+      assertContains(output, "Status: Fast slash command enabled", "expected 26.506 build 2575 status to report the Fast slash command after apply", output);
+      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.506 build 2575 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Status: Plugins access enabled", "expected 26.506 build 2575 status to report Plugins after apply", output);
+      assertContains(output, "Status: Plugins page content enabled", "expected 26.506 build 2575 status to report Plugins page content after apply", output);
+      assertContains(output, "Status: Plugin detail access enabled", "expected 26.506 build 2575 status to report Plugin detail access after apply", output);
+      assertContains(output, "Status: Plugin install availability enabled", "expected 26.506 build 2575 status to report Plugin install availability after apply", output);
+      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.506 build 2575 status to report Plugin install modal content after apply", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.506 build 2575 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });
@@ -499,18 +512,16 @@ function main(): void {
     restoreContext: "26.506 build 2620 restore",
     postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.506 build 2620 apply to skip GPT-5.5 patch targets", output),
     statusAssert: (output) => {
-      assertContains(output, "Current state: Speed setting enabled", "expected 26.506 build 2620 status to report the Settings Speed target after apply", output);
-      assertContains(output, "Current state: Fast slash command enabled", "expected 26.506 build 2620 status to report the Fast slash command after apply", output);
-      assertContains(output, "Current state: Composer Intelligence Speed menu enabled", "expected 26.506 build 2620 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Current state: Plugins access enabled", "expected 26.506 build 2620 status to report Plugins after apply", output);
-      assertContains(output, "Current state: Plugins page content enabled", "expected 26.506 build 2620 status to report Plugins page content after apply", output);
-      assertContains(output, "Current state: Plugin detail access enabled", "expected 26.506 build 2620 status to report Plugin detail access after apply", output);
-      assertContains(output, "Current state: Plugin install availability enabled", "expected 26.506 build 2620 status to report Plugin install availability after apply", output);
-      assertContains(output, "Current state: Plugin install modal content enabled", "expected 26.506 build 2620 status to report Plugin install modal content after apply", output);
-      assertContains(output, "Target file: webview/assets/app-main-Bucm979x.js", "expected 26.506 build 2620 status to print bundle-relative target paths", output);
-      assertContains(output, "Backup file: webview/assets/app-main-Bucm979x.js.codexfast.bak", "expected 26.506 build 2620 status to print bundle-relative backup paths", output);
-      assertNotContains(output, "Target file: ../../", "expected 26.506 build 2620 status target paths to omit temp directory traversal", output);
-      assertNotContains(output, "Backup file: ../../", "expected 26.506 build 2620 status backup paths to omit temp directory traversal", output);
+      assertContains(output, "Status: Speed setting enabled", "expected 26.506 build 2620 status to report the Settings Speed target after apply", output);
+      assertContains(output, "Status: Fast slash command enabled", "expected 26.506 build 2620 status to report the Fast slash command after apply", output);
+      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.506 build 2620 status to report the Intelligence Speed target after apply", output);
+      assertContains(output, "Status: Plugins access enabled", "expected 26.506 build 2620 status to report Plugins after apply", output);
+      assertContains(output, "Status: Plugins page content enabled", "expected 26.506 build 2620 status to report Plugins page content after apply", output);
+      assertContains(output, "Status: Plugin detail access enabled", "expected 26.506 build 2620 status to report Plugin detail access after apply", output);
+      assertContains(output, "Status: Plugin install availability enabled", "expected 26.506 build 2620 status to report Plugin install availability after apply", output);
+      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.506 build 2620 status to report Plugin install modal content after apply", output);
+      assertNotContains(output, "Target file:", "expected 26.506 build 2620 status to omit internal target paths", output);
+      assertNotContains(output, "Backup file:", "expected 26.506 build 2620 status to omit internal backup paths", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.506 build 2620 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
   });

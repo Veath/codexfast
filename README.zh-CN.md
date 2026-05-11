@@ -23,7 +23,7 @@ npx codexfast
 
 脚本在安装好的 `Codex.app` 上提供这些菜单动作：
 
-1. **查看当前状态** — 检查版本、目标文件，以及当前是否可以安全打补丁
+1. **查看当前状态** — 检查版本、兼容性，以及各功能是否已启用
 2. **开启 custom API 相关能力** — 恢复上面列出的能力集合
 3. **恢复原始状态** — 回退到原始应用 bundle
 4. **安装自动修复 watcher** — Codex 更新并替换 `app.asar` 后，在受支持版本上自动重新应用补丁
@@ -89,7 +89,7 @@ q) Quit
 
 ### 查看状态
 
-先选择 **1) View current status**。状态检查会读取当前安装的 `Codex.app`，显示检测到的版本和 build，告诉你兼容性是否为 `supported`，并列出 app bundle 里找到的 patch 目标。
+先选择 **1) View current status**。状态检查会读取当前安装的 `Codex.app`，显示检测到的版本和 build，告诉你兼容性是否为 `supported`，并列出各支持功能是否已启用。
 
 每次 Codex 更新后都先跑一次查看状态。如果兼容性不是 `supported`，不要在这个版本上开补丁。
 
