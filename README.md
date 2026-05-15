@@ -202,6 +202,8 @@ codesign --force --deep --sign - /Applications/Codex.app
 
 **Target not found / version unsupported** — do not continue, do not hand-patch. The build likely needs a new adaptation.
 
+**Runtime launch shows `Codex failed to start` / `ERR_FAILED`** — fully quit Codex and rerun the latest `npx codexfast launch`. A failed runtime launch should not modify `app.asar`, `Info.plist`, the app bundle, backups, the app signature, or macOS privacy permissions. If this persists on a supported build, use `npx codexfast status` and report the detected version/build plus the launch output; use legacy `apply` only when you explicitly need persistent bundle patching.
+
 **Plugins visible but a specific plugin is still unusable** — run **Check current status** first. On `26.429.20946`, `26.429.30905`, `26.429.61741`, `26.506.21252`, `26.506.31421`, and `26.513.20950`, `Plugin install availability enabled` means the top-level connector-unavailable install block is patched, and `Plugin install modal content enabled` means the empty install-modal detail card gate is patched. Remaining failures usually come from plugin state, connector runtime behavior, or admin-side restrictions.
 
 **GPT-5.5 visible but requests fail** — the UI entry is present, but your custom API provider still needs to accept `model: "gpt-5.5"`.

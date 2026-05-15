@@ -8,6 +8,8 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 
 `launch` and legacy `apply` use the same target definitions. Runtime launch applies matching replacements in memory through the local CDP session and leaves the app bundle untouched; legacy `apply` writes the replacements into the packed `app.asar` fallback path.
 
+For legacy bundle patching, target files are inspected inside `app/webview/assets` after extracting `app.asar`. For runtime launch, the same renderer assets may be requested with different `app://` URL shapes. Current `26.513.20950` uses `app://-/assets/*.js`; older assumptions used `app://-/webview/assets/*.js`. Runtime matchers must account for both when CDP Fetch interception changes.
+
 | Feature | Target label | Current file | Needle | Patch intent |
 | --- | --- | --- | --- | --- |
 | Settings-side Fast control | `Speed setting` | `general-settings-*.js` | `settings.agent.speed.label` | Remove the guarded Fast-settings early return. |

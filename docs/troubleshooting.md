@@ -16,6 +16,14 @@ If launch is blocked:
 2. Run `npx codexfast status` and confirm the detected version/build is `supported`.
 3. Use legacy `npx codexfast apply` only as a fallback when you explicitly need persistent bundle patches.
 
+If Codex shows `Codex failed to start` with `ERR_FAILED` while runtime launch is being tested:
+
+1. Fully quit Codex and confirm no `Codex` main process remains.
+2. Re-run the latest `npx codexfast launch`.
+3. Confirm the failed launch did not change `Contents/Resources/app.asar`, `Info.plist`, the app signature, backups, or macOS privacy permissions.
+4. If the failure persists on a supported build, inspect the CDP runtime asset URL shape. Current `26.513.20950` requests renderer JavaScript as `app://-/assets/*.js`, while older assumptions used `app://-/webview/assets/*.js`.
+5. Confirm the generated single-file CLI can run its embedded runtime patch engine; do not rely only on source-level `patch-engine` imports.
+
 ## `Codex.app` does not open after patching
 
 Check:

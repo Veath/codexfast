@@ -23,15 +23,18 @@ Determine whether the new build can be supported, update patch logic if needed, 
    - Read `docs/patch-targets.md`
    - Read the closest prior note under `docs/bundle-notes/`
    - Identify changed filenames, needles, or gated shapes in the new bundle
+   - For runtime launch changes, confirm the actual CDP request URLs for renderer JavaScript, not only the archive paths inside `app.asar`
 
 4. Update the script narrowly.
    - Keep new regexes or target specs as small as possible
    - Preserve apply/restore symmetry
+   - Preserve runtime launch fail-closed behavior without writing the app bundle
    - Do not widen support claims before validation
 
 5. Update tests in the same change.
    - Extend `test/re-sign-flow.sh` for every changed target or new guard
    - Keep unsupported-version blocking coverage intact
+   - When runtime launch changes, cover generated single-file behavior, not only source-level patch helpers
 
 6. Update docs in the same change.
    - `docs/compatibility-matrix.md`
@@ -42,6 +45,7 @@ Determine whether the new build can be supported, update patch logic if needed, 
 7. Verify.
    - `bash test/re-sign-flow.sh`
    - Manual checks from `docs/real-app-validation.md` when claiming real-app support
+   - For runtime launch support, verify launch success on the installed app and confirm `app.asar`, `Info.plist`, and the app signature are unchanged
 
 8. Only after verification, add the build to the strict whitelist in `src/supported-app-versions.mts`.
 

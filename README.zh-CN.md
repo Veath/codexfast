@@ -203,6 +203,8 @@ codesign --force --deep --sign - /Applications/Codex.app
 
 **找不到目标文件 / 版本不被支持** — 不要继续，也不要手动改 bundle。当前构建可能需要重新适配。
 
+**Runtime launch 显示 `Codex failed to start` / `ERR_FAILED`** — 完全退出 Codex，然后重新运行最新的 `npx codexfast launch`。失败的 runtime launch 不应该修改 `app.asar`、`Info.plist`、app bundle、备份、app 签名或 macOS 隐私权限。如果受支持 build 上仍然复现，先跑 `npx codexfast status`，再反馈检测到的 version/build 和 launch 输出；只有明确需要持久 bundle patch 时才使用 legacy `apply`。
+
 **Plugins 已可见但某个具体插件仍无法使用** — 请先跑 **查看当前状态**。在 `26.429.20946`、`26.429.30905`、`26.429.61741`、`26.506.21252`、`26.506.31421` 和 `26.513.20950` 上，`Plugin install availability enabled` 表示顶层 connector-unavailable 安装阻断已被 patch，`Plugin install modal content enabled` 表示安装弹窗空详情卡片的 gate 已被 patch；剩余失败通常来自插件状态、connector 运行时行为或管理侧限制。
 
 **GPT-5.5 已可见但请求失败** — UI 项已经存在，但你的 custom API provider 仍需接受 `model: "gpt-5.5"`。

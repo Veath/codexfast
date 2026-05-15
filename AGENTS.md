@@ -71,6 +71,11 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - detected app version
   - detected build
   - compatibility state
+- Confirm runtime launch still:
+  - requires Codex to be fully quit before launch
+  - reports patched target labels on supported builds
+  - leaves `app.asar`, `Info.plist`, and the app signature unchanged
+  - fails closed without modifying the app when interception does not complete
 - Do not ship a change that enables only part of the combined Fast feature set.
 - Do not describe Plugins as supported unless every Plugins gate required by that build still works cleanly.
 - Before claiming real-app support, run the manual checklist in [`docs/real-app-validation.md`](./docs/real-app-validation.md).

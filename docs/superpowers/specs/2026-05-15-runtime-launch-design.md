@@ -77,7 +77,7 @@ Required launch properties:
 
 ### CDP interception
 
-Runtime patching must happen before the renderer executes target JavaScript. The preferred implementation is CDP Fetch or Network interception for `app://.../webview/assets/*.js`.
+Runtime patching must happen before the renderer executes target JavaScript. The preferred implementation is CDP Fetch or Network interception for renderer JavaScript under `app://`. Current `26.513.20950` requests assets as `app://-/assets/*.js`; older assumptions used `app://-/webview/assets/*.js`, so runtime interception should account for both URL shapes.
 
 For each intercepted JavaScript response:
 

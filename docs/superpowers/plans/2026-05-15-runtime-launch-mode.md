@@ -1,5 +1,7 @@
 # Runtime Launch Mode Implementation Plan
 
+> Historical implementation plan. Runtime launch has since been implemented and validated; use `docs/feature-scope.md`, `docs/patch-targets.md`, `docs/troubleshooting.md`, `docs/real-app-validation.md`, and the latest bundle note as the current source of truth. In particular, current `26.513.20950` runtime requests renderer JavaScript as `app://-/assets/*.js`, while older assumptions in this plan used `app://-/webview/assets/*.js`.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Add `codexfast launch` as the default-recommended runtime patch mode while keeping `apply` / `restore` as legacy bundle patch fallbacks.
@@ -743,7 +745,10 @@ Implement WebSocket handshake with `net.connect`, `Sec-WebSocket-Key`, and HTTP 
 
 ```ts
 await cdp.send("Fetch.enable", {
-  patterns: [{ urlPattern: "app://*/webview/assets/*.js", requestStage: "Response" }],
+  patterns: [
+    { urlPattern: "app://*/assets/*.js", requestStage: "Response" },
+    { urlPattern: "app://*/webview/assets/*.js", requestStage: "Response" },
+  ],
 });
 ```
 

@@ -38,6 +38,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
    - If the change is bundle-specific, identify the exact gated text key, target file shape, and restore path first.
    - Do not trust `status`/matcher output as proof that a feature target is gone. For every expected feature path, search the extracted bundle by stable needles such as `settings.agent.speed.label`, `composer.speedSlashCommand.title`, `composer.intelligenceDropdown.speed.title`, `sidebarElectron.pluginsDisabledTooltip`, `skills.pluginsAuthBlockedToast.title`, `pluginDeepLinkAuthBlocked`, `plugins.install.connectorUnavailable`, `plugins.installModal.about`, and nearby `serviceTierSettings` / auth-method gates.
    - Distinguish "target absent" from "target present but regex stale". A target is absent only after broad non-locale JS search shows the user-facing needle and adjacent gate are no longer present anywhere in `webview/assets`.
+   - For runtime launch work, inspect the real CDP request URLs as well as the extracted archive paths. Current `26.513.20950` serves renderer JavaScript as `app://-/assets/*.js`, while older assumptions used `app://-/webview/assets/*.js`.
 
 2. Make the smallest viable code change.
    - Keep patch logic narrow.
@@ -48,6 +49,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 3. Update regression coverage in the same change.
    - Extend `test/re-sign-flow.sh` for every new target, restore path, or compatibility guard.
    - Cover both positive and negative cases when relevant.
+   - When changing runtime launch, cover generated single-file behavior. A source-level `patch-engine` import is not enough because the embedded runtime engine is extracted from generated `__PATCHER_SOURCE__`.
 
 4. Update repo docs in the same change.
    - Update `README.md` when usage, compatibility policy, supported features, or recovery guidance changes.
@@ -63,6 +65,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
    - Run `pnpm test` or `bash test/re-sign-flow.sh`.
    - If package metadata changed, also inspect `package.json` and `bin/codexfast`.
    - If packaging or docs changed materially, run `pnpm pack --dry-run`.
+   - For runtime launch changes, run a real installed-app `launch` pass when possible, then confirm `app.asar`, `Info.plist`, and the app signature are unchanged.
 
 ## Codexfast-Specific Checklist
 
@@ -87,3 +90,4 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 - Describing a Codex build as supported before adding tests and whitelist coverage.
 - Updating only one README and leaving English/Chinese docs out of sync.
 - Publishing behavior changes without moving the maintenance checklist forward.
+- Validating runtime launch only against extracted fixture files or source imports; generated CLI extraction and CDP timing can fail independently.
