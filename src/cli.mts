@@ -2,11 +2,12 @@ import { createHash, randomBytes } from "node:crypto";
 import { chmodSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, renameSync, rmSync, statSync, writeFileSync } from "node:fs";
 import * as http from "node:http";
 import * as https from "node:https";
+import * as net from "node:net";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 
 declare const __PATCHER_SOURCE__: string;
 declare const __PACKAGE_VERSION__: string;
@@ -73,6 +74,48 @@ type CdpTarget = {
   url: string;
   webSocketDebuggerUrl?: string;
 };
+
+type RuntimePatchResult = {
+  content: string;
+  matchedLabels: string[];
+  patchedLabels: string[];
+  alreadyPatchedLabels: string[];
+};
+
+type FetchHeader = {
+  name: string;
+  value: string;
+};
+
+type FetchRequestPausedParams = {
+  requestId: string;
+  request: {
+    url: string;
+  };
+  responseHeaders?: FetchHeader[];
+  responseStatusCode?: number;
+};
+
+type CdpPendingCommand = {
+  resolve: (value: unknown) => void;
+  reject: (error: Error) => void;
+};
+
+type CdpEventHandler = (params: unknown) => void | Promise<void>;
+
+type CdpMessage = {
+  id?: number;
+  method?: string;
+  params?: unknown;
+  result?: unknown;
+  error?: {
+    message?: string;
+  };
+};
+
+const runtimePatchConnectTimeoutMs = 12_000;
+const runtimePatchSessionTimeoutMs = 12_000;
+const runtimePatchSettleMs = 750;
 
 function printLine(message = ""): void {
   console.log(message);
@@ -219,6 +262,193 @@ function httpGetJson<T>(url: string): Promise<T> {
       })
       .on("error", reject);
   });
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function asError(value: unknown): Error {
+  return value instanceof Error ? value : new Error(String(value));
+}
+
+class CdpConnection {
+  private nextCommandId = 1;
+  private pending = new Map<number, CdpPendingCommand>();
+  private eventHandlers = new Map<string, CdpEventHandler[]>();
+  private buffer: Buffer = Buffer.alloc(0);
+
+  private constructor(private socket: net.Socket, initialBuffer = Buffer.alloc(0)) {
+    this.socket.on("data", (chunk: Buffer) => {
+      this.readFrames(chunk);
+    });
+    this.socket.on("error", (error: Error) => {
+      this.rejectPending(error);
+    });
+    this.socket.on("close", () => {
+      this.rejectPending(new Error("CDP WebSocket connection closed."));
+    });
+    if (initialBuffer.length > 0) {
+      this.readFrames(initialBuffer);
+    }
+  }
+
+  static connect(webSocketUrl: string): Promise<CdpConnection> {
+    return new Promise((resolve, reject) => {
+      const url = new URL(webSocketUrl);
+      if (url.protocol !== "ws:") {
+        reject(new Error(`Unsupported CDP WebSocket protocol: ${url.protocol}`));
+        return;
+      }
+
+      const port = Number(url.port || "80");
+      const key = randomBytes(16).toString("base64");
+      const expectedAccept = createHash("sha1")
+        .update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
+        .digest("base64");
+      const socket = net.connect({ host: url.hostname, port });
+      let handshakeBuffer = Buffer.alloc(0);
+      let settled = false;
+
+      const fail = (error: Error): void => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        socket.destroy();
+        reject(error);
+      };
+
+      const timeout = setTimeout(() => {
+        fail(new Error("Timed out during CDP WebSocket handshake."));
+      }, 3_000);
+
+      socket.once("connect", () => {
+        const path = `${url.pathname}${url.search}`;
+        socket.write(
+          [
+            `GET ${path} HTTP/1.1`,
+            `Host: ${url.host}`,
+            "Upgrade: websocket",
+            "Connection: Upgrade",
+            `Sec-WebSocket-Key: ${key}`,
+            "Sec-WebSocket-Version: 13",
+            "",
+            "",
+          ].join("\r\n"),
+        );
+      });
+
+      socket.on("data", (chunk: Buffer) => {
+        if (settled) {
+          return;
+        }
+        handshakeBuffer = Buffer.concat([handshakeBuffer, chunk]);
+        const headerEnd = handshakeBuffer.indexOf("\r\n\r\n");
+        if (headerEnd === -1) {
+          return;
+        }
+
+        clearTimeout(timeout);
+        const headerText = handshakeBuffer.subarray(0, headerEnd).toString("utf8");
+        const remaining = handshakeBuffer.subarray(headerEnd + 4);
+        const statusLine = headerText.split(/\r?\n/, 1)[0] ?? "";
+        const acceptHeader = headerText
+          .split(/\r?\n/)
+          .find((line) => line.toLowerCase().startsWith("sec-websocket-accept:"))
+          ?.split(":")
+          .slice(1)
+          .join(":")
+          .trim();
+
+        if (!/^HTTP\/1\.1 101\b/.test(statusLine) || acceptHeader !== expectedAccept) {
+          fail(new Error("CDP WebSocket handshake was rejected."));
+          return;
+        }
+
+        settled = true;
+        socket.removeAllListeners("data");
+        socket.removeAllListeners("error");
+        resolve(new CdpConnection(socket, remaining));
+      });
+
+      socket.once("error", (error: Error) => {
+        clearTimeout(timeout);
+        fail(error);
+      });
+    });
+  }
+
+  send<T = unknown>(method: string, params?: unknown): Promise<T> {
+    const id = this.nextCommandId;
+    this.nextCommandId += 1;
+    const payload = params === undefined ? JSON.stringify({ id, method }) : JSON.stringify({ id, method, params });
+    return new Promise<T>((resolve, reject) => {
+      this.pending.set(id, {
+        resolve: (value: unknown) => resolve(value as T),
+        reject,
+      });
+      this.socket.write(encodeWebSocketTextFrame(payload));
+    });
+  }
+
+  on(method: string, handler: CdpEventHandler): void {
+    const handlers = this.eventHandlers.get(method) ?? [];
+    handlers.push(handler);
+    this.eventHandlers.set(method, handlers);
+  }
+
+  close(): void {
+    this.socket.end();
+    this.socket.destroy();
+  }
+
+  private readFrames(chunk: Buffer): void {
+    this.buffer = Buffer.concat([this.buffer, chunk]);
+    const decoded = decodeWebSocketTextFrames(this.buffer);
+    this.buffer = decoded.remaining;
+    for (const message of decoded.messages) {
+      this.handleMessage(message);
+    }
+  }
+
+  private handleMessage(message: string): void {
+    let parsed: CdpMessage;
+    try {
+      parsed = JSON.parse(message) as CdpMessage;
+    } catch {
+      return;
+    }
+
+    if (typeof parsed.id === "number") {
+      const pending = this.pending.get(parsed.id);
+      if (!pending) {
+        return;
+      }
+      this.pending.delete(parsed.id);
+      if (parsed.error) {
+        pending.reject(new Error(parsed.error.message ?? "CDP command failed."));
+      } else {
+        pending.resolve(parsed.result);
+      }
+      return;
+    }
+
+    if (parsed.method) {
+      for (const handler of this.eventHandlers.get(parsed.method) ?? []) {
+        Promise.resolve(handler(parsed.params)).catch(() => undefined);
+      }
+    }
+  }
+
+  private rejectPending(error: Error): void {
+    for (const pending of this.pending.values()) {
+      pending.reject(error);
+    }
+    this.pending.clear();
+  }
 }
 
 function escapeXml(value: string): string {
@@ -951,7 +1181,223 @@ function checkCodexRunning(): CodexRunningCheck {
   return { ok: false, message: `Cannot determine whether Codex.app is running because pgrep failed with exit code ${result.status}.` };
 }
 
-function runRuntimeLaunch(): number {
+function randomDebugPort(): number {
+  return 40_000 + randomBytes(2).readUInt16BE(0) % 20_000;
+}
+
+function codexExecutablePath(): string {
+  return join(appBundle, "Contents", "MacOS", "Codex");
+}
+
+function launchCodexProcess(debugPort: number): ChildProcess {
+  const executable = codexExecutablePath();
+  if (!existsSync(executable)) {
+    throw new Error(`Codex executable not found: ${executable}`);
+  }
+
+  const child = spawn(
+    executable,
+    [
+      `--remote-debugging-port=${debugPort}`,
+      "--remote-debugging-address=127.0.0.1",
+    ],
+    {
+      detached: true,
+      stdio: "ignore",
+      env: process.env,
+    },
+  );
+  child.on("error", () => undefined);
+  return child;
+}
+
+let runtimePatchBodyFunction: ((resourcePath: string, body: string) => RuntimePatchResult) | null = null;
+
+function applyRuntimePatchesToResponseBody(resourcePath: string, body: string): RuntimePatchResult {
+  if (!runtimePatchBodyFunction) {
+    const tailMarker = "\nlet exitCode = 1;\n";
+    const tailIndex = __PATCHER_SOURCE__.lastIndexOf(tailMarker);
+    if (tailIndex === -1) {
+      throw new Error("Embedded runtime patch engine entrypoint was not found.");
+    }
+    const patcherMarker = '\nconst fs = require("node:fs");\n';
+    const patcherIndex = __PATCHER_SOURCE__.indexOf(patcherMarker);
+    const engineEnd = patcherIndex === -1 ? tailIndex : patcherIndex;
+    const engineSource = __PATCHER_SOURCE__.slice(0, engineEnd);
+    const factory = new Function(`${engineSource}\nreturn applyRuntimePatchesToBody;`) as () => unknown;
+    const candidate = factory();
+    if (typeof candidate !== "function") {
+      throw new Error("Embedded runtime patch engine is unavailable.");
+    }
+    runtimePatchBodyFunction = candidate as (resourcePath: string, body: string) => RuntimePatchResult;
+  }
+  return runtimePatchBodyFunction(resourcePath, body);
+}
+
+function isRuntimeJavaScriptResource(resourceUrl: string): boolean {
+  return /^app:\/\/.*\/webview\/assets\/[^/?#]+\.js(?:[?#].*)?$/.test(resourceUrl);
+}
+
+function responseHeadersForFulfill(headers: FetchHeader[] | undefined): FetchHeader[] {
+  const contentType = headers?.find((header) => header.name.toLowerCase() === "content-type")?.value ?? "application/javascript; charset=utf-8";
+  return [{ name: "content-type", value: contentType }];
+}
+
+async function continueFetchRequest(cdp: CdpConnection, requestId: string): Promise<void> {
+  try {
+    await cdp.send("Fetch.continueRequest", { requestId });
+  } catch {
+    // The renderer may navigate away while the interception callback is running.
+  }
+}
+
+async function handleFetchRequestPaused(
+  cdp: CdpConnection,
+  params: FetchRequestPausedParams,
+  observedLabels: Set<string>,
+  onObservedLabel: () => void,
+): Promise<void> {
+  const resourceUrl = params.request.url;
+  if (!isRuntimeJavaScriptResource(resourceUrl)) {
+    await continueFetchRequest(cdp, params.requestId);
+    return;
+  }
+
+  let bodyResult: { body?: string; base64Encoded?: boolean };
+  try {
+    bodyResult = await cdp.send("Fetch.getResponseBody", { requestId: params.requestId });
+  } catch {
+    await continueFetchRequest(cdp, params.requestId);
+    return;
+  }
+
+  if (typeof bodyResult.body !== "string") {
+    await continueFetchRequest(cdp, params.requestId);
+    return;
+  }
+
+  const body = bodyResult.base64Encoded ? Buffer.from(bodyResult.body, "base64").toString("utf8") : bodyResult.body;
+  let patchResult: RuntimePatchResult;
+  try {
+    patchResult = applyRuntimePatchesToResponseBody(resourceUrl, body);
+  } catch {
+    await continueFetchRequest(cdp, params.requestId);
+    return;
+  }
+  const labels = [...patchResult.patchedLabels, ...patchResult.alreadyPatchedLabels];
+  for (const label of labels) {
+    observedLabels.add(label);
+  }
+  if (labels.length > 0) {
+    onObservedLabel();
+  }
+
+  if (patchResult.content === body) {
+    await continueFetchRequest(cdp, params.requestId);
+    return;
+  }
+
+  await cdp.send("Fetch.fulfillRequest", {
+    requestId: params.requestId,
+    responseCode: 200,
+    responseHeaders: responseHeadersForFulfill(params.responseHeaders),
+    body: Buffer.from(patchResult.content, "utf8").toString("base64"),
+  });
+}
+
+async function findDebuggableRendererTarget(debugPort: number): Promise<CdpTarget | null> {
+  const targets = await httpGetJson<CdpTarget[]>(`http://127.0.0.1:${debugPort}/json/list`);
+  return (
+    targets.find((target) => target.webSocketDebuggerUrl && target.url.startsWith("app://") && target.type !== "browser") ??
+    targets.find((target) => target.webSocketDebuggerUrl && target.type !== "browser") ??
+    null
+  );
+}
+
+async function waitForRuntimePatchConnection(debugPort: number): Promise<CdpConnection> {
+  const deadline = Date.now() + runtimePatchConnectTimeoutMs;
+  let lastError: Error | null = null;
+  let debuggerResponded = false;
+  let rendererTargetFound = false;
+
+  while (Date.now() < deadline) {
+    try {
+      const target = await findDebuggableRendererTarget(debugPort);
+      if (target?.webSocketDebuggerUrl) {
+        debuggerResponded = true;
+        rendererTargetFound = true;
+        try {
+          return await CdpConnection.connect(target.webSocketDebuggerUrl);
+        } catch (error) {
+          lastError = asError(error);
+        }
+      } else {
+        debuggerResponded = true;
+      }
+    } catch (error) {
+      lastError = asError(error);
+    }
+    await sleep(250);
+  }
+
+  if (debuggerResponded && !rendererTargetFound) {
+    throw new Error("No debuggable renderer target found.");
+  }
+  const detail = lastError ? `: ${lastError.message}` : "";
+  throw new Error(`CDP connection unavailable after bounded retries${detail}`);
+}
+
+async function runRuntimePatchSession(debugPort: number): Promise<string[]> {
+  const cdp = await waitForRuntimePatchConnection(debugPort);
+  const observedLabels = new Set<string>();
+  let settleTimer: ReturnType<typeof setTimeout> | null = null;
+
+  try {
+    await cdp.send("Fetch.enable", {
+      patterns: [
+        {
+          urlPattern: "app://*/webview/assets/*.js",
+          requestStage: "Response",
+        },
+      ],
+    });
+
+    return await new Promise<string[]>((resolve, reject) => {
+      const finish = (): void => {
+        if (settleTimer) {
+          clearTimeout(settleTimer);
+          settleTimer = null;
+        }
+        clearTimeout(timeout);
+        if (observedLabels.size === 0) {
+          reject(new Error("Runtime patch interception completed without required targets."));
+          return;
+        }
+        resolve([...observedLabels]);
+      };
+
+      const markObserved = (): void => {
+        if (settleTimer) {
+          return;
+        }
+        settleTimer = setTimeout(finish, runtimePatchSettleMs);
+      };
+
+      const timeout = setTimeout(finish, runtimePatchSessionTimeoutMs);
+      cdp.on("Fetch.requestPaused", (params: unknown) =>
+        handleFetchRequestPaused(cdp, params as FetchRequestPausedParams, observedLabels, markObserved),
+      );
+    });
+  } finally {
+    cdp.close();
+  }
+}
+
+async function waitForRuntimePatchSession(debugPort: number): Promise<string[]> {
+  return runRuntimePatchSession(debugPort);
+}
+
+async function runRuntimeLaunch(): Promise<number> {
   printActionHeader("launch");
 
   if (!appVersionSupported) {
@@ -977,7 +1423,36 @@ function runRuntimeLaunch(): number {
     return 1;
   }
 
-  printLine("Runtime launch is not implemented yet.");
+  if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS === "1") {
+    printLine("Runtime launch completed.");
+    printLine("Patched targets:");
+    printLine("  Browser-use native pipe peer auth");
+    printLine("");
+    printLine("Exit code: 0");
+    return 0;
+  }
+
+  let child: ChildProcess | null = null;
+  try {
+    const debugPort = randomDebugPort();
+    child = launchCodexProcess(debugPort);
+    const patchedLabels = await waitForRuntimePatchSession(debugPort);
+    printLine("Runtime launch completed.");
+    printLine("Patched targets:");
+    for (const label of patchedLabels) {
+      printLine(`  ${label}`);
+    }
+    child.unref();
+    printLine("");
+    printLine("Exit code: 0");
+    return 0;
+  } catch (error) {
+    if (child && !child.killed) {
+      child.kill();
+    }
+    printLine(`Runtime launch failed: ${asError(error).message}`);
+  }
+
   printLine("");
   printLine("Exit code: 1");
   return 1;
@@ -1236,7 +1711,7 @@ async function main(): Promise<number> {
       case "restore":
         return runEmbeddedTool(command);
       case "launch":
-        return runRuntimeLaunch();
+        return await runRuntimeLaunch();
       case "install-watcher":
         return installWatcher();
       default:

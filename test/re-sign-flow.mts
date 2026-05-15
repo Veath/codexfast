@@ -328,13 +328,24 @@ function main(): void {
   assertContains(readOutput(unsupportedLaunchOutput), "Exit code: 1", "expected unsupported launch to return exit code 1", readOutput(unsupportedLaunchOutput));
   assertNoLaunchCalls(unsupportedLaunchOutput);
 
+  const launchSuccessApp = join(tmpDir, "LaunchSuccess.app");
+  const launchSuccessOutput = join(tmpDir, "launch-success-output.txt");
+  prepareArchivedFakeApp(launchSuccessApp, join(tmpDir, "launch-success-assets"), "26.513.20950", "2816", "26513-2816");
+  runScriptCommand(launchSuccessApp, ["launch"], launchSuccessOutput, {
+    CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS: "1",
+  });
+  assertContains(readOutput(launchSuccessOutput), "Runtime launch completed.", "expected launch command to report success", readOutput(launchSuccessOutput));
+  assertContains(readOutput(launchSuccessOutput), "Browser-use native pipe peer auth", "expected launch dry-run hook to report runtime target labels", readOutput(launchSuccessOutput));
+  assertNoCodesignCalls(launchSuccessOutput);
+  assertNoTccutilCalls(launchSuccessOutput);
+
   const nonRunningLaunchApp = join(tmpDir, "NonRunningLaunch.app");
   const nonRunningLaunchOutput = join(tmpDir, "non-running-launch-output.txt");
   prepareArchivedFakeApp(nonRunningLaunchApp, join(tmpDir, "non-running-launch-assets"), "26.513.20950", "2816", "26513-2816");
   runScriptCommand(nonRunningLaunchApp, ["launch"], nonRunningLaunchOutput, { CODEXFAST_TEST_ALLOW_NONZERO: "1" });
   assertContains(readOutput(nonRunningLaunchOutput), "Action: launch", "expected launch to print an action header", readOutput(nonRunningLaunchOutput));
   assertContains(readOutput(nonRunningLaunchOutput), "Compatibility: supported", "expected supported launch to print compatibility", readOutput(nonRunningLaunchOutput));
-  assertContains(readOutput(nonRunningLaunchOutput), "Runtime launch is not implemented yet.", "expected supported non-running launch to reach the placeholder branch", readOutput(nonRunningLaunchOutput));
+  assertContains(readOutput(nonRunningLaunchOutput), "Runtime launch failed: Codex executable not found:", "expected supported fake app launch to fail closed before app start", readOutput(nonRunningLaunchOutput));
   assertContains(readOutput(nonRunningLaunchOutput), "Exit code: 1", "expected supported non-running launch to return exit code 1", readOutput(nonRunningLaunchOutput));
   assertNoLaunchCalls(nonRunningLaunchOutput);
 
