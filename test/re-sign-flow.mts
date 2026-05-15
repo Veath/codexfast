@@ -290,7 +290,7 @@ function main(): void {
 
   const cdpEncodeOutput = join(tmpDir, "cdp-encode-output.txt");
   runScriptCommand(join(tmpDir, "MissingForCdpSelfTest.app"), ["__selftest-cdp-frame"], cdpEncodeOutput);
-  assertContains(readOutput(cdpEncodeOutput), "CDP frame self-test passed", "expected CDP frame self-test to pass", readOutput(cdpEncodeOutput));
+  assertContains(readOutput(cdpEncodeOutput), "CDP frame self-test passed", "expected CDP frame self-test to cover large frames", readOutput(cdpEncodeOutput));
 
   const uninstallMissingAppOutput = join(tmpDir, "uninstall-missing-app-output.txt");
   const uninstallMissingHome = join(tmpDir, "uninstall-missing-home");
