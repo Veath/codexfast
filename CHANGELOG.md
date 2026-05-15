@@ -15,6 +15,12 @@ This project follows a simple release-oriented changelog format.
 - Help, the interactive menu, and README docs now recommend `codexfast launch` as the default runtime patch path, with `apply` / `restore` labeled as legacy bundle patch fallbacks.
 - Restore now prints the current-version official Codex.app download URL after a successful restore so users can choose whether to reinstall and recover the OpenAI Developer ID signature.
 
+### Fixed
+
+- Fixed runtime launch interception for `Codex.app` `26.513.20950` by waiting for the initial renderer load to settle before enabling Fetch interception and reloading the page.
+- Fixed the generated single-file runtime patch engine extraction so `launch` can apply the embedded patch rules instead of silently continuing intercepted responses.
+- Matched both current `app://-/assets/*.js` runtime URLs and legacy `app://-/webview/assets/*.js` runtime URLs.
+
 ## [0.15.1] - 2026-05-15
 
 ### Fixed

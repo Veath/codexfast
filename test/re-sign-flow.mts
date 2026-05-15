@@ -284,6 +284,8 @@ function main(): void {
   assertContains(readOutput(helpOutput), "version", "expected help to include version command", readOutput(helpOutput));
   assertNotContains(readOutput(helpOutput), "--quiet", "expected help not to advertise the legacy quiet marker", readOutput(helpOutput));
   assertNotContains(readOutput(helpOutput), "__selftest-cdp-frame", "expected help not to list the hidden CDP self-test command", readOutput(helpOutput));
+  assertNotContains(readOutput(helpOutput), "__selftest-runtime-url", "expected help not to list the hidden runtime URL self-test command", readOutput(helpOutput));
+  assertNotContains(readOutput(helpOutput), "__selftest-runtime-patch-body", "expected help not to list the hidden runtime patch body self-test command", readOutput(helpOutput));
 
   const menuOutput = join(tmpDir, "menu-output.txt");
   prepareArchivedFakeApp(join(tmpDir, "Menu.app"), join(tmpDir, "menu-assets"));
@@ -301,6 +303,14 @@ function main(): void {
   const cdpEncodeOutput = join(tmpDir, "cdp-encode-output.txt");
   runScriptCommand(join(tmpDir, "MissingForCdpSelfTest.app"), ["__selftest-cdp-frame"], cdpEncodeOutput);
   assertContains(readOutput(cdpEncodeOutput), "CDP frame self-test passed", "expected CDP frame self-test to cover large frames", readOutput(cdpEncodeOutput));
+
+  const runtimeUrlOutput = join(tmpDir, "runtime-url-output.txt");
+  runScriptCommand(join(tmpDir, "MissingForRuntimeUrlSelfTest.app"), ["__selftest-runtime-url"], runtimeUrlOutput);
+  assertContains(readOutput(runtimeUrlOutput), "Runtime URL self-test passed", "expected runtime URL self-test to cover current and legacy asset URLs", readOutput(runtimeUrlOutput));
+
+  const runtimePatchBodyOutput = join(tmpDir, "runtime-patch-body-output.txt");
+  runScriptCommand(join(tmpDir, "MissingForRuntimePatchBodySelfTest.app"), ["__selftest-runtime-patch-body"], runtimePatchBodyOutput);
+  assertContains(readOutput(runtimePatchBodyOutput), "Runtime patch body self-test passed", "expected generated CLI runtime patch engine to patch JS bodies", readOutput(runtimePatchBodyOutput));
 
   const uninstallMissingAppOutput = join(tmpDir, "uninstall-missing-app-output.txt");
   const uninstallMissingHome = join(tmpDir, "uninstall-missing-home");

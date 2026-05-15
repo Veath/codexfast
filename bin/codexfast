@@ -100,8 +100,14 @@ const runtimePatchConnectTimeoutMs = 12_000;
 const runtimePatchSessionTimeoutMs = 12_000;
 const runtimePatchSettleMs = 750;
 const runtimePatchHttpTimeoutMs = 3_000;
+const runtimePatchInitialLoadSettleMs = 1_000;
 function printLine(message = "") {
     console.log(message);
+}
+function debugRuntime(message) {
+    if (process.env.CODEXFAST_DEBUG_RUNTIME === "1") {
+        printLine(`[runtime-debug] ${message}`);
+    }
 }
 function resolveCommand(name) {
     const result = (0, node_child_process_1.spawnSync)("sh", ["-c", 'command -v -- "$1"', "sh", name], { encoding: "utf8" });
@@ -149,12 +155,14 @@ function encodeWebSocketTextFrame(payload) {
     }
     return Buffer.concat([Buffer.from(header), mask, masked]);
 }
-function decodeWebSocketTextFrames(buffer) {
+function decodeWebSocketTextFrames(buffer, fragments = []) {
     const messages = [];
     let offset = 0;
+    let pendingFragments = fragments;
     while (offset + 2 <= buffer.length) {
         const first = buffer[offset];
         const second = buffer[offset + 1];
+        const finalFrame = (first & 0x80) !== 0;
         const opcode = first & 0x0f;
         const masked = (second & 0x80) !== 0;
         let length = second & 0x7f;
@@ -185,11 +193,26 @@ function decodeWebSocketTextFrames(buffer) {
         }
         const payload = buffer.subarray(offset + headerLength, offset + headerLength + length);
         if (opcode === 1) {
-            messages.push(payload.toString("utf8"));
+            if (finalFrame) {
+                messages.push(payload.toString("utf8"));
+            }
+            else {
+                pendingFragments = [payload];
+            }
+        }
+        else if (opcode === 0 && pendingFragments.length > 0) {
+            pendingFragments.push(payload);
+            if (finalFrame) {
+                messages.push(Buffer.concat(pendingFragments).toString("utf8"));
+                pendingFragments = [];
+            }
+        }
+        else if (opcode === 8) {
+            pendingFragments = [];
         }
         offset += headerLength + length;
     }
-    return { messages, remaining: buffer.subarray(offset) };
+    return { messages, remaining: buffer.subarray(offset), fragments: pendingFragments };
 }
 function runCdpFrameSelfTest() {
     const payload = JSON.stringify({ id: 1, method: "Runtime.enable" });
@@ -213,7 +236,18 @@ function runCdpFrameSelfTest() {
     }
     const serverFrame = Buffer.concat([Buffer.from([0x81, 0x0d]), Buffer.from("hello runtime")]);
     const decoded = decodeWebSocketTextFrames(serverFrame);
-    if (decoded.messages[0] !== "hello runtime" || decoded.remaining.length !== 0) {
+    if (decoded.messages[0] !== "hello runtime" || decoded.remaining.length !== 0 || decoded.fragments.length !== 0) {
+        printLine("CDP frame self-test failed");
+        return 1;
+    }
+    const fragmentedServerFrames = Buffer.concat([
+        Buffer.from([0x01, 0x06]),
+        Buffer.from("hello "),
+        Buffer.from([0x80, 0x07]),
+        Buffer.from("runtime"),
+    ]);
+    const fragmentedDecoded = decodeWebSocketTextFrames(fragmentedServerFrames);
+    if (fragmentedDecoded.messages[0] !== "hello runtime" || fragmentedDecoded.remaining.length !== 0 || fragmentedDecoded.fragments.length !== 0) {
         printLine("CDP frame self-test failed");
         return 1;
     }
@@ -237,7 +271,7 @@ function runCdpFrameSelfTest() {
     largeServerLength.writeBigUInt64BE(BigInt(Buffer.byteLength(largePayload)), 0);
     const largeServerFrame = Buffer.concat([Buffer.from([0x81, 0x7f]), largeServerLength, Buffer.from(largePayload)]);
     const largeDecoded = decodeWebSocketTextFrames(largeServerFrame);
-    if (largeDecoded.messages[0] !== largePayload || largeDecoded.remaining.length !== 0) {
+    if (largeDecoded.messages[0] !== largePayload || largeDecoded.remaining.length !== 0 || largeDecoded.fragments.length !== 0) {
         printLine("CDP frame self-test failed");
         return 1;
     }
@@ -311,6 +345,7 @@ class CdpConnection {
     eventHandlers = new Map();
     eventErrorHandlers = [];
     buffer = Buffer.alloc(0);
+    textFrameFragments = [];
     constructor(socket, initialBuffer = Buffer.alloc(0)) {
         this.socket = socket;
         this.socket.on("data", (chunk) => {
@@ -426,8 +461,9 @@ class CdpConnection {
     }
     readFrames(chunk) {
         this.buffer = Buffer.concat([this.buffer, chunk]);
-        const decoded = decodeWebSocketTextFrames(this.buffer);
+        const decoded = decodeWebSocketTextFrames(this.buffer, this.textFrameFragments);
         this.buffer = decoded.remaining;
+        this.textFrameFragments = decoded.fragments;
         for (const message of decoded.messages) {
             this.handleMessage(message);
         }
@@ -455,6 +491,7 @@ class CdpConnection {
             return;
         }
         if (parsed.method) {
+            debugRuntime(`event ${parsed.method}`);
             for (const handler of this.eventHandlers.get(parsed.method) ?? []) {
                 Promise.resolve(handler(parsed.params)).catch((error) => {
                     this.emitEventError(asError(error));
@@ -1174,8 +1211,10 @@ function applyRuntimePatchesToResponseBody(resourcePath, body) {
         if (tailIndex === -1) {
             throw new Error("Embedded runtime patch engine entrypoint was not found.");
         }
-        const patcherMarker = '\nconst fs = require("node:fs");\n';
-        const patcherIndex = __PATCHER_SOURCE__.indexOf(patcherMarker);
+        const patcherMarkerIndexes = ['\nconst fs = require("node:fs");\n', '\nconst fs = require("fs");\n']
+            .map((marker) => __PATCHER_SOURCE__.indexOf(marker))
+            .filter((index) => index >= 0);
+        const patcherIndex = patcherMarkerIndexes.length > 0 ? Math.min(...patcherMarkerIndexes) : -1;
         const engineEnd = patcherIndex === -1 ? tailIndex : patcherIndex;
         const engineSource = __PATCHER_SOURCE__.slice(0, engineEnd);
         const factory = new Function(`${engineSource}\nreturn applyRuntimePatchesToBody;`);
@@ -1188,7 +1227,52 @@ function applyRuntimePatchesToResponseBody(resourcePath, body) {
     return runtimePatchBodyFunction(resourcePath, body);
 }
 function isRuntimeJavaScriptResource(resourceUrl) {
-    return /^app:\/\/.*\/webview\/assets\/[^/?#]+\.js(?:[?#].*)?$/.test(resourceUrl);
+    return /^app:\/\/[^?#]+\/(?:webview\/)?assets\/[^/?#]+\.js(?:[?#].*)?$/.test(resourceUrl);
+}
+function runRuntimeUrlSelfTest() {
+    const acceptedUrls = [
+        "app://-/assets/index-DxnGmFpS.js",
+        "app://-/assets/index-DxnGmFpS.js?v=1",
+        "app://-/webview/assets/index.js",
+        "app://codex.local/webview/assets/chunk.js#hash",
+    ];
+    const rejectedUrls = [
+        "app://-/index.html",
+        "app://-/assets/style.css",
+        "https://example.com/assets/index.js",
+        "app://-/assets/nested/index.js",
+    ];
+    for (const url of acceptedUrls) {
+        if (!isRuntimeJavaScriptResource(url)) {
+            printLine(`Runtime URL self-test failed: expected accepted ${url}`);
+            return 1;
+        }
+    }
+    for (const url of rejectedUrls) {
+        if (isRuntimeJavaScriptResource(url)) {
+            printLine(`Runtime URL self-test failed: expected rejected ${url}`);
+            return 1;
+        }
+    }
+    printLine("Runtime URL self-test passed");
+    return 0;
+}
+function runRuntimePatchBodySelfTest() {
+    const body = "function dP(){return lP().info(`browser-use native pipe peer authorization enabled`,{safe:{mode:a?`dev`:`packaged`},sensitive:{}}),e=>{let t=fP(e);return t==null?{authorized:!1,reason:`missing-socket-file-descriptor`}:s.authorizeSocketPeer(t,a)}}";
+    let result;
+    try {
+        result = applyRuntimePatchesToResponseBody("app://-/assets/browser-use-native-pipe-Demo.js", body);
+    }
+    catch (error) {
+        printLine(`Runtime patch body self-test failed: ${asError(error).message}`);
+        return 1;
+    }
+    if (!result.content.includes("codexfast-browser-peer-auth") || !result.patchedLabels.includes("Browser-use native pipe peer auth")) {
+        printLine("Runtime patch body self-test failed");
+        return 1;
+    }
+    printLine("Runtime patch body self-test passed");
+    return 0;
 }
 function responseHeadersForFulfill(headers) {
     const forwarded = [];
@@ -1212,15 +1296,18 @@ async function handleFetchRequestPaused(cdp, params) {
         await continueFetchRequest(cdp, params.requestId);
         return [];
     }
+    debugRuntime(`paused ${resourceUrl}`);
     let bodyResult;
     try {
         bodyResult = await cdp.send("Fetch.getResponseBody", { requestId: params.requestId });
     }
     catch {
+        debugRuntime(`getResponseBody failed ${resourceUrl}`);
         await continueFetchRequest(cdp, params.requestId);
         return [];
     }
     if (typeof bodyResult.body !== "string") {
+        debugRuntime(`missing body ${resourceUrl}`);
         await continueFetchRequest(cdp, params.requestId);
         return [];
     }
@@ -1229,11 +1316,15 @@ async function handleFetchRequestPaused(cdp, params) {
     try {
         patchResult = applyRuntimePatchesToResponseBody(resourceUrl, body);
     }
-    catch {
+    catch (error) {
+        debugRuntime(`patch failed ${resourceUrl}: ${asError(error).message}`);
         await continueFetchRequest(cdp, params.requestId);
         return [];
     }
     const labels = [...patchResult.patchedLabels, ...patchResult.alreadyPatchedLabels];
+    if (patchResult.matchedLabels.length > 0) {
+        debugRuntime(`matched ${resourceUrl}: ${patchResult.matchedLabels.join(", ")}`);
+    }
     if (patchResult.content === body) {
         await continueFetchRequest(cdp, params.requestId);
         return labels;
@@ -1261,6 +1352,7 @@ async function waitForRuntimePatchConnection(debugPort) {
         try {
             const target = await findDebuggableRendererTarget(debugPort);
             if (target?.webSocketDebuggerUrl) {
+                debugRuntime(`connecting target type=${target.type} url=${target.url}`);
                 debuggerResponded = true;
                 rendererTargetFound = true;
                 try {
@@ -1292,6 +1384,23 @@ async function runRuntimePatchSession(debugPort) {
     let settleTimer = null;
     let failSession = () => undefined;
     try {
+        const waitForInitialPageLoad = new Promise((resolve) => {
+            let settled = false;
+            let timeout = null;
+            const resolveOnce = () => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                if (timeout) {
+                    clearTimeout(timeout);
+                }
+                resolve();
+            };
+            timeout = setTimeout(resolveOnce, runtimePatchInitialLoadSettleMs);
+            cdp.on("Page.loadEventFired", resolveOnce);
+            cdp.on("Page.frameStoppedLoading", resolveOnce);
+        });
         const session = new Promise((resolve, reject) => {
             let timeout = null;
             let completed = false;
@@ -1370,16 +1479,25 @@ async function runRuntimePatchSession(debugPort) {
         });
         void session.catch(() => undefined);
         try {
+            await cdp.send("Page.enable");
+            debugRuntime("Page.enable ok");
+            await waitForInitialPageLoad;
+            debugRuntime("initial page load settled");
             await cdp.send("Fetch.enable", {
                 patterns: [
+                    {
+                        urlPattern: "app://*/assets/*.js",
+                        requestStage: "Response",
+                    },
                     {
                         urlPattern: "app://*/webview/assets/*.js",
                         requestStage: "Response",
                     },
                 ],
             });
-            await cdp.send("Page.enable");
+            debugRuntime("Fetch.enable ok");
             await cdp.send("Page.reload", { ignoreCache: true });
+            debugRuntime("Page.reload ok");
         }
         catch (error) {
             failSession(asError(error));
@@ -1668,6 +1786,12 @@ async function main() {
     const command = args[0] ?? "";
     if (command === "__selftest-cdp-frame") {
         return runCdpFrameSelfTest();
+    }
+    if (command === "__selftest-runtime-url") {
+        return runRuntimeUrlSelfTest();
+    }
+    if (command === "__selftest-runtime-patch-body") {
+        return runRuntimePatchBodySelfTest();
     }
     if (command === "-h" || command === "--help" || command === "help") {
         printUsage();

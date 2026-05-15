@@ -10,7 +10,9 @@ Use these checks when validating `launch` behavior. Do not mark a build as real-
 
 - `npx codexfast launch` starts Codex when Codex is not already running
 - The launched session opens with runtime patches active
+- The launch output reports the expected patched target labels for the current build
 - `app.asar`, `Info.plist`, and the app code signature are unchanged after launch exits
+- If launch fails, the app signature and `app.asar` are still unchanged and no Codex main process is left running
 - Launch reports a clear failure when `Codex.app` is already running
 - Launch is blocked when the detected version/build is unsupported
 
