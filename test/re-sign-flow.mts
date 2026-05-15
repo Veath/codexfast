@@ -549,6 +549,7 @@ function main(): void {
       assertContains(output, "Status: Plugin detail access enabled", "expected 26.513 build 2816 status to report Plugin detail access after apply", output);
       assertContains(output, "Status: Plugin install availability enabled", "expected 26.513 build 2816 status to report Plugin install availability after apply", output);
       assertContains(output, "Status: Plugin install modal content enabled", "expected 26.513 build 2816 status to report Plugin install modal content after apply", output);
+      assertContains(output, "Status: Composer plugin mentions enabled", "expected 26.513 build 2816 status to report Composer plugin mentions after apply", output);
       assertNotContains(output, "Target file:", "expected 26.513 build 2816 status to omit internal target paths", output);
       assertNotContains(output, "Backup file:", "expected 26.513 build 2816 status to omit internal backup paths", output);
       assertNotContains(output, "GPT-5.5 model", "expected 26.513 build 2816 status to omit unpatched GPT-5.5 compatibility targets", output);

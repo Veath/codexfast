@@ -7,6 +7,7 @@ const PLUGINS_PAGE_CONTENT_NEEDLE = "skills.pluginsAuthBlockedToast.title";
 const PLUGIN_DETAIL_AUTH_NEEDLE = "pluginDeepLinkAuthBlocked";
 const PLUGIN_INSTALL_AVAILABILITY_NEEDLE = "plugins.install.connectorUnavailable";
 const PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE = "plugins.installModal.about";
+const COMPOSER_PLUGIN_MENTIONS_NEEDLE = "composer.atMentionList.pluginsLoading";
 const MODEL_LIST_NEEDLE = "\"list-models-for-host\"";
 const MODEL_QUERY_NEEDLE = "modelsByType";
 export const GPT_55_OFFICIAL_MODEL_LIST_MIN_VERSION = "26.422.30944";
@@ -96,6 +97,10 @@ const PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE =
   /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)=\(([A-Za-z_$][\w$]*)\?\.apps\.length\?\?0\)>0&&\5\?\.summary\.authPolicy===`ON_INSTALL`,([A-Za-z_$][\w$]*);/;
 const PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE =
   /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)=\(([A-Za-z_$][\w$]*)\?\.apps\.length\?\?0\)>0&&!1,([A-Za-z_$][\w$]*);/;
+const COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE =
+  /(additionalMarketplaceKinds:)\[`shared-with-me`\]/;
+const COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE =
+  /(additionalMarketplaceKinds:)\[\]/;
 const MODEL_LIST_GUARDED_SIGNATURE =
   /("list-models-for-host":i9\()\(([A-Za-z_$][\w$]*),\{hostId:([A-Za-z_$][\w$]*),\.\.\.([A-Za-z_$][\w$]*)\}\)=>\2\.sendRequest\(`model\/list`,\4\)(\))/;
 const MODEL_LIST_PATCHED_SIGNATURE =
@@ -399,6 +404,16 @@ export const TARGET_SPECS: TargetSpec[] = [
     legacyPatchedSignature: null,
     applyReplacement: "$1$2=$3,$4=($5?.apps.length??0)>0&&!1,$6;",
     restoreReplacement: "$1$2=$3,$4=($5?.apps.length??0)>0&&$5?.summary.authPolicy===`ON_INSTALL`,$6;",
+  },
+  {
+    id: "composer-plugin-mentions-26513",
+    label: "Composer plugin mentions",
+    needle: COMPOSER_PLUGIN_MENTIONS_NEEDLE,
+    guardedSignature: COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE,
+    patchedSignature: COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: "$1[]",
+    restoreReplacement: "$1[`shared-with-me`]",
   },
   {
     id: "gpt55-model-list",

@@ -33,7 +33,9 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 - Exposes the `Plugins` sidebar/page access path for custom API users on supported builds.
 - This removes the relevant auth-method gates for API-key users. On newer builds this includes the sidebar entry, the `/skills` Plugins page content gate, plugin detail deep-link redirects, the aggregate connector-unavailable install block, and the install-modal disclosure-only content gate when present.
+- On `26.513.20950`, this also keeps the composer `@` plugin mention list from requesting the remote `shared-with-me` plugin catalog, so local and already available plugin mentions can load under API-key auth.
 - This does not guarantee that every plugin or connector flow is available. Plugin state, connector runtime behavior, or admin-side restrictions may still block a specific plugin.
+- This does not unlock the remote ChatGPT shared plugin marketplace; that catalog still requires ChatGPT authentication.
 
 ### GPT-5.5 model-list entry for custom API users
 

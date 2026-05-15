@@ -200,6 +200,9 @@ export function assertApplyState26513Build2816(archivePath: string): void {
   const pluginInstallFlow = archiveFile(archivePath, "webview/assets/plugins-availability-Ch97MI4l.js");
   assertContains(pluginInstallFlow, "g=(u?.apps.length??0)>0&&!1,_", "expected 26.513 build 2816 apply to keep plugin install modal information visible for ON_INSTALL app plugins");
   assertNotContains(pluginInstallFlow, "g=(u?.apps.length??0)>0&&u?.summary.authPolicy===`ON_INSTALL`,_", "expected 26.513 build 2816 apply to remove the disclosure-only install modal content gate");
+  const prosemirror = archiveFile(archivePath, "webview/assets/prosemirror-DbRBBq50.js");
+  assertContains(prosemirror, "additionalMarketplaceKinds:[]", "expected 26.513 build 2816 apply to skip remote shared-with-me plugin mentions");
+  assertNotContains(prosemirror, "additionalMarketplaceKinds:[`shared-with-me`]", "expected 26.513 build 2816 apply to remove the remote shared-with-me plugin mention catalog");
   assertNotContains(appMain, "codexfast-gpt55", "expected 26.513 build 2816 apply to leave the model list handler on the official path");
 }
 
@@ -223,6 +226,9 @@ export function assertGuardedState26513Build2816(archivePath: string, context: s
   const pluginInstallFlow = archiveFile(archivePath, "webview/assets/plugins-availability-Ch97MI4l.js");
   assertContains(pluginInstallFlow, "g=(u?.apps.length??0)>0&&u?.summary.authPolicy===`ON_INSTALL`,_", `expected ${context} to preserve the 26.513 disclosure-only install modal content gate`);
   assertNotContains(pluginInstallFlow, "g=(u?.apps.length??0)>0&&!1,_", `expected ${context} to restore the 26.513 install modal content gate`);
+  const prosemirror = archiveFile(archivePath, "webview/assets/prosemirror-DbRBBq50.js");
+  assertContains(prosemirror, "additionalMarketplaceKinds:[`shared-with-me`]", `expected ${context} to preserve the 26.513 remote shared-with-me plugin mention catalog`);
+  assertNotContains(prosemirror, "additionalMarketplaceKinds:[]", `expected ${context} to restore the 26.513 plugin mention catalog options`);
   assertNotContains(appMain, "codexfast-gpt55", `expected ${context} not to add GPT-5.5 model list injection`);
 }
 
