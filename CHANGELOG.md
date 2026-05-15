@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.15.1] - 2026-05-15
+
 ### Fixed
 
 - Fixed the `26.513.20950` composer `@` plugin mention list getting stuck on the remote `shared-with-me` plugin catalog under API-key auth, while preserving local and already available plugin results.
