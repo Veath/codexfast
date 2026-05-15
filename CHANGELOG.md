@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-05-15
+
 ### Added
 
 - Added a browser-use native pipe peer-auth compatibility target that only allows `missing-code-signing-identity` and reports `Browser-use native pipe peer auth` independently in runtime launch output and internal target checks.
