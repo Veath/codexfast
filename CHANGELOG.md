@@ -6,6 +6,14 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added a browser-use native pipe peer-auth compatibility target that only allows `missing-code-signing-identity` after local ad-hoc signing, and reports `Browser-use native pipe peer auth` independently in status output.
+
+### Changed
+
+- Restore now prints the current-version official Codex.app download URL after a successful restore so users can choose whether to reinstall and recover the OpenAI Developer ID signature.
+
 ## [0.15.1] - 2026-05-15
 
 ### Fixed

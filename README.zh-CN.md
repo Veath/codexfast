@@ -11,6 +11,7 @@
 - **Speed 子菜单**（composer 中）
 - **GPT-5.5** 模型列表兼容（仅在受支持版本仍需要时）
 - **Plugins 入口**（custom API 用户可用）
+- **Browser-use native pipe 兼容**（本地 ad-hoc 签名后的 app）
 
 ```bash
 npx codexfast
@@ -42,6 +43,8 @@ npx codexfast
 替换归档前，脚本会保留恢复路径：`app.asar1` 归档级备份，以及重新打包 bundle 内的 `*.codexfast.bak` 文件级备份。重新打包后，它会更新 `Info.plist` 里的 Electron ASAR integrity hash。由于修改 `app.asar` 会让原始代码签名失效，脚本随后会执行本地 ad-hoc `codesign`，让 macOS 可以启动被修改后的 app。这个本地签名可以通过 `codesign` 校验，但会替换原厂 notarization，因此屏幕录制等 macOS 隐私权限可能需要重新授权。Restore 会按顺序优先使用归档备份，其次使用文件备份，最后再尝试内联恢复规则。
 
 对于已经打过补丁的 `26.506.31421`（`build 2620`），`apply` 和 watcher 的 `repair` 还会备份 `SUPublicEDKey`，并更新为 `26.513.20950`（`build 2816`）使用的 public EdDSA key。这样在本地 ad-hoc 重签名之后，Sparkle 的软件内更新校验路径仍然可用。恢复时如果存在备份，会把原 key 写回去。
+
+对于 browser-use / `@chrome` 通信，受支持 build 还包含一个窄范围 native pipe peer-auth 兼容补丁。它会包一层本地 `authorizeSocketPeer` 结果，只把本地 ad-hoc 签名导致的 `missing-code-signing-identity` 拒绝改成通过；其他 native pipe peer-auth 失败仍然保持拒绝。这个补丁会降低本地 native pipe peer 校验在这一类兼容原因上的强度，但它不等价于恢复 OpenAI Developer ID 官方签名。
 
 ## 使用方式
 
@@ -104,12 +107,15 @@ q) Quit
 - composer 里的 Speed 菜单
 - 必要版本上的 GPT-5.5 模型列表兼容
 - custom API 用户的 Plugins 入口
+- 本地 ad-hoc 签名 app 的 browser-use native pipe peer-auth 兼容
 
 第一次开启时脚本会创建备份，更新 `app.asar`，刷新 Electron ASAR integrity hash，并执行本地 ad-hoc 重签名。由于重签名会改变 macOS 隐私权限识别应用时使用的身份，apply 会重置 `Codex.app` 的屏幕录制权限记录。脚本完成后重启 `Codex.app`，并在 macOS 提示时允许“屏幕与系统音频录制”。
 
 ### 关闭或恢复
 
 选择 **3) Restore original state** 可以关闭补丁。恢复流程会先移除已安装的 auto-repair watcher，再优先把 `Codex.app` 回滚到备份的原始 vendor bundle，必要时重新签名。恢复成功并重签名后，脚本也会重置 `Codex.app` 的屏幕录制权限记录，让 macOS 在下次启动时重新询问。
+
+Restore 会保持当前这套回滚行为，并且仍然做本地重签名；它不能自行恢复 OpenAI Developer ID 官方签名。恢复成功后，脚本会打印当前版本的官方下载 URL，用户可以自行决定是否手动重新安装官方 app。
 
 排查问题、测试新的 Codex 更新，或想回到官方原始行为时，都可以先执行恢复。如果恢复后还想继续自动修复，请再显式安装 watcher。
 

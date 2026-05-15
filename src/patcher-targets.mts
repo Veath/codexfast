@@ -8,6 +8,7 @@ const PLUGIN_DETAIL_AUTH_NEEDLE = "pluginDeepLinkAuthBlocked";
 const PLUGIN_INSTALL_AVAILABILITY_NEEDLE = "plugins.install.connectorUnavailable";
 const PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE = "plugins.installModal.about";
 const COMPOSER_PLUGIN_MENTIONS_NEEDLE = "composer.atMentionList.pluginsLoading";
+const BROWSER_USE_NATIVE_PIPE_PEER_AUTH_NEEDLE = "browser-use native pipe peer authorization enabled";
 const MODEL_LIST_NEEDLE = "\"list-models-for-host\"";
 const MODEL_QUERY_NEEDLE = "modelsByType";
 export const GPT_55_OFFICIAL_MODEL_LIST_MIN_VERSION = "26.422.30944";
@@ -101,6 +102,10 @@ const COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE =
   /(additionalMarketplaceKinds:)\[`shared-with-me`\]/;
 const COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE =
   /(additionalMarketplaceKinds:)\[\]/;
+const BROWSER_USE_NATIVE_PIPE_PEER_AUTH_GUARDED_SIGNATURE =
+  /(return ([A-Za-z_$][\w$]*)==null\?\{authorized:!1,reason:`missing-socket-file-descriptor`\}:)([A-Za-z_$][\w$]*)\.authorizeSocketPeer\(\2,([A-Za-z_$][\w$]*)\)/;
+const BROWSER_USE_NATIVE_PIPE_PEER_AUTH_PATCHED_SIGNATURE =
+  /(return ([A-Za-z_$][\w$]*)==null\?\{authorized:!1,reason:`missing-socket-file-descriptor`\}:)\/\*codexfast-browser-peer-auth\*\/\(\(\)=>\{let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.authorizeSocketPeer\(\2,([A-Za-z_$][\w$]*)\);return \3\.reason===`missing-code-signing-identity`\?\{authorized:!0\}:\3\}\)\(\)/;
 const MODEL_LIST_GUARDED_SIGNATURE =
   /("list-models-for-host":i9\()\(([A-Za-z_$][\w$]*),\{hostId:([A-Za-z_$][\w$]*),\.\.\.([A-Za-z_$][\w$]*)\}\)=>\2\.sendRequest\(`model\/list`,\4\)(\))/;
 const MODEL_LIST_PATCHED_SIGNATURE =
@@ -198,6 +203,27 @@ function restorePluginsSidebar26506Qo(
   delimiter: string,
 ): string {
   return `${prefix}${pluginsExperimentVariable}=Qo(\`533078438\`),${authGateVariable}=Xc(${authMethodVariable}),${disabledPluginsVariable}=${desktopNavVariable}&&${pluginsExperimentVariable}&&${authGateVariable},${between}${pluginsLabelVariable}=${desktopNavVariable}&&${pluginsEnabledVariable}&&!${authGateVariable}${delimiter}`;
+}
+
+function applyBrowserUseNativePipePeerAuth(
+  _match: string,
+  prefix: string,
+  socketPeerVariable: string,
+  authorizerVariable: string,
+  devModeVariable: string,
+): string {
+  return `${prefix}/*codexfast-browser-peer-auth*/(()=>{let r=${authorizerVariable}.authorizeSocketPeer(${socketPeerVariable},${devModeVariable});return r.reason===\`missing-code-signing-identity\`?{authorized:!0}:r})()`;
+}
+
+function restoreBrowserUseNativePipePeerAuth(
+  _match: string,
+  prefix: string,
+  socketPeerVariable: string,
+  _resultVariable: string,
+  authorizerVariable: string,
+  devModeVariable: string,
+): string {
+  return `${prefix}${authorizerVariable}.authorizeSocketPeer(${socketPeerVariable},${devModeVariable})`;
 }
 
 export const TARGET_SPECS: TargetSpec[] = [
@@ -414,6 +440,16 @@ export const TARGET_SPECS: TargetSpec[] = [
     legacyPatchedSignature: null,
     applyReplacement: "$1[]",
     restoreReplacement: "$1[`shared-with-me`]",
+  },
+  {
+    id: "browser-use-native-pipe-peer-auth",
+    label: "Browser-use native pipe peer auth",
+    needle: BROWSER_USE_NATIVE_PIPE_PEER_AUTH_NEEDLE,
+    guardedSignature: BROWSER_USE_NATIVE_PIPE_PEER_AUTH_GUARDED_SIGNATURE,
+    patchedSignature: BROWSER_USE_NATIVE_PIPE_PEER_AUTH_PATCHED_SIGNATURE,
+    legacyPatchedSignature: null,
+    applyReplacement: applyBrowserUseNativePipePeerAuth,
+    restoreReplacement: restoreBrowserUseNativePipePeerAuth,
   },
   {
     id: "gpt55-model-list",

@@ -37,6 +37,13 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - This does not guarantee that every plugin or connector flow is available. Plugin state, connector runtime behavior, or admin-side restrictions may still block a specific plugin.
 - This does not unlock the remote ChatGPT shared plugin marketplace; that catalog still requires ChatGPT authentication.
 
+### Browser-use native pipe peer-auth compatibility
+
+- Allows the browser-use native pipe to keep working after `codexfast` replaces the vendor code signature with a local ad-hoc signature.
+- The patch only maps the `missing-code-signing-identity` peer-auth rejection to an authorized result. Other native pipe peer-auth failures remain rejected.
+- This lowers the local native pipe peer verification strength for that one compatibility reason. It does not restore the OpenAI Developer ID signature.
+- `status` reports this target separately as `Browser-use native pipe peer auth`.
+
 ### GPT-5.5 model-list entry for custom API users
 
 - Exposes `GPT-5.5` in the app model list on supported builds when the bundled model catalog does not include it.
@@ -49,5 +56,6 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 - `Settings-side Fast control`, composer `/fast`, and the composer-side `Speed` menu should be treated as one combined Fast feature set.
 - `Plugins` support should not be described as available unless the sidebar/page gates still work cleanly on the target build.
+- Browser-use native pipe compatibility should not be described as disabling peer auth entirely. It only handles `missing-code-signing-identity`.
 - `GPT-5.5` model-list support should not be described as provider support. It is only a UI catalog entry.
 - Compatibility claims must also match `docs/compatibility-matrix.md` and the strict whitelist in `src/supported-app-versions.mts`.

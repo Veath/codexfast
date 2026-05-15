@@ -45,6 +45,33 @@ Check:
 - Plugin package state
 - Admin-side or upstream restrictions
 
+## `@chrome` reports `Browser is not available: extension`
+
+Likely cause after running `codexfast apply`:
+
+- `codexfast` modifies `app.asar` and then ad-hoc re-signs `Codex.app`.
+- That local signature replaces the OpenAI Developer ID identity.
+- The browser-use native pipe can reject the local socket peer with `missing-code-signing-identity`.
+
+Expected boundary:
+
+- Current `codexfast` includes a narrow compatibility target named `Browser-use native pipe peer auth`.
+- The patch only allows the `missing-code-signing-identity` peer-auth rejection caused by local ad-hoc signing.
+- It does not disable every native pipe peer check, and other peer-auth failures remain rejected.
+- This lowers local native pipe peer verification strength for that one compatibility reason. It is not equivalent to restoring the official OpenAI Developer ID signature.
+
+Check:
+
+- Run `npx codexfast status`.
+- Confirm the output includes `Status: Browser-use native pipe peer auth enabled`.
+- Fully quit and reopen both `Codex.app` and Chrome after applying the patch.
+
+Recovery:
+
+- Run `npx codexfast restore` to remove the compatibility wrapper and restore the backed-up app archive or inline target shape.
+- Restore still re-signs locally; it cannot recover the official OpenAI Developer ID signature by itself.
+- After successful restore, `codexfast` prints the current-version official download URL. Reinstall from that URL if you want to recover the official signature.
+
 ## `Compatibility: unsupported`
 
 Meaning:

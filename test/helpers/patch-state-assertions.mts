@@ -203,6 +203,10 @@ export function assertApplyState26513Build2816(archivePath: string): void {
   const prosemirror = archiveFile(archivePath, "webview/assets/prosemirror-DbRBBq50.js");
   assertContains(prosemirror, "additionalMarketplaceKinds:[]", "expected 26.513 build 2816 apply to skip remote shared-with-me plugin mentions");
   assertNotContains(prosemirror, "additionalMarketplaceKinds:[`shared-with-me`]", "expected 26.513 build 2816 apply to remove the remote shared-with-me plugin mention catalog");
+  const nativePipe = archiveFile(archivePath, "webview/assets/browser-use-native-pipe-Demo.js");
+  assertContains(nativePipe, "codexfast-browser-peer-auth", "expected 26.513 build 2816 apply to mark the browser-use native pipe peer auth compatibility patch");
+  assertContains(nativePipe, "r.reason===`missing-code-signing-identity`?{authorized:!0}:r", "expected 26.513 build 2816 apply to allow only missing-code-signing-identity peer auth failures");
+  assertNotContains(nativePipe, ":s.authorizeSocketPeer(t,a)", "expected 26.513 build 2816 apply to wrap the original native pipe peer auth result");
   assertNotContains(appMain, "codexfast-gpt55", "expected 26.513 build 2816 apply to leave the model list handler on the official path");
 }
 
@@ -229,6 +233,9 @@ export function assertGuardedState26513Build2816(archivePath: string, context: s
   const prosemirror = archiveFile(archivePath, "webview/assets/prosemirror-DbRBBq50.js");
   assertContains(prosemirror, "additionalMarketplaceKinds:[`shared-with-me`]", `expected ${context} to preserve the 26.513 remote shared-with-me plugin mention catalog`);
   assertNotContains(prosemirror, "additionalMarketplaceKinds:[]", `expected ${context} to restore the 26.513 plugin mention catalog options`);
+  const nativePipe = archiveFile(archivePath, "webview/assets/browser-use-native-pipe-Demo.js");
+  assertContains(nativePipe, "return t==null?{authorized:!1,reason:`missing-socket-file-descriptor`}:s.authorizeSocketPeer(t,a)", `expected ${context} to preserve the guarded browser-use native pipe peer auth state`);
+  assertNotContains(nativePipe, "codexfast-browser-peer-auth", `expected ${context} to restore the browser-use native pipe peer auth wrapper`);
   assertNotContains(appMain, "codexfast-gpt55", `expected ${context} not to add GPT-5.5 model list injection`);
 }
 

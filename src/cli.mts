@@ -510,6 +510,26 @@ function printManualResignGuidance(): void {
   printLine("If verification still fails, run Restore original app or reinstall Codex.app.");
 }
 
+function officialCodexDownloadUrl(): string | null {
+  if (!appVersion || appVersion === "unknown") {
+    return null;
+  }
+  return `https://persistent.oaistatic.com/codex-app-prod/Codex-darwin-arm64-${appVersion}.zip`;
+}
+
+function printOfficialReinstallGuidanceAfterRestore(): void {
+  printLine("");
+  printLine("Official signature recovery:");
+  printLine("  Restore keeps the existing codexfast rollback behavior and re-signs locally.");
+  printLine("  To recover the OpenAI Developer ID signature, reinstall the official Codex.app build manually.");
+  const downloadUrl = officialCodexDownloadUrl();
+  if (downloadUrl) {
+    printLine(`  Current-version download: ${downloadUrl}`);
+  } else {
+    printLine("  Appcast: https://persistent.oaistatic.com/codex-app-prod/appcast.xml");
+  }
+}
+
 function resignAppBundle(reason: string): boolean {
   printLine(reason);
   printLine("Running local ad-hoc re-sign...");
@@ -729,6 +749,9 @@ function runEmbeddedTool(action: string): number {
 
   if (action === "restore" && existsSync(appAsarBackup)) {
     exitCode = restoreFromArchiveBackup() ? 0 : 1;
+    if (exitCode === 0) {
+      printOfficialReinstallGuidanceAfterRestore();
+    }
     printLine("");
     printLine(`Exit code: ${exitCode}`);
     return exitCode;
@@ -769,6 +792,9 @@ function runEmbeddedTool(action: string): number {
   }
 
   cleanupTempWorkspace();
+  if (action === "restore" && exitCode === 0) {
+    printOfficialReinstallGuidanceAfterRestore();
+  }
   printLine("");
   printLine(`Exit code: ${exitCode}`);
   return exitCode;

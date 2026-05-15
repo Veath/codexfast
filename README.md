@@ -11,6 +11,7 @@
 - **Speed submenu** in the composer
 - **GPT-5.5** model-list compatibility for custom-API users where the supported build still needs it
 - **Plugins access** for custom-API users
+- **Browser-use native pipe compatibility** for locally ad-hoc signed apps
 
 ```bash
 npx codexfast
@@ -41,6 +42,8 @@ The unpack/repack step is required because Codex ships its renderer code inside 
 Before replacing the archive, it keeps recovery paths: an archive backup at `app.asar1` plus file-level `*.codexfast.bak` backups inside the repacked bundle. After repacking, it updates Electron's ASAR integrity hash in `Info.plist`. Because changing `app.asar` invalidates the app's original code signature, it then performs a local ad-hoc `codesign` so macOS can launch the modified app. This local signature passes `codesign` verification, but it replaces the vendor notarization, so macOS privacy permissions such as screen recording may need to be granted again. Restore reverses this by preferring the archive backup, then file backups, then inline restore rules.
 
 For patched `26.506.31421` (`build 2620`) installs, `apply` and watcher `repair` also back up `SUPublicEDKey` and update it to the public EdDSA key used by `26.513.20950` (`build 2816`). This preserves Sparkle's in-app update validation path after the app has been locally ad-hoc signed. Restore puts the original key back when the backup is present.
+
+For browser-use / `@chrome` communication, supported builds also include a narrow native pipe peer-auth compatibility patch. It wraps the local `authorizeSocketPeer` result and only maps the `missing-code-signing-identity` rejection caused by local ad-hoc signing to an authorized result. Other native pipe peer-auth failures remain rejected. This lowers the local native pipe peer verification strength for that one compatibility reason; it is not equivalent to restoring OpenAI's Developer ID signature.
 
 ## Usage
 
@@ -103,12 +106,15 @@ Choose **2) Enable custom API features** when status reports a supported build. 
 - Speed menu in the composer
 - GPT-5.5 in the model list where the supported build still needs the compatibility patch
 - Plugins access for custom-API users
+- Browser-use native pipe peer-auth compatibility for locally ad-hoc signed apps
 
 The first enable run creates backups, updates `app.asar`, refreshes the Electron ASAR integrity hash, and runs an ad-hoc re-sign. Because re-signing changes the app identity used by macOS privacy checks, apply resets the `Codex.app` screen-recording permission record. Restart `Codex.app` after the script finishes and allow Screen & System Audio Recording when macOS asks.
 
 ### Disable or Restore
 
 Choose **3) Restore original state** to turn the patch off. Restore first removes the auto-repair watcher if it is installed, then rolls `Codex.app` back to the vendor bundle when the archive backup is available and re-signs if needed. After a successful restore re-sign, the script also resets the `Codex.app` screen-recording permission record so macOS asks for a fresh decision on next launch.
+
+Restore keeps this rollback behavior and still re-signs locally. It cannot recover the official OpenAI Developer ID signature by itself. After a successful restore, the script prints the current-version official download URL so you can choose whether to reinstall the official app manually.
 
 Use restore before troubleshooting, before testing a fresh Codex update, or whenever you want to return to the original app behavior. If you want auto-repair again after restoring, reinstall the watcher explicitly.
 

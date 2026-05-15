@@ -30,6 +30,12 @@ Run these checks after any meaningful bundle change, patch-signature update, or 
 - On builds with install-modal content gates, the install modal shows basic plugin details such as About, Includes, or Capabilities instead of an empty information card
 - At least one plugin install or connect path is not blocked solely by `authMethod === "apikey"` or another patched custom-API gate
 
+## Browser-use Native Pipe
+
+- `status` reports `Browser-use native pipe peer auth enabled` after apply on builds that contain this target
+- `@chrome` / browser-use no longer fails only because the native pipe peer was rejected with `missing-code-signing-identity`
+- Other native pipe peer-auth failures are still rejected
+
 ## Model List
 
 - `GPT-5.5` appears in the app model picker for custom API users
