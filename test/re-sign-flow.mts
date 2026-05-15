@@ -228,7 +228,7 @@ function runApplyRestoreCase(caseConfig: {
   const restoreOutput = join(tmpDir, `${caseConfig.name}-restore.txt`);
   prepareArchivedFakeApp(caseConfig.appDir, caseConfig.assetsRoot, caseConfig.appVersion, caseConfig.appBuild, caseConfig.assetProfile);
 
-  runScript(caseConfig.appDir, "2\n\nq\n", applyOutput);
+  runScript(caseConfig.appDir, "3\n\nq\n", applyOutput);
   assertNpmCallContains("--package @electron/asar@3.4.1", applyOutput);
   assertCodesignCalls(1, applyOutput);
   assertTccutilCallContains("reset ScreenCapture com.openai.codex", applyOutput);
@@ -241,12 +241,12 @@ function runApplyRestoreCase(caseConfig: {
   resetNativeToolCalls();
 
   if (caseConfig.statusAssert) {
-    runScript(caseConfig.appDir, "1\n\nq\n", statusOutput);
+    runScript(caseConfig.appDir, "2\n\nq\n", statusOutput);
     assertNoPatcherInternalPaths(readOutput(statusOutput), `${caseConfig.name} status output`);
     caseConfig.statusAssert(readOutput(statusOutput));
   }
 
-  runScript(caseConfig.appDir, "3\n\nq\n", restoreOutput);
+  runScript(caseConfig.appDir, "4\n\nq\n", restoreOutput);
   assertCodesignCalls(1, restoreOutput);
   assertTccutilCallContains("reset ScreenCapture com.openai.codex", restoreOutput);
   assertContains(readOutput(restoreOutput), "Reset macOS screen recording permission for com.openai.codex.", "expected restore to report TCC reset", readOutput(restoreOutput));
@@ -277,10 +277,20 @@ function main(): void {
   runScriptCommand(join(tmpDir, "MissingForHelp.app"), ["help"], helpOutput);
   assertContains(readOutput(helpOutput), `codexfast ${packageVersion}`, "expected help to print the current package version", readOutput(helpOutput));
   assertContains(readOutput(helpOutput), "Commands:", "expected help to list commands", readOutput(helpOutput));
+  assertContains(readOutput(helpOutput), "launch             Launch Codex with runtime patches (recommended)", "expected help to recommend runtime launch mode", readOutput(helpOutput));
+  assertContains(readOutput(helpOutput), "apply              Apply legacy bundle patches (fallback)", "expected help to label apply as legacy fallback", readOutput(helpOutput));
+  assertContains(readOutput(helpOutput), "restore            Restore legacy bundle patch backups", "expected help to label restore as legacy bundle restore", readOutput(helpOutput));
   assertContains(readOutput(helpOutput), "install-watcher", "expected help to include watcher install command", readOutput(helpOutput));
   assertContains(readOutput(helpOutput), "version", "expected help to include version command", readOutput(helpOutput));
   assertNotContains(readOutput(helpOutput), "--quiet", "expected help not to advertise the legacy quiet marker", readOutput(helpOutput));
   assertNotContains(readOutput(helpOutput), "__selftest-cdp-frame", "expected help not to list the hidden CDP self-test command", readOutput(helpOutput));
+
+  const menuOutput = join(tmpDir, "menu-output.txt");
+  prepareArchivedFakeApp(join(tmpDir, "Menu.app"), join(tmpDir, "menu-assets"));
+  runScript(join(tmpDir, "Menu.app"), "q\n", menuOutput);
+  assertContains(readOutput(menuOutput), "1) Launch Codex with runtime patches (recommended)", "expected no-arg menu to recommend runtime launch mode", readOutput(menuOutput));
+  assertContains(readOutput(menuOutput), "3) Apply legacy bundle patches (fallback)", "expected no-arg menu to label apply as legacy fallback", readOutput(menuOutput));
+  assertContains(readOutput(menuOutput), "4) Restore legacy bundle patch backups", "expected no-arg menu to label restore as legacy bundle restore", readOutput(menuOutput));
 
   const versionOutput = join(tmpDir, "version-output.txt");
   runScriptCommand(join(tmpDir, "MissingForVersion.app"), ["version"], versionOutput);
@@ -399,7 +409,7 @@ function main(): void {
   const partial26417Resources = join(partial26417App, "Contents", "Resources");
   const partial26417Output = join(tmpDir, "apply-26417-partial-output.txt");
   prepareArchivedFakeApp(partial26417App, join(tmpDir, "supported-26417-partial-assets"), "26.417.41555", "1858", "26417-partial");
-  runScript(partial26417App, "2\n\nq\n", partial26417Output);
+  runScript(partial26417App, "3\n\nq\n", partial26417Output);
   assertCodesignCalls(1, partial26417Output);
   assertNoPersistentUnpackDir(partial26417Resources, partial26417Output);
   assertFakeAsarJsParses(join(partial26417Resources, "app.asar"));
@@ -798,12 +808,12 @@ function main(): void {
   const inlineResources = join(inlineApp, "Contents", "Resources");
   const inlineArchive = join(inlineResources, "app.asar");
   prepareArchivedFakeApp(inlineApp, join(tmpDir, "supported-26422-2080-inline-assets"), "26.422.21637", "2056", "26422");
-  runScript(inlineApp, "2\n\nq\n", join(tmpDir, "apply-26422-2080-inline-output.txt"));
+  runScript(inlineApp, "3\n\nq\n", join(tmpDir, "apply-26422-2080-inline-output.txt"));
   assertApplyState26422(inlineArchive);
   rmSync(join(inlineResources, "app.asar1"), { force: true });
   writeInfoPlist(inlineApp, readFakeAsarHeaderHash(inlineArchive), "26.422.30944", "2080");
   const inlineRestoreOutput = join(tmpDir, "restore-26422-2080-inline-output.txt");
-  runScript(inlineApp, "3\n\nq\n", inlineRestoreOutput);
+  runScript(inlineApp, "4\n\nq\n", inlineRestoreOutput);
   assertNoPersistentUnpackDir(inlineResources, inlineRestoreOutput);
   assertFakeAsarJsParses(inlineArchive);
   assertGuardedState26422(inlineArchive, "26.422 build 2080 inline restore from 0.5.2 state");
@@ -815,14 +825,14 @@ function main(): void {
   const legacyBackupOutput = join(tmpDir, "legacy-file-backup-restore-output.txt");
   const legacyBackupExtracted = join(tmpDir, "legacy-file-backup-extracted");
   prepareArchivedFakeApp(legacyBackupApp, join(tmpDir, "legacy-file-backup-assets"));
-  runScript(legacyBackupApp, "2\n\nq\n", join(tmpDir, "legacy-file-backup-apply-output.txt"));
+  runScript(legacyBackupApp, "3\n\nq\n", join(tmpDir, "legacy-file-backup-apply-output.txt"));
   assertApplyState(legacyBackupArchive);
   rmSync(join(legacyBackupResources, "app.asar1"), { force: true });
   extractFakeAsar(legacyBackupArchive, legacyBackupExtracted);
   renameBackupSuffixes(legacyBackupExtracted, ".codexfast.bak", ".speed-setting.bak");
   writeFakeAsar(legacyBackupExtracted, legacyBackupArchive);
   writeInfoPlist(legacyBackupApp, readFakeAsarHeaderHash(legacyBackupArchive));
-  runScript(legacyBackupApp, "3\n\nq\n", legacyBackupOutput);
+  runScript(legacyBackupApp, "4\n\nq\n", legacyBackupOutput);
   assertFakeAsarJsParses(legacyBackupArchive);
   assertGuardedState(legacyBackupArchive, "legacy file backup restore");
   assertContains(readOutput(legacyBackupOutput), "restored backup: Speed setting", "expected restore to use legacy file-level backup suffix", readOutput(legacyBackupOutput));
@@ -842,11 +852,11 @@ function main(): void {
   writeFileSync(legacyMixedIndexFile, legacyMixedOriginalIndex.replace("A=O&&k,", "A=!1,"));
   writeFakeAsar(legacyMixedBackupExtracted, legacyMixedBackupArchive);
   writeInfoPlist(legacyMixedBackupApp, readFakeAsarHeaderHash(legacyMixedBackupArchive), "26.422.21637", "2056");
-  runScript(legacyMixedBackupApp, "2\n\nq\n", legacyMixedApplyOutput);
+  runScript(legacyMixedBackupApp, "3\n\nq\n", legacyMixedApplyOutput);
   assertFakeAsarJsParses(legacyMixedBackupArchive);
   assertApplyState26422(legacyMixedBackupArchive);
   rmSync(join(legacyMixedBackupResources, "app.asar1"), { force: true });
-  runScript(legacyMixedBackupApp, "3\n\nq\n", legacyMixedRestoreOutput);
+  runScript(legacyMixedBackupApp, "4\n\nq\n", legacyMixedRestoreOutput);
   assertFakeAsarJsParses(legacyMixedBackupArchive);
   assertGuardedState26422(legacyMixedBackupArchive, "legacy mixed file backup restore");
   assertContains(readOutput(legacyMixedRestoreOutput), "restored backup: Fast slash command", "expected restore to use existing legacy file backup without seeding a polluted new backup", readOutput(legacyMixedRestoreOutput));
@@ -869,7 +879,7 @@ function main(): void {
   );
   writeFakeAsar(legacyInlineApplyExtracted, legacyInlineApplyArchive);
   writeInfoPlist(legacyInlineApplyApp, readFakeAsarHeaderHash(legacyInlineApplyArchive));
-  runScript(legacyInlineApplyApp, "2\n\nq\n", legacyInlineApplyOutput);
+  runScript(legacyInlineApplyApp, "3\n\nq\n", legacyInlineApplyOutput);
   assertNoPersistentUnpackDir(legacyInlineApplyResources, legacyInlineApplyOutput);
   assertFakeAsarJsParses(legacyInlineApplyArchive);
   assertApplyState(legacyInlineApplyArchive);
@@ -879,7 +889,7 @@ function main(): void {
   const futureGptSkipApp = join(tmpDir, "FutureGptSkip.app");
   const futureGptSkipOutput = join(tmpDir, "status-future-gpt-skip-output.txt");
   prepareArchivedFakeApp(futureGptSkipApp, join(tmpDir, "future-gpt-skip-assets"), "26.500.0", "9999", "26422");
-  runScript(futureGptSkipApp, "1\n\nq\n", futureGptSkipOutput);
+  runScript(futureGptSkipApp, "2\n\nq\n", futureGptSkipOutput);
   assertNotContains(readOutput(futureGptSkipOutput), "GPT-5.5 model", "expected post-26.422.30944 status to omit unpatched GPT-5.5 compatibility targets", readOutput(futureGptSkipOutput));
   resetCodesignCalls();
 
@@ -893,7 +903,7 @@ function main(): void {
   writeFileSync(activeTempFile, "active");
   const staleTime = new Date(Date.now() - 20 * 60 * 1000);
   utimesSync(staleTempFile, staleTime, staleTime);
-  runScript(staleTempApp, "1\n\nq\n", staleTempOutput);
+  runScript(staleTempApp, "2\n\nq\n", staleTempOutput);
   if (existsSync(staleTempFile)) {
     fail("expected stale app.asar temp file to be removed during startup checks", readOutput(staleTempOutput));
   }
@@ -906,7 +916,7 @@ function main(): void {
   const legacyResources = join(legacyApp, "Contents", "Resources");
   const legacyOutput = join(tmpDir, "legacy-output.txt");
   prepareLegacyFakeApp(legacyApp, join(tmpDir, "legacy-unpacked-assets"), join(tmpDir, "legacy-assets"), "legacy-placeholder-hash");
-  runScript(legacyApp, "1\n\nq\n", legacyOutput);
+  runScript(legacyApp, "2\n\nq\n", legacyOutput);
   assertCodesignCalls(1, legacyOutput);
   assertNoPersistentUnpackDir(legacyResources, legacyOutput);
   assertFakeAsarJsParses(join(legacyResources, "app.asar"));
@@ -924,7 +934,7 @@ function main(): void {
   prepareArchivedFakeApp(packFailApp, join(tmpDir, "pack-fail-assets"));
   const packFailOriginalArchive = readFileSync(packFailArchive);
   const packFailOriginalHash = readInfoPlistHash(packFailApp);
-  runScriptWithAsarPackFailure(packFailApp, "2\n\nq\n", packFailOutput);
+  runScriptWithAsarPackFailure(packFailApp, "3\n\nq\n", packFailOutput);
   assertNoPersistentUnpackDir(packFailResources, packFailOutput);
   if (!readFileSync(packFailArchive).equals(packFailOriginalArchive)) {
     fail("expected failed temp pack to leave installed app.asar unchanged", readOutput(packFailOutput));
@@ -948,7 +958,7 @@ function main(): void {
   const legacyPackFailOriginalArchive = readFileSync(legacyPackFailArchive);
   const legacyPackFailOriginalHash = readInfoPlistHash(legacyPackFailApp);
   const legacyPackFailTempDirs = listCodexfastTempDirs();
-  runScriptWithStartupAsarPackFailure(legacyPackFailApp, "1\n\nq\n", legacyPackFailOutput);
+  runScriptWithStartupAsarPackFailure(legacyPackFailApp, "2\n\nq\n", legacyPackFailOutput);
   assertNoNewCodexfastTempDirs(legacyPackFailTempDirs, legacyPackFailOutput);
   if (!existsSync(legacyPackFailUnpackedDir)) {
     fail("expected failed legacy temp pack to preserve Resources/app", readOutput(legacyPackFailOutput));
@@ -966,7 +976,7 @@ function main(): void {
   const extractFailOutput = join(tmpDir, "extract-fail-output.txt");
   prepareArchivedFakeApp(extractFailApp, join(tmpDir, "extract-fail-assets"));
   const extractFailTempDirs = listCodexfastTempDirs();
-  runScriptWithAsarExtractFailure(extractFailApp, "2\n\nq\n", extractFailOutput);
+  runScriptWithAsarExtractFailure(extractFailApp, "3\n\nq\n", extractFailOutput);
   assertNoNewCodexfastTempDirs(extractFailTempDirs, extractFailOutput);
   assertContains(readOutput(extractFailOutput), "Failed to unpack app.asar.", "expected extract failure to be reported", readOutput(extractFailOutput));
   assertContains(readOutput(extractFailOutput), "Exit code: 1", "expected failed extract to return exit code 1", readOutput(extractFailOutput));
@@ -980,7 +990,7 @@ function main(): void {
   const integrityFailOriginalArchive = readFileSync(integrityFailArchive);
   const integrityFailOriginalHash = readInfoPlistHash(integrityFailApp);
   chmodSync(join(integrityFailApp, "Contents", "Info.plist"), 0o444);
-  runScriptAllowFailure(integrityFailApp, "2\n\nq\n", integrityFailOutput);
+  runScriptAllowFailure(integrityFailApp, "3\n\nq\n", integrityFailOutput);
   chmodSync(join(integrityFailApp, "Contents", "Info.plist"), 0o644);
   if (!readFileSync(integrityFailArchive).equals(integrityFailOriginalArchive)) {
     fail("expected failed integrity update during apply to restore the previous app.asar", readOutput(integrityFailOutput));
@@ -998,11 +1008,11 @@ function main(): void {
   const restoreIntegrityApplyOutput = join(tmpDir, "restore-integrity-fail-apply-output.txt");
   const restoreIntegrityOutput = join(tmpDir, "restore-integrity-fail-output.txt");
   prepareArchivedFakeApp(restoreIntegrityFailApp, join(tmpDir, "restore-integrity-fail-assets"));
-  runScript(restoreIntegrityFailApp, "2\n\nq\n", restoreIntegrityApplyOutput);
+  runScript(restoreIntegrityFailApp, "3\n\nq\n", restoreIntegrityApplyOutput);
   const restoreIntegrityPatchedArchive = readFileSync(restoreIntegrityFailArchive);
   const restoreIntegrityPatchedHash = readInfoPlistHash(restoreIntegrityFailApp);
   chmodSync(join(restoreIntegrityFailApp, "Contents", "Info.plist"), 0o444);
-  runScriptAllowFailure(restoreIntegrityFailApp, "3\n\nq\n", restoreIntegrityOutput);
+  runScriptAllowFailure(restoreIntegrityFailApp, "4\n\nq\n", restoreIntegrityOutput);
   chmodSync(join(restoreIntegrityFailApp, "Contents", "Info.plist"), 0o644);
   if (!readFileSync(restoreIntegrityFailArchive).equals(restoreIntegrityPatchedArchive)) {
     fail("expected failed integrity update during archive restore to restore the previous app.asar", readOutput(restoreIntegrityOutput));
@@ -1021,7 +1031,7 @@ function main(): void {
   prepareArchivedFakeApp(missingBundleIdApp, join(tmpDir, "missing-bundle-id-assets"));
   writeInfoPlist(missingBundleIdApp, readFakeAsarHeaderHash(missingBundleIdArchive), "26.415.40636", "1799", null);
   resetTccutilCalls();
-  runScript(missingBundleIdApp, "2\n\nq\n", missingBundleIdOutput);
+  runScript(missingBundleIdApp, "3\n\nq\n", missingBundleIdOutput);
   assertNoTccutilCalls(missingBundleIdOutput);
   assertContains(readOutput(missingBundleIdOutput), "Could not reset macOS screen recording permission because CFBundleIdentifier was not found.", "expected missing bundle id to skip TCC reset", readOutput(missingBundleIdOutput));
   resetCodesignCalls();
@@ -1030,7 +1040,7 @@ function main(): void {
   const unsupportedResources = join(unsupportedApp, "Contents", "Resources");
   const unsupportedOutput = join(tmpDir, "unsupported-output.txt");
   prepareArchivedFakeApp(unsupportedApp, join(tmpDir, "unsupported-assets"), "99.0.0", "9999");
-  runScript(unsupportedApp, "2\n\nq\n", unsupportedOutput);
+  runScript(unsupportedApp, "3\n\nq\n", unsupportedOutput);
   assertNoPersistentUnpackDir(unsupportedResources, unsupportedOutput);
   const unsupportedText = readOutput(unsupportedOutput);
   assertNotContains(unsupportedText, "Running local ad-hoc re-sign", "expected unsupported versions to be blocked before re-signing", unsupportedText);
@@ -1047,7 +1057,7 @@ function main(): void {
   const unsupportedLegacyOutput = join(tmpDir, "unsupported-legacy-output.txt");
   prepareLegacyFakeApp(unsupportedLegacyApp, join(tmpDir, "unsupported-legacy-unpacked-assets"), join(tmpDir, "unsupported-legacy-assets"), "unsupported-legacy-placeholder-hash");
   writeInfoPlist(unsupportedLegacyApp, "unsupported-legacy-placeholder-hash", "99.0.0", "9999");
-  runScript(unsupportedLegacyApp, "2\n\nq\n", unsupportedLegacyOutput);
+  runScript(unsupportedLegacyApp, "3\n\nq\n", unsupportedLegacyOutput);
   const unsupportedLegacyText = readOutput(unsupportedLegacyOutput);
   assertContains(unsupportedLegacyText, "Compatibility: unsupported", "expected unsupported legacy compatibility status in output", unsupportedLegacyText);
   assertContains(unsupportedLegacyText, "Enable custom API features is blocked for this Codex.app version.", "expected unsupported legacy apply to be blocked", unsupportedLegacyText);
@@ -1070,7 +1080,7 @@ function main(): void {
   writeFileSync(join(missingAssetsSource, "other", "noop.js"), "const noop=true;");
   writeFakeAsar(missingAssetsSource, join(missingAssetsResources, "app.asar"));
   writeInfoPlist(missingAssetsApp, readFakeAsarHeaderHash(join(missingAssetsResources, "app.asar")));
-  runScriptAllowFailure(missingAssetsApp, "1\n\nq\n", missingAssetsOutput);
+  runScriptAllowFailure(missingAssetsApp, "2\n\nq\n", missingAssetsOutput);
   assertContains(readOutput(missingAssetsOutput), "Assets directory not found:", "expected missing assets to be reported without a stack trace", readOutput(missingAssetsOutput));
   assertContains(readOutput(missingAssetsOutput), "Exit code: 1", "expected missing assets to return exit code 1", readOutput(missingAssetsOutput));
   assertNotContains(readOutput(missingAssetsOutput), "ENOENT", "expected missing assets to avoid raw readdirSync ENOENT", readOutput(missingAssetsOutput));
@@ -1080,7 +1090,7 @@ function main(): void {
   const failingResources = join(failingApp, "Contents", "Resources");
   const failingOutput = join(tmpDir, "failing-output.txt");
   prepareArchivedFakeApp(failingApp, join(tmpDir, "failing-assets"));
-  runScriptWithCodesignFailure(failingApp, "2\n\nq\n", failingOutput);
+  runScriptWithCodesignFailure(failingApp, "3\n\nq\n", failingOutput);
   assertNoPersistentUnpackDir(failingResources, failingOutput);
   assertFakeAsarJsParses(join(failingResources, "app.asar"));
   const failingText = readOutput(failingOutput);
@@ -1092,7 +1102,7 @@ function main(): void {
   const verifyFailingResources = join(verifyFailingApp, "Contents", "Resources");
   const verifyFailingOutput = join(tmpDir, "verify-failing-output.txt");
   prepareArchivedFakeApp(verifyFailingApp, join(tmpDir, "verify-failing-assets"));
-  runScriptWithCodesignVerifyFailure(verifyFailingApp, "2\n\nq\n", verifyFailingOutput);
+  runScriptWithCodesignVerifyFailure(verifyFailingApp, "3\n\nq\n", verifyFailingOutput);
   assertNoPersistentUnpackDir(verifyFailingResources, verifyFailingOutput);
   assertFakeAsarJsParses(join(verifyFailingResources, "app.asar"));
   assertCodesignCallContains(`--verify --deep --strict --verbose=2 ${verifyFailingApp}`, verifyFailingOutput);

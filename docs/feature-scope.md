@@ -4,6 +4,12 @@ This document defines the user-facing feature paths currently exposed by `codexf
 
 Use it when you need a quick answer to "what does this repo actually enable?" before reading bundle-specific notes.
 
+## Delivery Modes
+
+- `launch` is the recommended path. It starts Codex with a local CDP endpoint and applies the supported target patches in memory for that launched session only.
+- Runtime launch does not modify `app.asar`, `Info.plist`, the app bundle, or the app signature.
+- `apply` / `restore` remain available as legacy bundle patch fallbacks for users who need persistent on-disk changes.
+
 ## Current Feature Set
 
 ### Settings-side Fast control

@@ -2,9 +2,9 @@
 
 [English README](./README.md)
 
-**一个面向 OpenAI `Codex.app` 的 macOS patch 脚本，用于在已验证兼容的版本上重新启用被隐藏的 custom API 能力。**
+**一个面向 OpenAI `Codex.app` 的 macOS runtime launcher 和 legacy patch 脚本，用于在已验证兼容的版本上重新启用被隐藏的 custom API 能力。**
 
-`codexfast` 是一个面向 macOS custom API 用户的 OpenAI Codex.app 单文件 patcher，用来恢复被隐藏的 Fast mode 能力，包括 Settings 里的 Fast 设置项、输入框 `/fast` 命令、composer 里的 Speed 菜单、必要版本上的 GPT-5.5 模型列表兼容，以及 Plugins 入口。
+`codexfast` 是一个面向 macOS custom API 用户的 OpenAI Codex.app 单文件 launcher。推荐使用 runtime launch 模式：它会临时为当前启动的 Codex 会话应用 runtime patch，恢复被隐藏的 Fast mode 能力，包括 Settings 里的 Fast 设置项、输入框 `/fast` 命令、composer 里的 Speed 菜单、必要版本上的 GPT-5.5 模型列表兼容，以及 Plugins 入口。Legacy bundle patch 仍作为 fallback 保留。
 
 - **Fast 设置项**（Settings 中）
 - **`/fast` 输入框命令**
@@ -14,7 +14,7 @@
 - **Browser-use native pipe 兼容**（本地 ad-hoc 签名后的 app）
 
 ```bash
-npx codexfast
+npx codexfast launch
 ```
 
 
@@ -24,19 +24,24 @@ npx codexfast
 
 脚本在安装好的 `Codex.app` 上提供这些菜单动作：
 
-1. **查看当前状态** — 检查版本、兼容性，以及各功能是否已启用
-2. **开启 custom API 相关能力** — 恢复上面列出的能力集合
-3. **恢复原始状态** — 回退到原始应用 bundle
-4. **安装自动修复 watcher** — Codex 更新并替换 `app.asar` 后，在受支持版本上自动重新应用补丁
-5. **卸载自动修复 watcher** — 移除 launchd watcher
+1. **Launch Codex with runtime patches** — 推荐路径；只为当前启动会话临时应用 runtime patch
+2. **查看当前状态** — 检查版本、兼容性，以及 legacy bundle 目标是否已启用
+3. **Apply legacy bundle patches** — 修改已安装 bundle 的 fallback 路径
+4. **Restore legacy bundle patch backups** — 回滚 legacy bundle patch
+5. **安装自动修复 watcher** — Codex 更新并替换 `app.asar` 后，在受支持版本上自动重新应用 legacy bundle patch
+6. **卸载自动修复 watcher** — 移除 launchd watcher
 
-打补丁流程：解包 `app.asar`，改写前端资源，重新打包，更新 `Info.plist` 中的 `ElectronAsarIntegrity` hash，再做一次本地 ad-hoc 重签名，保持 `Codex.app` 可以正常启动。
+Runtime launch 不会修改 `app.asar`、`Info.plist`、app bundle 或 app 签名。Legacy bundle patch 流程仍会解包 `app.asar`，改写前端资源，重新打包，更新 `Info.plist` 中的 `ElectronAsarIntegrity` hash，再做一次本地 ad-hoc 重签名，保持 `Codex.app` 可以正常启动。
 
 ## 原理
 
-`Codex.app` 打包后的前端 bundle 里本来就包含 Fast、`/fast`、Speed、模型列表和 Plugins 相关 UI 路径，但其中一部分路径会因为 custom API 用户的本地 gate 判断而被隐藏或禁用。`codexfast` 不新增后端服务，也不调用 OpenAI 私有 API；它只在已验证兼容的版本上修改本机安装的 app bundle。
+`Codex.app` 打包后的前端 bundle 里本来就包含 Fast、`/fast`、Speed、模型列表和 Plugins 相关 UI 路径，但其中一部分路径会因为 custom API 用户的本地 gate 判断而被隐藏或禁用。`codexfast` 不新增后端服务，也不调用 OpenAI 私有 API。
 
-脚本会先从 `Info.plist` 读取当前安装的 app version 和 build，只有精确命中严格兼容白名单时才允许 apply。对于受支持版本，它会把 `Contents/Resources/app.asar` 解包到临时目录，在 `webview/assets/*.js` 里搜索稳定的功能锚点，再用窄范围代码签名替换移除 custom API gate，或强制打开对应的本地 UI 可用性标记。
+推荐的 `launch` 命令会启动 Codex，并为该启动会话打开一个本地 Chrome DevTools Protocol endpoint，拦截匹配的 renderer JavaScript 响应，再在内存中应用同一套窄范围 patch 规则。这个会话退出后，runtime patch 就消失。该模式不会改写已安装 app bundle，也不会替换原始代码签名。
+
+Legacy `apply` fallback 才会在已验证兼容的版本上修改本机安装的 app bundle。
+
+脚本会先从 `Info.plist` 读取当前安装的 app version 和 build，只有精确命中严格兼容白名单时才允许 `launch` 和 legacy `apply`。对于受支持版本，legacy `apply` 会把 `Contents/Resources/app.asar` 解包到临时目录，在 `webview/assets/*.js` 里搜索稳定的功能锚点，再用窄范围代码签名替换移除 custom API gate，或强制打开对应的本地 UI 可用性标记。
 
 需要解包再重新打包，是因为 Codex 把 renderer 代码放在 Electron 的 `app.asar` 归档里；如果直接把散文件放到 `Contents/Resources/app`，会让 app 处在非标准布局，也容易和之后的自动更新冲突。`codexfast` 只在临时目录里解包处理，最终替换的仍然是打包后的 `app.asar`。
 
@@ -50,16 +55,16 @@ npx codexfast
 
 仅支持 macOS。需要：`Codex.app` 安装在 `/Applications`，命令行可用 Node.js `>=18.12.0`、`npm` 和系统自带的 `codesign`。
 
-运行 patcher：
+推荐 runtime launch：
 
 ```bash
-npx codexfast
+npx codexfast launch
 ```
 
 或在本仓库里直接运行：
 
 ```bash
-./bin/codexfast
+./bin/codexfast launch
 ```
 
 查看帮助或当前包版本：
@@ -72,35 +77,43 @@ npx codexfast version
 脚本会打开一个交互菜单：
 
 ```text
-1) View current status
-2) Enable custom API features
-3) Restore original state
-4) Install auto-repair watcher
-5) Uninstall auto-repair watcher
+1) Launch Codex with runtime patches (recommended)
+2) Check current status
+3) Apply legacy bundle patches (fallback)
+4) Restore legacy bundle patch backups
+5) Install auto-repair watcher
+6) Uninstall auto-repair watcher
 q) Quit
 ```
 
-这些动作也可以用非交互命令直接执行：`status`、`apply`、`restore`、`install-watcher` 和 `uninstall-watcher`。
+这些动作也可以用非交互命令直接执行：`launch`、`status`、`apply`、`restore`、`install-watcher` 和 `uninstall-watcher`。
 
 ### 命令说明
 
 | 命令 | 用途 |
 | --- | --- |
+| `npx codexfast launch` | 推荐路径：启动 Codex，并只为当前会话应用 runtime patch；不修改已安装 bundle 或 app 签名。 |
 | `npx codexfast status` | 检查当前安装的 `Codex.app`，显示检测到的版本、build、兼容性状态和各 patch 目标状态，不修改 app。 |
-| `npx codexfast apply` | 对兼容 build 应用当前支持的补丁集合，创建备份，刷新 Electron ASAR integrity，本地 ad-hoc 重签名，并重置屏幕录制权限记录。 |
-| `npx codexfast restore` | 先移除已安装的 auto-repair watcher，再通过备份或内联恢复规则还原 vendor bundle，必要时重新签名，并在恢复成功后重置屏幕录制权限记录。 |
-| `npx codexfast install-watcher` | 安装当前用户的 macOS `launchd` auto-repair watcher，监听 `app.asar`，在受支持的 Codex 更新后运行最新发布版的 `repair`。 |
+| `npx codexfast apply` | Legacy fallback：对兼容 build 应用当前支持的补丁集合，创建备份，刷新 Electron ASAR integrity，本地 ad-hoc 重签名，并重置屏幕录制权限记录。 |
+| `npx codexfast restore` | Legacy fallback：先移除已安装的 auto-repair watcher，再通过备份或内联恢复规则还原 vendor bundle，必要时重新签名，并在恢复成功后重置屏幕录制权限记录。 |
+| `npx codexfast install-watcher` | Legacy fallback：安装当前用户的 macOS `launchd` auto-repair watcher，监听 `app.asar`，在受支持的 Codex 更新后运行最新发布版的 `repair`。 |
 | `npx codexfast uninstall-watcher` | 删除 auto-repair watcher 的 plist 和本地 watcher runtime。这个清理命令不依赖一个健康的 `Codex.app` 安装。 |
+
+### 启动 Codex
+
+运行 `npx codexfast launch`，或选择 **1) Launch Codex with runtime patches (recommended)**。Codex 不能已经在运行。这个命令会打开一个本地 CDP endpoint，并只为当前启动的 Codex 会话应用 runtime patch。
+
+它不会改写 bundle 文件，不会创建备份，也不会改动原始 app 签名。完全退出这个 Codex 会话后，就会回到未修改的 app 行为。
 
 ### 查看状态
 
-先选择 **1) View current status**。状态检查会读取当前安装的 `Codex.app`，显示检测到的版本和 build，告诉你兼容性是否为 `supported`，并列出各支持功能是否已启用。
+先选择 **2) Check current status**。状态检查会读取当前安装的 `Codex.app`，显示检测到的版本和 build，告诉你兼容性是否为 `supported`，并列出各 legacy bundle patch 目标是否已启用。
 
 每次 Codex 更新后都先跑一次查看状态。如果兼容性不是 `supported`，不要在这个版本上开补丁。
 
-### 开启功能
+### Legacy bundle patch fallback
 
-当状态显示当前 build 已支持时，选择 **2) Enable custom API features**。这会开启当前支持的能力集合：
+只有在需要持久修改已安装 bundle，且状态显示当前 build 已支持时，才选择 **3) Apply legacy bundle patches (fallback)**。这会通过修改 app bundle 开启当前支持的能力集合：
 
 - Settings 里的 Fast 控制项
 - composer 里的 `/fast` slash command
@@ -111,9 +124,9 @@ q) Quit
 
 第一次开启时脚本会创建备份，更新 `app.asar`，刷新 Electron ASAR integrity hash，并执行本地 ad-hoc 重签名。由于重签名会改变 macOS 隐私权限识别应用时使用的身份，apply 会重置 `Codex.app` 的屏幕录制权限记录。脚本完成后重启 `Codex.app`，并在 macOS 提示时允许“屏幕与系统音频录制”。
 
-### 关闭或恢复
+### 关闭或恢复 legacy bundle patch
 
-选择 **3) Restore original state** 可以关闭补丁。恢复流程会先移除已安装的 auto-repair watcher，再优先把 `Codex.app` 回滚到备份的原始 vendor bundle，必要时重新签名。恢复成功并重签名后，脚本也会重置 `Codex.app` 的屏幕录制权限记录，让 macOS 在下次启动时重新询问。
+选择 **4) Restore legacy bundle patch backups** 可以关闭 legacy bundle patch。恢复流程会先移除已安装的 auto-repair watcher，再优先把 `Codex.app` 回滚到备份的原始 vendor bundle，必要时重新签名。恢复成功并重签名后，脚本也会重置 `Codex.app` 的屏幕录制权限记录，让 macOS 在下次启动时重新询问。
 
 Restore 会保持当前这套回滚行为，并且仍然做本地重签名；它不能自行恢复 OpenAI Developer ID 官方签名。恢复成功后，脚本会打印当前版本的官方下载 URL，用户可以自行决定是否手动重新安装官方 app。
 
@@ -121,7 +134,7 @@ Restore 会保持当前这套回滚行为，并且仍然做本地重签名；它
 
 ### 自动修复 watcher
 
-选择 **4) Install auto-repair watcher**，或运行：
+选择 **5) Install auto-repair watcher**，或运行：
 
 ```bash
 npx codexfast install-watcher
@@ -155,13 +168,13 @@ npx codexfast uninstall-watcher
 - 已验证版本：`Codex.app` `26.422.21637`（`build 2056`）
 - 已验证版本：`Codex.app` `26.417.41555`（`build 1858`）
 - 已验证版本：`Codex.app` `26.415.40636`（`build 1799`）
-- **开启动作** 只允许在白名单里的 version/build 上执行
+- **Launch** 和 legacy **Apply** 只允许在白名单里的 version/build 上执行
 - **自动修复** 遇到不支持的 version/build 也会静默跳过，并且不会修改 app
 - **查看状态** 和 **恢复** 在任何版本都可用
 - GPT-5.5 模型列表补丁只在仍需要兼容补丁的受支持版本上注入 UI catalog 项。`Codex.app` `26.422.30944` 及之后的版本预期已经通过官方 app 路径展示 GPT-5.5，因此 `codexfast` 会从 `26.422.30944` 起跳过这个 apply 目标；你的 custom API provider 仍然必须支持 `gpt-5.5`
 - Plugins 会移除受支持版本上打开 Plugins 侧边栏和页面路径所需的 custom API gate；在 `26.429.20946`、`26.429.30905`、`26.429.61741`、`26.506.21252`、`26.506.31421` 和 `26.513.20950` 上也会移除安装按钮的聚合 connector-unavailable 阻断，并保留安装弹窗中的插件详情。插件实际行为仍可能取决于插件状态、connector 运行时行为或管理侧限制
 
-每次 Codex 更新后都建议重新跑一次 **查看当前状态**。
+每次 Codex 更新后都建议重新跑一次 **Check current status**。
 
 ## 备份与恢复
 

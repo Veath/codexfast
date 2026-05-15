@@ -1768,10 +1768,10 @@ function printUsage(): void {
   printLine("");
   printLine("Commands:");
   printLine("  status             Check version, compatibility, and feature state");
-  printLine("  launch             Start runtime launch mode after compatibility guard checks");
-  printLine("  apply              Enable custom API features on a supported build");
+  printLine("  launch             Launch Codex with runtime patches (recommended)");
+  printLine("  apply              Apply legacy bundle patches (fallback)");
   printLine("  repair             Safely re-apply missing patches; no-op on unsupported or already patched builds");
-  printLine("  restore            Restore the original app archive or file backups");
+  printLine("  restore            Restore legacy bundle patch backups");
   printLine("  install-watcher    Install the macOS launchd auto-repair watcher");
   printLine("  uninstall-watcher  Remove the auto-repair watcher");
   printLine("  version            Print the codexfast version");
@@ -1790,33 +1790,38 @@ async function showMenu(): Promise<number> {
       run("clear", []);
       printLine("codexfast");
       printLine("");
-      printLine("1) Check current status");
-      printLine("2) Enable custom API features");
-      printLine("3) Restore original app");
-      printLine("4) Install auto-repair watcher");
-      printLine("5) Uninstall auto-repair watcher");
+      printLine("1) Launch Codex with runtime patches (recommended)");
+      printLine("2) Check current status");
+      printLine("3) Apply legacy bundle patches (fallback)");
+      printLine("4) Restore legacy bundle patch backups");
+      printLine("5) Install auto-repair watcher");
+      printLine("6) Uninstall auto-repair watcher");
       printLine("q) Quit");
       printLine("");
 
       const choice = (await rl.question("Select an option: ")).trim();
       switch (choice) {
         case "1":
-          runEmbeddedTool("status");
+          runEmbeddedTool("launch");
           await rl.question("Press Enter to continue...");
           break;
         case "2":
-          runEmbeddedTool("apply");
+          runEmbeddedTool("status");
           await rl.question("Press Enter to continue...");
           break;
         case "3":
-          runEmbeddedTool("restore");
+          runEmbeddedTool("apply");
           await rl.question("Press Enter to continue...");
           break;
         case "4":
-          installWatcher();
+          runEmbeddedTool("restore");
           await rl.question("Press Enter to continue...");
           break;
         case "5":
+          installWatcher();
+          await rl.question("Press Enter to continue...");
+          break;
+        case "6":
           uninstallWatcher();
           await rl.question("Press Enter to continue...");
           break;

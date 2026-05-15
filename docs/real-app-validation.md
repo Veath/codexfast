@@ -4,6 +4,16 @@ This checklist is for manual smoke-testing on an installed `Codex.app` copy afte
 
 Run these checks after any meaningful bundle change, patch-signature update, or compatibility-whitelist expansion.
 
+## Runtime Launch Checks
+
+Use these checks when validating `launch` behavior. Do not mark a build as real-app validated from regression tests alone.
+
+- `npx codexfast launch` starts Codex when Codex is not already running
+- The launched session opens with runtime patches active
+- `app.asar`, `Info.plist`, and the app code signature are unchanged after launch exits
+- Launch reports a clear failure when `Codex.app` is already running
+- Launch is blocked when the detected version/build is unsupported
+
 ## Core App Checks
 
 - `Codex.app` launches successfully after patching
@@ -44,7 +54,7 @@ Run these checks after any meaningful bundle change, patch-signature update, or 
 
 ## Recovery Checks
 
-- `Restore original state` completes successfully
+- `Restore legacy bundle patch backups` completes successfully
 - `Codex.app` still launches after restore
 - The app remains in packed `app.asar` layout after both apply and restore
 

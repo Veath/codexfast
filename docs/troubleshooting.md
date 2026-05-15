@@ -2,6 +2,20 @@
 
 This document collects the recurring failure modes for `codexfast` and the expected recovery path.
 
+## Runtime launch does not patch the app
+
+Expected behavior:
+
+- `npx codexfast launch` is the recommended path.
+- It starts Codex with a local CDP endpoint and applies runtime patches only to that launched session.
+- It does not modify `app.asar`, `Info.plist`, the app bundle, the app signature, backups, or macOS privacy permissions.
+
+If launch is blocked:
+
+1. Fully quit any running `Codex.app` instance.
+2. Run `npx codexfast status` and confirm the detected version/build is `supported`.
+3. Use legacy `npx codexfast apply` only as a fallback when you explicitly need persistent bundle patches.
+
 ## `Codex.app` does not open after patching
 
 Check:
@@ -26,9 +40,9 @@ Likely causes:
 
 What to do:
 
-1. Run `View current status`.
+1. Run `Check current status`.
 2. Confirm the current build is `supported`.
-3. If needed, run `Restore original state`.
+3. If needed, run `Restore legacy bundle patch backups`.
 4. Re-check the bundle against `docs/patch-targets.md` and the latest bundle note before changing patch logic.
 
 ## `Plugins` is visible but plugin install or use still fails
@@ -40,7 +54,7 @@ Expected boundary:
 
 Check:
 
-- `View current status` reports every expected Plugins target as `enabled` for the current supported build
+- `Check current status` reports every expected Plugins target as `enabled` for the current supported build
 - Connector/app integration availability
 - Plugin package state
 - Admin-side or upstream restrictions
@@ -77,7 +91,8 @@ Recovery:
 Meaning:
 
 - The current `CFBundleShortVersionString` + `CFBundleVersion` pair is not on the strict whitelist in `src/supported-app-versions.mts`.
-- `repair` and the launchd watcher treat this as a no-op: they do not notify, unpack, back up, write `app.asar`, re-sign, or write a log file.
+- `launch` is blocked for unsupported builds.
+- `repair` and the launchd watcher treat unsupported builds as a no-op: they do not notify, unpack, back up, write `app.asar`, re-sign, or write a log file.
 
 What to do:
 
@@ -90,7 +105,7 @@ What to do:
 Check:
 
 - The watcher is installed at `~/Library/LaunchAgents/com.codexfast.watcher.plist`
-- `View current status` reports the new Codex version/build as `supported`
+- `Check current status` reports the new Codex version/build as `supported`
 
 Expected behavior:
 
@@ -159,7 +174,7 @@ If the reset command fails, run it manually:
 tccutil reset ScreenCapture com.openai.codex
 ```
 
-## Repeated `Enable custom API features` runs
+## Repeated legacy bundle patch runs
 
 Expected behavior:
 

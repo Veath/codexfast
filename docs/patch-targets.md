@@ -6,6 +6,8 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 
 ## Current Targets
 
+`launch` and legacy `apply` use the same target definitions. Runtime launch applies matching replacements in memory through the local CDP session and leaves the app bundle untouched; legacy `apply` writes the replacements into the packed `app.asar` fallback path.
+
 | Feature | Target label | Current file | Needle | Patch intent |
 | --- | --- | --- | --- | --- |
 | Settings-side Fast control | `Speed setting` | `general-settings-*.js` | `settings.agent.speed.label` | Remove the guarded Fast-settings early return. |
