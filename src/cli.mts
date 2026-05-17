@@ -1585,6 +1585,23 @@ function runtimePatchSessionLostMessage(error: Error): string {
   return `Runtime patch session lost after ${runtimePatchReconnectMaxAttempts} reconnect attempts: ${error.message}`;
 }
 
+function printRuntimePatchSessionLost(error: Error): void {
+  printLine(error.message);
+  printLine("Codex.app will keep running without further runtime patching.");
+  printLine("Lazy-loaded features that were not patched before this point may stay unavailable until you fully quit Codex and relaunch with codexfast.");
+}
+
+function printRuntimeLaunchReady(patchedLabels: string[]): void {
+  printLine("Patched targets:");
+  for (const label of patchedLabels) {
+    printLine(`  ${label}`);
+  }
+  printLine("");
+  printLine("Runtime launch completed.");
+  printLine("Keep this codexfast launch process running while you use Codex.");
+  printLine("Quit Codex to end the runtime patch session.");
+}
+
 function waitForRuntimeInitialPageLoad(cdp: CdpConnection): Promise<void> {
   return new Promise<void>((resolve) => {
     let settled = false;
@@ -1910,17 +1927,12 @@ async function runRuntimeLaunch(): Promise<number> {
   }
 
   if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS === "1") {
-    printLine("Runtime launch completed.");
-    printLine("Keep this codexfast launch process running while you use Codex.");
-    printLine("Quit Codex to end the runtime patch session.");
-    printLine("Patched targets:");
-    printLine("  Speed setting");
-    printLine("");
+    printRuntimeLaunchReady(["Speed setting"]);
     if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SESSION_LOST === "1") {
-      printLine(runtimePatchSessionLostMessage(new Error("simulated CDP heartbeat failure")));
+      printRuntimePatchSessionLost(new Error(runtimePatchSessionLostMessage(new Error("simulated CDP heartbeat failure"))));
       printLine("");
-      printLine("Exit code: 1");
-      return 1;
+      printLine("Exit code: 0");
+      return 0;
     }
     printLine("Exit code: 0");
     return 0;
@@ -1933,14 +1945,7 @@ async function runRuntimeLaunch(): Promise<number> {
     child = launchCodexProcess(debugPort);
     const childExit = waitForRuntimeLaunchProcessExit(child);
     session = await waitForRuntimePatchSession(debugPort);
-    printLine("Runtime launch completed.");
-    printLine("Keep this codexfast launch process running while you use Codex.");
-    printLine("Quit Codex to end the runtime patch session.");
-    printLine("Patched targets:");
-    for (const label of session.patchedLabels) {
-      printLine(`  ${label}`);
-    }
-    printLine("");
+    printRuntimeLaunchReady(session.patchedLabels);
     const outcome = await Promise.race([
       childExit.then((exitCode) => ({ type: "child-exit" as const, exitCode })),
       session.lost.then((error) => ({ type: "session-lost" as const, error })),
@@ -1948,13 +1953,10 @@ async function runRuntimeLaunch(): Promise<number> {
     if (outcome.type === "session-lost") {
       session.close();
       session = null;
-      if (child && !child.killed) {
-        terminateRuntimeLaunchProcess(child);
-      }
-      printLine(outcome.error.message);
+      printRuntimePatchSessionLost(outcome.error);
       printLine("");
-      printLine("Exit code: 1");
-      return 1;
+      printLine("Exit code: 0");
+      return 0;
     }
     session.close();
     session = null;

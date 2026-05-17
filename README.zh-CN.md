@@ -24,7 +24,7 @@ npx codexfast launch
 
 `codexfast launch` 会用本地 Chrome DevTools Protocol endpoint 启动 Codex，拦截当前会话里匹配的 renderer JavaScript 响应，并在内存里应用窄范围 patch。使用 Codex 时需要保持 `codexfast launch` 进程运行；Settings 和 Plugins 的部分 chunk 是懒加载的，首次窗口打开后仍然需要 runtime interceptor。
 
-launcher 会发送轻量 CDP heartbeat。runtime patch session 断开时最多做三次 bounded reconnect，仍失败则打印 `Runtime patch session lost`，不会静默继续跑一个未 patch 的会话。退出该 Codex 会话后，runtime patch 随之消失。
+launcher 会发送轻量 CDP heartbeat。runtime patch session 断开时最多做三次 bounded reconnect，仍失败则打印 `Runtime patch session lost`，不会静默继续跑一个未 patch 的会话。如果 launch 进程退出，或者 Codex 启动后 runtime patch session 断开，Codex 会继续运行；但断开后才懒加载的功能 chunk 可能不会再被 patch，需要完全退出 Codex 并重新用 `codexfast` 启动。
 
 如果旧版 codexfast 安装过 launchd auto-repair watcher，`launch` 会在启动 Codex 前自动移除这个 legacy watcher。
 
@@ -83,7 +83,7 @@ q) Quit
 
 **`launch` 后 Settings Fast 或 Plugins 内容仍然缺失** - 确认 `codexfast launch` 终端进程仍在运行。关闭它会结束 CDP interception，后续懒加载的 Settings 和 Plugins chunk 就无法继续被 patch。
 
-**出现 `Runtime patch session lost after reconnect attempts`** - 完全退出 Codex，然后重新运行 `npx codexfast launch`。launcher 在 bounded reconnect 失败后会停止，不会无限重试。
+**出现 `Runtime patch session lost after reconnect attempts`** - Codex 会继续运行，但该 launch 进程无法继续 patch 后续懒加载 chunk。需要新的 patched session 时，完全退出 Codex，然后重新运行 `npx codexfast launch`。
 
 **Plugins 可见但某个具体 plugin 仍不可用** - codexfast 只移除已知本地 custom API gate。剩余失败通常来自 plugin 状态、connector runtime 或管理员限制。
 

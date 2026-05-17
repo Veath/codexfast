@@ -24,7 +24,7 @@ Verified for `Codex.app` `26.513.31313` (`build 2867`), `26.513.20950` (`build 2
 
 `codexfast launch` starts Codex with a local Chrome DevTools Protocol endpoint, intercepts matching renderer JavaScript responses for that launched session, and applies narrow patch rules in memory. Keep the `codexfast launch` process running while you use Codex; Settings and Plugins load some feature chunks lazily, so the runtime interceptor must stay attached after the first window appears.
 
-The launcher sends a lightweight CDP heartbeat, tries up to three bounded reconnects if the runtime patch session drops, and reports `Runtime patch session lost` instead of silently continuing unpatched. When the launched session exits, the runtime patches are gone.
+The launcher sends a lightweight CDP heartbeat, tries up to three bounded reconnects if the runtime patch session drops, and reports `Runtime patch session lost` instead of silently continuing unpatched. If the launch process exits or the runtime patch session disconnects after Codex has started, Codex keeps running. Lazy-loaded features that were not patched before that point may stay unavailable until you fully quit Codex and relaunch with `codexfast`.
 
 If an older codexfast version installed the launchd auto-repair watcher, `launch` removes that legacy watcher before starting Codex.
 
@@ -83,7 +83,7 @@ The script matches code signatures in frontend build output, so it can break aft
 
 **Settings Fast or Plugins content is still missing after `launch`** - confirm the `codexfast launch` terminal process is still running. Closing it ends CDP interception, so lazy-loaded Settings and Plugins chunks cannot be patched later in the session.
 
-**Runtime patch session lost after reconnect attempts** - fully quit Codex and rerun `npx codexfast launch`. The launcher stops after bounded reconnect attempts so it does not keep retrying forever while Codex may be running without runtime patches.
+**Runtime patch session lost after reconnect attempts** - Codex keeps running, but no further lazy-loaded chunks can be patched by that launch process. Fully quit Codex and rerun `npx codexfast launch` when you need a fresh patched session.
 
 **Plugins visible but a specific plugin is still unusable** - codexfast only removes known local custom-API gates. Remaining failures usually come from plugin state, connector runtime behavior, or admin-side restrictions.
 

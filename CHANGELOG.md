@@ -10,6 +10,11 @@ This project follows a simple release-oriented changelog format.
 
 - Added support for `Codex.app` `26.513.31313` (`build 2867`) after direct installed-bundle inspection confirmed the updated Settings Fast, `/fast`, composer `Intelligence` Speed menu, Plugins, and composer `@` plugin mention target shapes.
 
+### Changed
+
+- Runtime launch no longer terminates Codex after the patch session is lost following a successful startup; Codex keeps running, while later lazy-loaded chunks may require a full relaunch to be patched.
+- Runtime launch now prints patched target labels before the foreground-session instructions.
+
 ### Removed
 
 - Removed macOS ScreenCapture permission reset logic; current public launch does not re-sign the app.

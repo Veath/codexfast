@@ -202,6 +202,14 @@ function assertPatcherTargetsRuntimeImportable(): void {
   );
 }
 
+function assertOutputOrder(output: string, earlier: string, later: string, message: string): void {
+  const earlierIndex = output.indexOf(earlier);
+  const laterIndex = output.indexOf(later);
+  if (earlierIndex === -1 || laterIndex === -1 || earlierIndex >= laterIndex) {
+    fail(message, output);
+  }
+}
+
 function assertRuntimePatchEnginePatchesBody(): void {
   const speedBody = "settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;";
   const speedResult = applyRuntimePatchesToBody("webview/assets/general-settings-demo.js", speedBody);
@@ -389,6 +397,8 @@ function main(): void {
   });
   assertContains(readOutput(launchSuccessOutput), "Runtime launch completed.", "expected launch command to report success", readOutput(launchSuccessOutput));
   assertContains(readOutput(launchSuccessOutput), "Keep this codexfast launch process running while you use Codex.", "expected launch command to describe the foreground runtime session", readOutput(launchSuccessOutput));
+  assertOutputOrder(readOutput(launchSuccessOutput), "Patched targets:", "Runtime launch completed.", "expected launch output to list patched targets before session instructions");
+  assertOutputOrder(readOutput(launchSuccessOutput), "  Speed setting", "Keep this codexfast launch process running while you use Codex.", "expected launch output to list patched labels before foreground-session instructions");
   assertNotContains(readOutput(launchSuccessOutput), "Browser-use native pipe peer auth", "expected launch dry-run hook not to report removed native pipe target", readOutput(launchSuccessOutput));
   assertNoCodesignCalls(launchSuccessOutput);
   assertNoTccutilCalls(launchSuccessOutput);
@@ -397,13 +407,13 @@ function main(): void {
   const launchSessionLostOutput = join(tmpDir, "launch-session-lost-output.txt");
   prepareArchivedFakeApp(launchSessionLostApp, join(tmpDir, "launch-session-lost-assets"), "26.513.20950", "2816", "26513-2816");
   runScriptCommand(launchSessionLostApp, ["launch"], launchSessionLostOutput, {
-    CODEXFAST_TEST_ALLOW_NONZERO: "1",
     CODEXFAST_TEST_RUNTIME_LAUNCH_SESSION_LOST: "1",
     CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS: "1",
   });
   assertContains(readOutput(launchSessionLostOutput), "Runtime launch completed.", "expected launch session-lost hook to reach a ready session first", readOutput(launchSessionLostOutput));
   assertContains(readOutput(launchSessionLostOutput), "Runtime patch session lost after 3 reconnect attempts:", "expected launch to report exhausted runtime reconnect attempts", readOutput(launchSessionLostOutput));
-  assertContains(readOutput(launchSessionLostOutput), "Exit code: 1", "expected exhausted runtime reconnect attempts to fail launch", readOutput(launchSessionLostOutput));
+  assertContains(readOutput(launchSessionLostOutput), "Codex.app will keep running without further runtime patching.", "expected exhausted runtime reconnect attempts to leave Codex running", readOutput(launchSessionLostOutput));
+  assertContains(readOutput(launchSessionLostOutput), "Exit code: 0", "expected exhausted runtime reconnect attempts not to fail launch after Codex is running", readOutput(launchSessionLostOutput));
   assertNoCodesignCalls(launchSessionLostOutput);
   assertNoTccutilCalls(launchSessionLostOutput);
 
@@ -415,6 +425,8 @@ function main(): void {
   });
   assertContains(readOutput(menuLaunchSuccessOutput), "Runtime launch completed.", "expected menu launch option to report success", readOutput(menuLaunchSuccessOutput));
   assertContains(readOutput(menuLaunchSuccessOutput), "Keep this codexfast launch process running while you use Codex.", "expected menu launch option to describe the foreground runtime session", readOutput(menuLaunchSuccessOutput));
+  assertOutputOrder(readOutput(menuLaunchSuccessOutput), "Patched targets:", "Runtime launch completed.", "expected menu launch output to list patched targets before session instructions");
+  assertOutputOrder(readOutput(menuLaunchSuccessOutput), "  Speed setting", "Keep this codexfast launch process running while you use Codex.", "expected menu launch output to list patched labels before foreground-session instructions");
   assertNotContains(readOutput(menuLaunchSuccessOutput), "Browser-use native pipe peer auth", "expected menu launch option not to report removed native pipe target", readOutput(menuLaunchSuccessOutput));
   assertNoCodesignCalls(menuLaunchSuccessOutput);
   assertNoTccutilCalls(menuLaunchSuccessOutput);
