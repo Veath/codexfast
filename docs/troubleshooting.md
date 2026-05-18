@@ -90,8 +90,8 @@ What to do:
 
 ## Repeated old bundle patch leftovers
 
-Current public `codexfast` no longer exposes legacy bundle patch commands. If an old run left `Resources/app`, `app.asar1`, or `*.codexfast.bak` files behind, treat that as legacy recovery work:
+Current `codexfast` no longer includes legacy bundle patch, archive rewrite, re-sign, or restore flows. If an old run left `Resources/app`, `app.asar1`, or `*.codexfast.bak` files behind, do not use the current launcher to repair the app bundle:
 
-- Keep the packed `app.asar` layout.
-- Do not reintroduce a persistent `Contents/Resources/app` loose-file layout.
-- Use the internal regression coverage and `docs/patch-targets.md` before changing restore behavior.
+- Reinstall the official Codex.app build to recover a clean bundle and OpenAI Developer ID signature.
+- Use `npx codexfast launch` after reinstalling; it applies runtime patches without writing the app bundle.
+- The hidden `repair` compatibility command only removes old watcher files. It does not inspect, patch, restore, or re-sign Codex.app.

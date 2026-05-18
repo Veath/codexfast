@@ -15,7 +15,7 @@ This document describes the release flow for `codexfast`.
   - patch-signature corrections for an already supported Codex build
   - newly discovered gates, regexes, or target specs needed to complete a feature path that was already claimed supported
   - fixes to an already supported Fast, Speed, `/fast`, GPT-5.5, or Plugins path
-  - restore, backup, integrity, re-sign, status, or packaging fixes
+  - runtime launch, generated CLI, watcher cleanup, command dispatch, or packaging fixes
   - documentation corrections that do not change supported behavior
 - Treat implementation-level patch targets as release mechanics, not automatic version-scope expansion. If they only make an already promised feature work correctly on an already supported build, choose patch.
 - Use a minor release for any new user-visible supported capability or compatibility surface:

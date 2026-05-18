@@ -12,7 +12,12 @@ This project follows a simple release-oriented changelog format.
 
 ### Changed
 
-- Split the generated CLI source into focused runtime launch, legacy patch flow, watcher, app-environment, and app-mutation modules while preserving the single-file `bin/codexfast` output.
+- Reduced the generated CLI source to the runtime launcher, runtime patch engine, app-environment checks, command policy, and legacy watcher cleanup shim while preserving the single-file `bin/codexfast` output.
+
+### Removed
+
+- Removed the legacy bundle patch flow, including internal `status`, `apply`, `restore`, archive rewrite, ASAR helper, Sparkle bridge, re-sign, and legacy file-patch self-test code.
+- Removed legacy watcher install/uninstall code. The hidden `repair` command now only removes old watcher files for compatibility.
 
 ### Documentation
 

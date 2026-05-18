@@ -65,19 +65,6 @@ function normalizeLegacySpeedSetting(
   return `${enabledVariable}=${resolveSpeedAvailabilityCall(serviceTierFactory)}(),${serviceTierSetup}let `;
 }
 
-function restoreSpeedSetting(
-  _match: string,
-  enabledVariable: string,
-  availabilityOrServiceTierSetup: string,
-  serviceTierSetupOrFactory: string,
-): string {
-  if (availabilityOrServiceTierSetup.endsWith(",")) {
-    return `${enabledVariable}=${availabilityOrServiceTierSetup}${serviceTierSetupOrFactory}if(!${enabledVariable})return null;let `;
-  }
-  return `${enabledVariable}=${resolveSpeedAvailabilityCall(
-    serviceTierSetupOrFactory,
-  )}(),${availabilityOrServiceTierSetup}if(!${enabledVariable})return null;let `;
-}
 export const SPEED_TARGET_SPECS = defineTargetSpecs(
   {
     id: "speed-setting",
@@ -88,7 +75,6 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     legacyPatchedSignature: PATCHED_SIGNATURE,
     applyReplacement: "$1=$2$3",
     normalizeReplacement: normalizeLegacySpeedSetting,
-    restoreReplacement: restoreSpeedSetting,
   },
   {
     id: "add-context-speed-menu-old",
@@ -97,7 +83,6 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_OLD,
     patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_OLD,
     applyReplacement: "$1=!0,$2",
-    restoreReplacement: "$1=Cr(),$2",
   },
   {
     id: "add-context-speed-menu-new",
@@ -106,7 +91,6 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_NEW,
     patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_NEW,
     applyReplacement: "$1=!0,$2",
-    restoreReplacement: "$1=cr(),$2",
   },
   {
     id: "intelligence-speed-menu",
@@ -115,7 +99,6 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE,
     patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE,
     applyReplacement: "$1$2=!0,",
-    restoreReplacement: "$1$2=_f(),",
   },
   {
     id: "intelligence-speed-menu-gf",
@@ -124,7 +107,6 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_GF,
     patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_GF,
     applyReplacement: "$1$2=!0,",
-    restoreReplacement: "$1$2=gf(),",
   },
   {
     id: "intelligence-speed-menu-qs",
@@ -133,7 +115,6 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QS,
     patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QS,
     applyReplacement: "$1$2=!0,$5",
-    restoreReplacement: "$1$2=$3($4),$5",
   },
   {
     id: "intelligence-speed-menu-qa",
@@ -142,7 +123,6 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QA,
     patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QA,
     applyReplacement: "$1$2;$3!0$5",
-    restoreReplacement: "$1$2;$3$4$5",
   },
   {
     id: "fast-slash-command",

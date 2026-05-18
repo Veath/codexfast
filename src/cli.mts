@@ -9,22 +9,12 @@ import {
   isPublicLaunchCommand,
   isRuntimeSelftestCommand,
   isVersionCommand,
-  resolveLegacySelftestAction,
 } from './cli-command-policy.mts';
 import { checkRequirements } from './cli-app-environment.mts';
 import { createCodexfastContext } from './cli-context.mts';
 import {
   printActionHeaderBlock,
-  printExitBlock,
 } from './cli-output.mts';
-import {
-  runLegacyEmbeddedTool,
-  type LegacyPatchFlowOptions,
-} from './cli-legacy-patch-flow.mts';
-import {
-  createLegacyAppMutations,
-  type LegacyAppMutationOptions,
-} from './cli-legacy-app-mutations.mts';
 import {
   runRuntimePatchBodySourceSelfTest,
   runRuntimeUrlSelfTest,
@@ -45,16 +35,8 @@ declare const __SUPPORTED_APP_VERSIONS__: Record<string, string>;
 
 const SUPPORTED_APP_VERSIONS = __SUPPORTED_APP_VERSIONS__;
 const context = createCodexfastContext();
-const backupSuffix = '.codexfast.bak';
-const legacyBackupSuffix = '.speed-setting.bak';
-const asarPackage = "@electron/asar@3.4.1";
-const staleArchiveTempFileMs = 10 * 60 * 1000;
 const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(', ');
-const launchAgentLabel = 'com.codexfast.watcher';
-const launchAgentFileName = `${launchAgentLabel}.plist`;
-const SPARKLE_PUBLIC_ED_KEY_BRIDGES: Record<string, string> = {
-  '26.506.31421+2620': 'mNfr1v9t63BfgDtlw4C8lRvSY6uMggIXABDOCi3tS6k=',
-};
+const launchAgentFileName = 'com.codexfast.watcher.plist';
 
 function printActionHeader(action: string): void {
   printActionHeaderBlock(action, {
@@ -63,29 +45,6 @@ function printActionHeader(action: string): void {
     build: context.metadata.build,
     compatibility: context.metadata.compatibility,
   });
-}
-
-function validateActionRequest(action: string): boolean {
-  if (
-    (action === 'apply' || action === 'repair') &&
-    !context.metadata.supported
-  ) {
-    if (action === 'repair') {
-      printLine('Repair skipped because this Codex.app build is unsupported.');
-      printLine('No app files were modified.');
-      printLine(`Supported versions: ${supportedAppVersionKeys}`);
-      printExitBlock(0);
-      return false;
-    }
-    printLine(
-      'Enable custom API features is blocked for this Codex.app version.',
-    );
-    printLine('This script only allows apply on verified compatible builds.');
-    printLine(`Supported versions: ${supportedAppVersionKeys}`);
-    printExitBlock(1);
-    return false;
-  }
-  return true;
 }
 
 function printUsage(): void {
@@ -118,46 +77,7 @@ function runRuntimeLaunchCommand(): Promise<number> {
 
 function watcherFlowOptions(): WatcherFlowOptions {
   return {
-    context,
-    launchAgentLabel,
     launchAgentFileName,
-    printActionHeader,
-  };
-}
-
-function legacyAppMutationOptions(): LegacyAppMutationOptions {
-  return {
-    asarPackage,
-    context,
-    sparklePublicEdKeyBridges: SPARKLE_PUBLIC_ED_KEY_BRIDGES,
-    staleArchiveTempFileMs,
-  };
-}
-
-function legacyPatchFlowOptions(): LegacyPatchFlowOptions {
-  const watcherFlow = createWatcherFlow(watcherFlowOptions());
-  const appMutations = createLegacyAppMutations(legacyAppMutationOptions());
-  return {
-    context,
-    patcherSource: __PATCHER_SOURCE__,
-    backupSuffix,
-    legacyBackupSuffix,
-    printActionHeader,
-    validateActionRequest,
-    removeWatcherFiles: watcherFlow.removeWatcherFiles,
-    migrateLegacyUnpackedLayout: appMutations.migrateLegacyUnpackedLayout,
-    restoreFromArchiveBackup: appMutations.restoreFromArchiveBackup,
-    printOfficialReinstallGuidanceAfterRestore:
-      appMutations.printOfficialReinstallGuidanceAfterRestore,
-    unpackAppAsarToTemp: appMutations.unpackAppAsarToTemp,
-    cleanupTempWorkspace: appMutations.cleanupTempWorkspace,
-    ensureArchiveBackup: appMutations.ensureArchiveBackup,
-    createArchiveSnapshot: appMutations.createArchiveSnapshot,
-    packTempAppToAsar: appMutations.packTempAppToAsar,
-    commitArchiveWithIntegrity: appMutations.commitArchiveWithIntegrity,
-    syncSparklePublicEdKeyForInAppUpdates:
-      appMutations.syncSparklePublicEdKeyForInAppUpdates,
-    resignAppBundle: appMutations.resignAppBundle,
   };
 }
 
@@ -189,7 +109,6 @@ async function showMenu(): Promise<number> {
     }
   } finally {
     rl.close();
-    createLegacyAppMutations(legacyAppMutationOptions()).cleanupTempWorkspace();
   }
 }
 
@@ -198,7 +117,6 @@ async function main(): Promise<number> {
   // the cleanup-only compatibility path, but do not advertise it for new use.
   const args = process.argv.slice(2).filter((arg) => arg !== '--quiet');
   const command = args[0] ?? '';
-  const legacySelftestAction = resolveLegacySelftestAction(command);
 
   if (isRuntimeSelftestCommand(command) && command === '__selftest-cdp-frame') {
     return runCdpFrameSelfTest();
@@ -215,11 +133,6 @@ async function main(): Promise<number> {
   ) {
     return runRuntimePatchBodySourceSelfTest(__PATCHER_SOURCE__);
   }
-  if (legacySelftestAction === '__invalid__') {
-    printUsage();
-    return 1;
-  }
-
   if (isHelpCommand(command)) {
     printUsage();
     return 0;
@@ -231,31 +144,18 @@ async function main(): Promise<number> {
   if (isHiddenLegacyCleanupCommand(command)) {
     return createWatcherFlow(watcherFlowOptions()).cleanupLegacyWatcherCommand();
   }
-  if (command && !isPublicLaunchCommand(command) && !legacySelftestAction) {
+  if (command && !isPublicLaunchCommand(command)) {
     printUsage();
     return 1;
   }
 
-  const effectiveCommand = legacySelftestAction || command;
   if (
     !checkRequirements({
-      command: effectiveCommand,
       context,
-      cleanupStaleArchiveTempFiles:
-        createLegacyAppMutations(legacyAppMutationOptions())
-          .cleanupStaleArchiveTempFiles,
       supportedAppVersions: SUPPORTED_APP_VERSIONS,
     })
   ) {
-    createLegacyAppMutations(legacyAppMutationOptions()).cleanupTempWorkspace();
     return 1;
-  }
-
-  if (legacySelftestAction) {
-    return runLegacyEmbeddedTool(
-      legacyPatchFlowOptions(),
-      legacySelftestAction,
-    );
   }
 
   if (isPublicLaunchCommand(command)) {
@@ -270,7 +170,6 @@ main()
     process.exitCode = exitCode;
   })
   .catch((error: unknown) => {
-    createLegacyAppMutations(legacyAppMutationOptions()).cleanupTempWorkspace();
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
   });

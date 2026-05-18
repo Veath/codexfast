@@ -17,25 +17,8 @@ export function applyRuntimePatchesToResponseBodyWithSource(
   body: string,
 ): RuntimePatchResult {
   if (!runtimePatchBodyFunction) {
-    const tailMarker = "\nlet exitCode = 1;\n";
-    const tailIndex = patcherSource.lastIndexOf(tailMarker);
-    if (tailIndex === -1) {
-      throw new Error(
-        "Embedded runtime patch engine entrypoint was not found.",
-      );
-    }
-    const patcherMarkerIndexes = [
-      '\nconst fs = require("node:fs");\n',
-      '\nconst fs = require("fs");\n',
-    ]
-      .map((marker) => patcherSource.indexOf(marker))
-      .filter((index) => index >= 0);
-    const patcherIndex =
-      patcherMarkerIndexes.length > 0 ? Math.min(...patcherMarkerIndexes) : -1;
-    const engineEnd = patcherIndex === -1 ? tailIndex : patcherIndex;
-    const engineSource = patcherSource.slice(0, engineEnd);
     const factory = new Function(
-      `${engineSource}\nreturn applyRuntimePatchesToBody;`,
+      `${patcherSource}\nreturn applyRuntimePatchesToBody;`,
     ) as () => unknown;
     const candidate = factory();
     if (typeof candidate !== "function") {

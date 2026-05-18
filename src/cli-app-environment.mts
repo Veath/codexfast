@@ -1,11 +1,9 @@
 import { existsSync } from "node:fs";
 import type { CodexfastContext } from "./cli-context.mts";
-import { printLine, resolveCommand, resolvePlistBuddy, run } from "./cli-utils.mts";
+import { printLine, resolvePlistBuddy, run } from "./cli-utils.mts";
 
 export type CheckRequirementsOptions = {
-  command?: string;
   context: CodexfastContext;
-  cleanupStaleArchiveTempFiles: () => void;
   supportedAppVersions: Record<string, string>;
 };
 
@@ -48,8 +46,6 @@ export function checkRequirements(
   options: CheckRequirementsOptions,
 ): boolean {
   const {
-    cleanupStaleArchiveTempFiles,
-    command,
     context,
     supportedAppVersions,
   } = options;
@@ -62,47 +58,17 @@ export function checkRequirements(
     return false;
   }
 
-  context.toolchain.node = process.execPath;
   context.toolchain.plistBuddy = resolvePlistBuddy() ?? "";
 
   if (!context.toolchain.plistBuddy) {
     printLine("PlistBuddy not found.");
     printLine(
-      "This macOS environment cannot update ElectronAsarIntegrity in Info.plist.",
+      "This macOS environment cannot read Codex.app metadata.",
     );
     return false;
   }
 
-  cleanupStaleArchiveTempFiles();
-
   loadAppCompatibilityMetadataForContext(context, supportedAppVersions);
-
-  if (
-    (command === "repair" && !context.metadata.supported) ||
-    command === "launch"
-  ) {
-    return true;
-  }
-
-  context.toolchain.npm = resolveCommand("npm") ?? "";
-  context.toolchain.npx = resolveCommand("npx") ?? "";
-  context.toolchain.codesign = resolveCommand("codesign") ?? "";
-
-  if (!context.toolchain.npm) {
-    printLine("npm not found.");
-    printLine("Make sure npm is available in your shell.");
-    return false;
-  }
-  if (command === "install-watcher" && !context.toolchain.npx) {
-    printLine("npx not found.");
-    printLine("Make sure npx is available in your shell.");
-    return false;
-  }
-  if (!context.toolchain.codesign) {
-    printLine("codesign not found.");
-    printLine("This macOS environment cannot perform local re-signing.");
-    return false;
-  }
 
   return true;
 }

@@ -13,7 +13,7 @@ const compilerOptions = {
   module: ts.ModuleKind.CommonJS,
   target: ts.ScriptTarget.ES2022,
 };
-const cliModulePattern = String.raw`\.\/cli-(?:app-environment|asar-transaction|cdp|command-policy|context|legacy-app-mutations|legacy-patch-flow|output|runtime-launch|runtime-patcher|utils|watcher)\.mts`;
+const cliModulePattern = String.raw`\.\/cli-(?:app-environment|cdp|command-policy|context|output|runtime-launch|runtime-patcher|utils|watcher)\.mts`;
 
 function inlineLocalModuleSource(source: string): string {
   return source.replace(/^export /gm, "");
@@ -62,22 +62,15 @@ const patcherTargetsSource = [
 ].map((fileName) => inlinePatcherTargetModuleSource(readFileSync(join(sourceDir, fileName), "utf8"))).join("\n");
 const patchEngineSource = inlineLocalModuleSource(readFileSync(join(sourceDir, "patch-engine.mts"), "utf8"))
   .replace(/^import \{[^]*?\} from "\.\/patcher-targets\.mts";\r?\n\r?\n?/, "");
-const patcherEngineSource = readFileSync(join(sourceDir, "patcher.mts"), "utf8")
-  .replace(/^import \{[^]*?\} from "\.\/patch-engine\.mts";\r?\n/, "")
-  .replace(/^import \{[^]*?\} from "\.\/patcher-targets\.mts";\r?\n\r?\n?/, "")
-  .replace(/^(?:(?:\/\/ Build marker: stripped by scripts\/build-codexfast\.mts and re-added at the top\r?\n\/\/ of the concatenated patcher source\.\r?\n)?)"use strict";\r?\n\r?\n?/, "");
-const patcherSource = ts.transpileModule(`"use strict";\n\n${patcherTargetsSource}\n${patchEngineSource}\n${patcherEngineSource}`, {
+const patcherSource = ts.transpileModule(`"use strict";\n\n${patcherTargetsSource}\n${patchEngineSource}`, {
   compilerOptions,
 }).outputText;
 const packageVersion = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8")).version as string;
 const cliModuleSource = [
-  "cli-asar-transaction.mts",
   "cli-app-environment.mts",
   "cli-cdp.mts",
   "cli-command-policy.mts",
   "cli-context.mts",
-  "cli-legacy-app-mutations.mts",
-  "cli-legacy-patch-flow.mts",
   "cli-output.mts",
   "cli-runtime-launch.mts",
   "cli-runtime-patcher.mts",

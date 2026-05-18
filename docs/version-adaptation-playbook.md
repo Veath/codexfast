@@ -29,12 +29,11 @@ Determine whether the new build can be supported, update patch logic if needed, 
    - Keep new regexes or target specs as small as possible
    - Put feature-specific target definitions in `src/targets/speed.mts`, `src/targets/plugins.mts`, or `src/targets/models.mts`
    - Keep shared target builder helpers in `src/targets/builders.mts` and aggregate exported targets through `src/patcher-targets.mts`
-   - Preserve internal legacy apply/restore symmetry if touching file-patch targets
    - Preserve runtime launch fail-closed behavior without writing the app bundle
    - Do not widen support claims before validation
 
 5. Update tests in the same change.
-   - Extend `test/re-sign-flow.mts` for every changed target or new guard
+   - Extend `test/runtime-launch-flow.mts` for every changed target, runtime path, or new guard
    - Keep `test/re-sign-flow.sh` as the shell compatibility entrypoint
    - Keep unsupported-version blocking coverage intact
    - When runtime launch changes, cover generated single-file behavior, not only source-level patch helpers

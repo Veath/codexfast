@@ -54,65 +54,7 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const node_process_1 = require("node:process");
 const promises_1 = require("node:readline/promises");
-const node_crypto_1 = require("node:crypto");
 const node_fs_1 = require("node:fs");
-const node_path_1 = require("node:path");
-function calculateAsarHeaderHash(archivePath) {
-    try {
-        const archive = (0, node_fs_1.readFileSync)(archivePath);
-        const headerStringSize = archive.readUInt32LE(12);
-        const headerString = archive.subarray(16, 16 + headerStringSize).toString("utf8");
-        return (0, node_crypto_1.createHash)("sha256").update(headerString).digest("hex");
-    }
-    catch {
-        return null;
-    }
-}
-function snapshotArchive(tempRoot, archivePath, integrityHash) {
-    if (!(0, node_fs_1.existsSync)(archivePath)) {
-        return { archivePath: null, integrityHash };
-    }
-    const snapshotPath = (0, node_path_1.join)(tempRoot, "previous.app.asar");
-    try {
-        (0, node_fs_1.copyFileSync)(archivePath, snapshotPath);
-        return { archivePath: snapshotPath, integrityHash };
-    }
-    catch {
-        return null;
-    }
-}
-function replaceArchiveAtomically(sourceArchive, targetArchive, resourcesDir, tempFileName) {
-    const targetTempAsar = (0, node_path_1.join)(resourcesDir, tempFileName);
-    try {
-        (0, node_fs_1.rmSync)(targetTempAsar, { force: true });
-        (0, node_fs_1.copyFileSync)(sourceArchive, targetTempAsar);
-        (0, node_fs_1.renameSync)(targetTempAsar, targetArchive);
-        return true;
-    }
-    catch {
-        (0, node_fs_1.rmSync)(targetTempAsar, { force: true });
-        return false;
-    }
-}
-function removeStaleArchiveTempFiles(resourcesDir, staleBeforeMs) {
-    if (!(0, node_fs_1.existsSync)(resourcesDir)) {
-        return;
-    }
-    for (const entry of (0, node_fs_1.readdirSync)(resourcesDir)) {
-        if (!entry.startsWith(".codexfast.") || !entry.endsWith(".app.asar.tmp")) {
-            continue;
-        }
-        const tempFile = (0, node_path_1.join)(resourcesDir, entry);
-        try {
-            if ((0, node_fs_1.statSync)(tempFile).mtimeMs < staleBeforeMs) {
-                (0, node_fs_1.rmSync)(tempFile, { force: true });
-            }
-        }
-        catch {
-            (0, node_fs_1.rmSync)(tempFile, { force: true });
-        }
-    }
-}
 function readBundlePlistValueForContext(context, key, fallback = "unknown") {
     const result = run(context.toolchain.plistBuddy, [
         "-c",
@@ -131,46 +73,22 @@ function loadAppCompatibilityMetadataForContext(context, supportedAppVersions) {
         : "unsupported";
 }
 function checkRequirements(options) {
-    const { cleanupStaleArchiveTempFiles, command, context, supportedAppVersions, } = options;
+    const { context, supportedAppVersions, } = options;
     if (!(0, node_fs_1.existsSync)(context.paths.resources)) {
         printLine(`Codex resources directory not found: ${context.paths.resources}`);
         printLine(`Make sure Codex.app is installed at ${context.paths.bundle}.`);
         return false;
     }
-    context.toolchain.node = process.execPath;
     context.toolchain.plistBuddy = resolvePlistBuddy() ?? "";
     if (!context.toolchain.plistBuddy) {
         printLine("PlistBuddy not found.");
-        printLine("This macOS environment cannot update ElectronAsarIntegrity in Info.plist.");
+        printLine("This macOS environment cannot read Codex.app metadata.");
         return false;
     }
-    cleanupStaleArchiveTempFiles();
     loadAppCompatibilityMetadataForContext(context, supportedAppVersions);
-    if ((command === "repair" && !context.metadata.supported) ||
-        command === "launch") {
-        return true;
-    }
-    context.toolchain.npm = resolveCommand("npm") ?? "";
-    context.toolchain.npx = resolveCommand("npx") ?? "";
-    context.toolchain.codesign = resolveCommand("codesign") ?? "";
-    if (!context.toolchain.npm) {
-        printLine("npm not found.");
-        printLine("Make sure npm is available in your shell.");
-        return false;
-    }
-    if (command === "install-watcher" && !context.toolchain.npx) {
-        printLine("npx not found.");
-        printLine("Make sure npx is available in your shell.");
-        return false;
-    }
-    if (!context.toolchain.codesign) {
-        printLine("codesign not found.");
-        printLine("This macOS environment cannot perform local re-signing.");
-        return false;
-    }
     return true;
 }
-const node_crypto_2 = require("node:crypto");
+const node_crypto_1 = require("node:crypto");
 const http = __importStar(require("node:http"));
 const https = __importStar(require("node:https"));
 const net = __importStar(require("node:net"));
@@ -181,7 +99,7 @@ function encodeWebSocketTextFrame(payload) {
     if (body.length > Number.MAX_SAFE_INTEGER) {
         throw new Error("CDP frame payload is too large.");
     }
-    const mask = (0, node_crypto_2.randomBytes)(4);
+    const mask = (0, node_crypto_1.randomBytes)(4);
     const header = [0x81];
     if (body.length < 126) {
         header.push(0x80 | body.length);
@@ -409,7 +327,7 @@ class CdpConnection {
                 return;
             }
             const port = Number(url.port || "80");
-            const key = (0, node_crypto_2.randomBytes)(16).toString("base64");
+            const key = (0, node_crypto_1.randomBytes)(16).toString("base64");
             const expectedAccept = (0, node_crypto_1.createHash)("sha1")
                 .update(`${key}258EAFA5-E914-47DA-95CA-C5AB0DC85B11`)
                 .digest("base64");
@@ -632,20 +550,11 @@ function cdpCommandWithTimeout(command, timeoutMs, timeoutMessage) {
         });
     });
 }
-const legacySelftestPrefix = "__selftest-legacy-";
-const legacySelftestActions = new Set(["status", "apply", "repair", "restore"]);
 const runtimeSelftestCommands = new Set([
     "__selftest-cdp-frame",
     "__selftest-runtime-url",
     "__selftest-runtime-patch-body",
 ]);
-function resolveLegacySelftestAction(command) {
-    if (!command.startsWith(legacySelftestPrefix)) {
-        return "";
-    }
-    const action = command.slice(legacySelftestPrefix.length);
-    return legacySelftestActions.has(action) ? action : "__invalid__";
-}
 function isRuntimeSelftestCommand(command) {
     return runtimeSelftestCommands.has(command);
 }
@@ -661,15 +570,13 @@ function isPublicLaunchCommand(command) {
 function isHiddenLegacyCleanupCommand(command) {
     return command === "repair";
 }
+const node_path_1 = require("node:path");
 function createAppPaths(appBundle = "/Applications/Codex.app") {
     const resources = (0, node_path_1.join)(appBundle, "Contents", "Resources");
     return {
         bundle: appBundle,
         resources,
         infoPlist: (0, node_path_1.join)(appBundle, "Contents", "Info.plist"),
-        asar: (0, node_path_1.join)(resources, "app.asar"),
-        asarBackup: (0, node_path_1.join)(resources, "app.asar1"),
-        sparklePublicEdKeyBackup: (0, node_path_1.join)(resources, "SUPublicEDKey.codexfast.bak"),
     };
 }
 function emptyAppMetadata() {
@@ -681,20 +588,8 @@ function emptyAppMetadata() {
         supported: false,
     };
 }
-function emptyTempWorkspace() {
-    return {
-        root: "",
-        appDir: "",
-        assetsDir: "",
-        asar: "",
-    };
-}
 function emptyToolchain() {
     return {
-        node: "",
-        npm: "",
-        npx: "",
-        codesign: "",
         plistBuddy: "",
     };
 }
@@ -702,529 +597,8 @@ function createCodexfastContext(appBundle = process.env.CODEXFAST_APP_BUNDLE) {
     return {
         paths: createAppPaths(appBundle ?? "/Applications/Codex.app"),
         metadata: emptyAppMetadata(),
-        temp: emptyTempWorkspace(),
         toolchain: emptyToolchain(),
     };
-}
-const node_fs_2 = require("node:fs");
-const node_os_1 = require("node:os");
-function createLegacyAppMutations(options) {
-    const { asarPackage, context, sparklePublicEdKeyBridges, staleArchiveTempFileMs, } = options;
-    function readBundlePlistValue(key, fallback = 'unknown') {
-        const result = run(context.toolchain.plistBuddy, [
-            '-c',
-            `Print :${key}`,
-            context.paths.infoPlist,
-        ]);
-        return result.status === 0 ? result.stdout.trim() : fallback;
-    }
-    function cleanupTempWorkspace() {
-        if (context.temp.root && (0, node_fs_1.existsSync)(context.temp.root)) {
-            (0, node_fs_1.rmSync)(context.temp.root, { recursive: true, force: true });
-        }
-        context.temp.root = '';
-        context.temp.appDir = '';
-        context.temp.assetsDir = '';
-        context.temp.asar = '';
-    }
-    function createTempWorkspace() {
-        cleanupTempWorkspace();
-        try {
-            context.temp.root = (0, node_fs_2.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'codexfast.'));
-            context.temp.appDir = (0, node_path_1.join)(context.temp.root, 'app');
-            context.temp.assetsDir = (0, node_path_1.join)(context.temp.appDir, 'webview', 'assets');
-            context.temp.asar = (0, node_path_1.join)(context.temp.root, 'app.asar');
-            return true;
-        }
-        catch {
-            printLine('Failed to create a temporary workspace.');
-            return false;
-        }
-    }
-    function runAsar(args) {
-        const result = run(context.toolchain.npm, [
-            'exec',
-            '--yes',
-            '--package',
-            asarPackage,
-            '--',
-            'asar',
-            ...args,
-        ]);
-        if (result.status !== 0) {
-            process.stdout.write(result.stdout);
-            process.stderr.write(result.stderr);
-            return false;
-        }
-        return true;
-    }
-    function readAsarIntegrityHash() {
-        const result = run(context.toolchain.plistBuddy, [
-            '-c',
-            'Print :ElectronAsarIntegrity:Resources/app.asar:hash',
-            context.paths.infoPlist,
-        ]);
-        return result.status === 0 ? result.stdout.trim() : '';
-    }
-    function writeAsarIntegrityHash(hash, options = {}) {
-        const setResult = run(context.toolchain.plistBuddy, [
-            '-c',
-            `Set :ElectronAsarIntegrity:Resources/app.asar:hash ${hash}`,
-            context.paths.infoPlist,
-        ]);
-        if (setResult.status !== 0) {
-            printLine(options.failureMessage ??
-                'Failed to update ElectronAsarIntegrity hash in Info.plist.');
-            return false;
-        }
-        if (readAsarIntegrityHash() !== hash) {
-            printLine(options.verificationFailureMessage ??
-                'ElectronAsarIntegrity hash verification failed after updating Info.plist.');
-            return false;
-        }
-        return true;
-    }
-    function readSparklePublicEdKey() {
-        return readBundlePlistValue('SUPublicEDKey', '');
-    }
-    function writeSparklePublicEdKey(value) {
-        const setResult = run(context.toolchain.plistBuddy, [
-            '-c',
-            `Set :SUPublicEDKey ${value}`,
-            context.paths.infoPlist,
-        ]);
-        if (setResult.status !== 0) {
-            const addResult = run(context.toolchain.plistBuddy, [
-                '-c',
-                `Add :SUPublicEDKey string ${value}`,
-                context.paths.infoPlist,
-            ]);
-            if (addResult.status !== 0) {
-                return false;
-            }
-        }
-        return readSparklePublicEdKey() === value;
-    }
-    function syncSparklePublicEdKeyForInAppUpdates() {
-        const targetKey = sparklePublicEdKeyBridges[context.metadata.versionKey];
-        if (!targetKey) {
-            return { changed: false, ok: true };
-        }
-        const currentKey = readSparklePublicEdKey();
-        if (currentKey === targetKey) {
-            return { changed: false, ok: true };
-        }
-        try {
-            if (!(0, node_fs_1.existsSync)(context.paths.sparklePublicEdKeyBackup)) {
-                (0, node_fs_2.writeFileSync)(context.paths.sparklePublicEdKeyBackup, currentKey, 'utf8');
-            }
-        }
-        catch {
-            printLine('Failed to back up the Sparkle public EdDSA key.');
-            return { changed: false, ok: false };
-        }
-        if (!writeSparklePublicEdKey(targetKey)) {
-            printLine('Failed to update the Sparkle public EdDSA key for in-app updates.');
-            return { changed: false, ok: false };
-        }
-        printLine('Updated Sparkle public EdDSA key for in-app updates.');
-        return { changed: true, ok: true };
-    }
-    function restoreSparklePublicEdKeyBackup() {
-        if (!(0, node_fs_1.existsSync)(context.paths.sparklePublicEdKeyBackup)) {
-            return { changed: false, ok: true };
-        }
-        let originalKey = '';
-        try {
-            originalKey = (0, node_fs_1.readFileSync)(context.paths.sparklePublicEdKeyBackup, 'utf8').trim();
-        }
-        catch {
-            printLine('Failed to read the Sparkle public EdDSA key backup.');
-            return { changed: false, ok: false };
-        }
-        if (!writeSparklePublicEdKey(originalKey)) {
-            printLine('Failed to restore the Sparkle public EdDSA key backup.');
-            return { changed: false, ok: false };
-        }
-        try {
-            (0, node_fs_1.rmSync)(context.paths.sparklePublicEdKeyBackup, { force: true });
-        }
-        catch {
-            printLine('Failed to remove the Sparkle public EdDSA key backup.');
-            return { changed: true, ok: false };
-        }
-        printLine('Restored Sparkle public EdDSA key backup.');
-        return { changed: true, ok: true };
-    }
-    function updateAsarIntegrityMetadata() {
-        const currentHash = calculateAsarHeaderHash(context.paths.asar);
-        if (!currentHash) {
-            printLine('Failed to calculate the Electron ASAR header hash for app.asar.');
-            return false;
-        }
-        if (!readAsarIntegrityHash()) {
-            printLine('ElectronAsarIntegrity entry not found in Info.plist. Skipping metadata update.');
-            return true;
-        }
-        if (!writeAsarIntegrityHash(currentHash)) {
-            return false;
-        }
-        printLine('Updated ElectronAsarIntegrity hash in Info.plist.');
-        return true;
-    }
-    function createArchiveSnapshot() {
-        if (!context.temp.root && !createTempWorkspace()) {
-            return null;
-        }
-        const snapshot = snapshotArchive(context.temp.root, context.paths.asar, readAsarIntegrityHash());
-        if (!snapshot) {
-            printLine('Failed to snapshot the current app.asar before replacing it.');
-            return null;
-        }
-        return snapshot;
-    }
-    function restoreArchiveSnapshot(snapshot) {
-        let archiveRestored = false;
-        if (snapshot.archivePath) {
-            printLine('Reverting to the pre-change app.asar after failed integrity update.');
-            archiveRestored = replaceAppAsarFrom(snapshot.archivePath, 'Failed to restore the previous app.asar after integrity update failure.');
-        }
-        else {
-            printLine('Removing app.asar created during failed integrity update.');
-            try {
-                (0, node_fs_1.rmSync)(context.paths.asar, { force: true });
-                archiveRestored = true;
-            }
-            catch {
-                printLine('Failed to remove app.asar after integrity update failure.');
-            }
-        }
-        let integrityRestored = true;
-        if (snapshot.integrityHash &&
-            readAsarIntegrityHash() !== snapshot.integrityHash) {
-            integrityRestored = writeAsarIntegrityHash(snapshot.integrityHash, {
-                failureMessage: 'Failed to restore previous ElectronAsarIntegrity hash in Info.plist.',
-                verificationFailureMessage: 'ElectronAsarIntegrity hash verification failed after restoring previous Info.plist hash.',
-            });
-        }
-        return archiveRestored && integrityRestored;
-    }
-    function ensureArchiveBackup() {
-        if ((0, node_fs_1.existsSync)(context.paths.asarBackup)) {
-            printLine(`Archive backup already exists: ${context.paths.asarBackup}`);
-            return true;
-        }
-        try {
-            (0, node_fs_2.writeFileSync)(context.paths.asarBackup, (0, node_fs_1.readFileSync)(context.paths.asar));
-            printLine(`Created archive backup: ${context.paths.asarBackup}`);
-            return true;
-        }
-        catch {
-            printLine('Failed to create app.asar backup.');
-            return false;
-        }
-    }
-    function unpackAppAsarToTemp() {
-        if (!createTempWorkspace()) {
-            return false;
-        }
-        if (!runAsar(['e', context.paths.asar, context.temp.appDir])) {
-            printLine('Failed to unpack app.asar.');
-            return false;
-        }
-        if (!(0, node_fs_1.existsSync)(context.temp.assetsDir)) {
-            printLine(`Assets directory not found: ${context.temp.assetsDir}`);
-            return false;
-        }
-        return true;
-    }
-    function packTempAppToAsar() {
-        if (!context.temp.asar) {
-            printLine('Temporary archive path is not available.');
-            return false;
-        }
-        if (!runAsar(['p', context.temp.appDir, context.temp.asar])) {
-            printLine('Failed to repack app.asar.');
-            return false;
-        }
-        return true;
-    }
-    function replaceAppAsarFrom(sourceArchive, failureMessage) {
-        const tempFileName = `.codexfast.${process.pid}.${(0, node_crypto_2.randomBytes)(6).toString('hex')}.app.asar.tmp`;
-        if (replaceArchiveAtomically(sourceArchive, context.paths.asar, context.paths.resources, tempFileName)) {
-            return true;
-        }
-        printLine(failureMessage);
-        return false;
-    }
-    function commitArchiveWithIntegrity(sourceArchive, snapshot) {
-        if (!replaceAppAsarFrom(sourceArchive, 'Failed to replace app.asar with the repacked archive.')) {
-            return false;
-        }
-        if (updateAsarIntegrityMetadata()) {
-            return true;
-        }
-        if (!restoreArchiveSnapshot(snapshot)) {
-            printLine('Bundle may be in an inconsistent state. Re-run restore or reinstall Codex.app.');
-        }
-        return false;
-    }
-    function cleanupStaleArchiveTempFiles() {
-        removeStaleArchiveTempFiles(context.paths.resources, Date.now() - staleArchiveTempFileMs);
-    }
-    function migrateLegacyUnpackedLayout() {
-        const unpackedAppDir = (0, node_path_1.join)(context.paths.resources, 'app');
-        if (!(0, node_fs_1.existsSync)(unpackedAppDir)) {
-            return true;
-        }
-        printLine('Detected legacy unpacked Resources/app layout. Repacking into app.asar.');
-        if (!createTempWorkspace()) {
-            return false;
-        }
-        try {
-            if (!(0, node_fs_1.existsSync)(context.paths.asarBackup) &&
-                (0, node_fs_1.existsSync)(context.paths.asar)) {
-                if (!ensureArchiveBackup()) {
-                    return false;
-                }
-            }
-            const snapshot = createArchiveSnapshot();
-            if (!snapshot) {
-                return false;
-            }
-            if (!runAsar(['p', unpackedAppDir, context.temp.asar])) {
-                printLine('Failed to repack legacy Resources/app directory.');
-                return false;
-            }
-            if (!commitArchiveWithIntegrity(context.temp.asar, snapshot)) {
-                return false;
-            }
-            (0, node_fs_1.rmSync)(unpackedAppDir, { recursive: true, force: true });
-            return resignAppBundle('Legacy unpacked layout was migrated. Re-signing now.');
-        }
-        finally {
-            cleanupTempWorkspace();
-        }
-    }
-    function restoreFromArchiveBackup() {
-        if (!(0, node_fs_1.existsSync)(context.paths.asarBackup)) {
-            return false;
-        }
-        if (!createTempWorkspace()) {
-            return false;
-        }
-        try {
-            const snapshot = createArchiveSnapshot();
-            if (!snapshot) {
-                return false;
-            }
-            printLine(`Restoring app.asar from archive backup: ${context.paths.asarBackup}`);
-            if (!commitArchiveWithIntegrity(context.paths.asarBackup, snapshot)) {
-                return false;
-            }
-            const metadataChange = restoreSparklePublicEdKeyBackup();
-            if (!metadataChange.ok) {
-                return false;
-            }
-            if (!resignAppBundle('Original archive was restored. Re-signing now.')) {
-                return false;
-            }
-            return true;
-        }
-        finally {
-            cleanupTempWorkspace();
-        }
-    }
-    function printManualResignGuidance() {
-        printLine('Manual fallback:');
-        printLine(`  codesign --force --deep --sign - ${context.paths.bundle}`);
-        printLine(`  codesign --verify --deep --strict --verbose=2 ${context.paths.bundle}`);
-        printLine('If verification still fails, run Restore original app or reinstall Codex.app.');
-    }
-    function officialCodexDownloadUrl() {
-        if (!context.metadata.version || context.metadata.version === 'unknown') {
-            return null;
-        }
-        return `https://persistent.oaistatic.com/codex-app-prod/Codex-darwin-arm64-${context.metadata.version}.zip`;
-    }
-    function printOfficialReinstallGuidanceAfterRestore() {
-        printLine('');
-        printLine('Official signature recovery:');
-        printLine('  Restore keeps the existing codexfast rollback behavior and re-signs locally.');
-        printLine('  To recover the OpenAI Developer ID signature, reinstall the official Codex.app build manually.');
-        const downloadUrl = officialCodexDownloadUrl();
-        if (downloadUrl) {
-            printLine(`  Current-version download: ${downloadUrl}`);
-        }
-        else {
-            printLine('  Appcast: https://persistent.oaistatic.com/codex-app-prod/appcast.xml');
-        }
-    }
-    function resignAppBundle(reason) {
-        printLine(reason);
-        printLine('Running local ad-hoc re-sign...');
-        const result = run(context.toolchain.codesign, [
-            '--force',
-            '--deep',
-            '--sign',
-            '-',
-            context.paths.bundle,
-        ]);
-        if (result.status !== 0) {
-            process.stdout.write(result.stdout);
-            process.stderr.write(result.stderr);
-            printLine('Failed to re-sign Codex.app.');
-            printManualResignGuidance();
-            return false;
-        }
-        const verifyResult = run(context.toolchain.codesign, [
-            '--verify',
-            '--deep',
-            '--strict',
-            '--verbose=2',
-            context.paths.bundle,
-        ]);
-        if (verifyResult.status !== 0) {
-            process.stdout.write(verifyResult.stdout);
-            process.stderr.write(verifyResult.stderr);
-            printLine('Failed to verify the re-signed Codex.app.');
-            printManualResignGuidance();
-            return false;
-        }
-        printLine('Re-sign completed.');
-        return true;
-    }
-    return {
-        cleanupStaleArchiveTempFiles,
-        cleanupTempWorkspace,
-        commitArchiveWithIntegrity,
-        createArchiveSnapshot,
-        ensureArchiveBackup,
-        migrateLegacyUnpackedLayout,
-        packTempAppToAsar,
-        printOfficialReinstallGuidanceAfterRestore,
-        resignAppBundle,
-        restoreFromArchiveBackup,
-        syncSparklePublicEdKeyForInAppUpdates,
-        unpackAppAsarToTemp,
-    };
-}
-function parseApplySummary(output) {
-    const match = output.match(/summary: changed=(\d+), alreadyPatched=(\d+)/);
-    if (!match) {
-        return null;
-    }
-    return {
-        changed: Number(match[1]),
-        alreadyPatched: Number(match[2]),
-    };
-}
-function runEmbeddedPatcher(options, action) {
-    const patcherAction = action === "repair" ? "apply" : action;
-    const result = run(options.context.toolchain.node, [
-        "-",
-        patcherAction,
-        options.context.temp.assetsDir,
-        options.backupSuffix,
-        options.legacyBackupSuffix,
-        options.context.metadata.versionKey,
-    ], {
-        input: options.patcherSource,
-    });
-    process.stdout.write(result.stdout);
-    process.stderr.write(result.stderr);
-    return result;
-}
-function finalizeModifiedArchive(options, action) {
-    if ((action === "apply" || action === "repair") &&
-        !options.ensureArchiveBackup()) {
-        return false;
-    }
-    const snapshot = options.createArchiveSnapshot();
-    if (!snapshot) {
-        return false;
-    }
-    if (!options.packTempAppToAsar()) {
-        return false;
-    }
-    if (!options.commitArchiveWithIntegrity(options.context.temp.asar, snapshot)) {
-        return false;
-    }
-    if (action === "apply" || action === "repair") {
-        const metadataChange = options.syncSparklePublicEdKeyForInAppUpdates();
-        if (!metadataChange.ok) {
-            return false;
-        }
-    }
-    if (!options.resignAppBundle("Codex.app resources were modified. Re-signing now.")) {
-        return false;
-    }
-    return true;
-}
-function runLegacyEmbeddedTool(options, action) {
-    let exitCode = 1;
-    options.printActionHeader(action);
-    if (!options.validateActionRequest(action)) {
-        return action === "repair" ? 0 : 1;
-    }
-    if (action === "restore" &&
-        !options.removeWatcherFiles({ quietLaunchctl: true, reportRemoved: true })) {
-        printLine("Warning: failed to remove the auto-repair watcher before restore.");
-        printLine("Run uninstall-watcher manually if restore is re-applied automatically.");
-    }
-    if (!options.migrateLegacyUnpackedLayout()) {
-        return 1;
-    }
-    if (!(0, node_fs_1.existsSync)(options.context.paths.asar)) {
-        printLine(`app.asar not found: ${options.context.paths.asar}`);
-        return 1;
-    }
-    if (action === "restore" &&
-        (0, node_fs_1.existsSync)(options.context.paths.asarBackup)) {
-        exitCode = options.restoreFromArchiveBackup() ? 0 : 1;
-        if (exitCode === 0) {
-            options.printOfficialReinstallGuidanceAfterRestore();
-        }
-        printExitBlock(exitCode);
-        return exitCode;
-    }
-    if (!options.unpackAppAsarToTemp()) {
-        options.cleanupTempWorkspace();
-        return printExitBlock(1).exitCode;
-    }
-    const patcherRun = runEmbeddedPatcher(options, action);
-    exitCode = patcherRun.status;
-    if (exitCode === 0 && action !== "status") {
-        if (action === "apply" || action === "repair") {
-            const summary = parseApplySummary(patcherRun.stdout);
-            if (summary && summary.changed === 0) {
-                const metadataChange = options.syncSparklePublicEdKeyForInAppUpdates();
-                if (!metadataChange.ok) {
-                    exitCode = 1;
-                }
-                else if (metadataChange.changed) {
-                    if (!options.resignAppBundle("Codex.app metadata was modified. Re-signing now.")) {
-                        exitCode = 1;
-                    }
-                }
-                else {
-                    printLine("No patch changes were needed; leaving app.asar and signature untouched.");
-                }
-            }
-            else if (!finalizeModifiedArchive(options, action)) {
-                exitCode = 1;
-            }
-        }
-        else if (!finalizeModifiedArchive(options, action)) {
-            exitCode = 1;
-        }
-    }
-    options.cleanupTempWorkspace();
-    if (action === "restore" && exitCode === 0) {
-        options.printOfficialReinstallGuidanceAfterRestore();
-    }
-    printExitBlock(exitCode);
-    return exitCode;
 }
 function printActionHeaderBlock(action, details) {
     printLine("");
@@ -1276,7 +650,7 @@ function checkCodexRunning() {
     };
 }
 function randomDebugPort() {
-    return 40_000 + ((0, node_crypto_2.randomBytes)(2).readUInt16BE(0) % 20_000);
+    return 40_000 + ((0, node_crypto_1.randomBytes)(2).readUInt16BE(0) % 20_000);
 }
 function codexExecutablePath(context) {
     return (0, node_path_1.join)(context.paths.bundle, "Contents", "MacOS", "Codex");
@@ -1740,21 +1114,7 @@ async function runRuntimeLaunch(options) {
 let runtimePatchBodyFunction = null;
 function applyRuntimePatchesToResponseBodyWithSource(patcherSource, resourcePath, body) {
     if (!runtimePatchBodyFunction) {
-        const tailMarker = "\nlet exitCode = 1;\n";
-        const tailIndex = patcherSource.lastIndexOf(tailMarker);
-        if (tailIndex === -1) {
-            throw new Error("Embedded runtime patch engine entrypoint was not found.");
-        }
-        const patcherMarkerIndexes = [
-            '\nconst fs = require("node:fs");\n',
-            '\nconst fs = require("fs");\n',
-        ]
-            .map((marker) => patcherSource.indexOf(marker))
-            .filter((index) => index >= 0);
-        const patcherIndex = patcherMarkerIndexes.length > 0 ? Math.min(...patcherMarkerIndexes) : -1;
-        const engineEnd = patcherIndex === -1 ? tailIndex : patcherIndex;
-        const engineSource = patcherSource.slice(0, engineEnd);
-        const factory = new Function(`${engineSource}\nreturn applyRuntimePatchesToBody;`);
+        const factory = new Function(`${patcherSource}\nreturn applyRuntimePatchesToBody;`);
         const candidate = factory();
         if (typeof candidate !== "function") {
             throw new Error("Embedded runtime patch engine is unavailable.");
@@ -1851,15 +1211,7 @@ function sleep(ms) {
 function asError(value) {
     return value instanceof Error ? value : new Error(String(value));
 }
-function escapeXml(value) {
-    return value
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&apos;");
-}
-const node_fs_3 = require("node:fs");
+const node_fs_2 = require("node:fs");
 function userHomeDir() {
     return process.env.HOME || process.env.USERPROFILE || "";
 }
@@ -1877,7 +1229,7 @@ function launchctlDomain() {
     return `gui/${getuid()}`;
 }
 function createWatcherFlow(options) {
-    const { context, launchAgentFileName, launchAgentLabel, printActionHeader } = options;
+    const { launchAgentFileName } = options;
     const watcherPlistPath = () => (0, node_path_1.join)(launchAgentsDir(), launchAgentFileName);
     const watcherCliPath = () => (0, node_path_1.join)(codexfastSupportDir(), "codexfast-watcher.js");
     const runLaunchctl = (args, runOptions = {}) => {
@@ -1899,19 +1251,15 @@ function createWatcherFlow(options) {
         return true;
     };
     const removeWatcherFiles = (removeOptions = {}) => {
-        const hadWatcherFiles = (0, node_fs_1.existsSync)(watcherPlistPath()) || (0, node_fs_1.existsSync)(watcherCliPath());
         runLaunchctl(["bootout", launchctlDomain(), watcherPlistPath()], {
             quiet: removeOptions.quietLaunchctl,
         });
         try {
-            (0, node_fs_1.rmSync)(watcherPlistPath(), { force: true });
-            (0, node_fs_1.rmSync)(watcherCliPath(), { force: true });
+            (0, node_fs_2.rmSync)(watcherPlistPath(), { force: true });
+            (0, node_fs_2.rmSync)(watcherCliPath(), { force: true });
         }
         catch {
             return false;
-        }
-        if (hadWatcherFiles && removeOptions.reportRemoved) {
-            printLine("Removed auto-repair watcher before restore.");
         }
         return true;
     };
@@ -1932,137 +1280,17 @@ function createWatcherFlow(options) {
         }
         return printExitBlock(0).exitCode;
     };
-    const watcherRunnerSource = () => `#!/usr/bin/env node
-const { spawnSync } = require("node:child_process");
-
-const result = spawnSync(${JSON.stringify(context.toolchain.npx)}, ["--yes", "codexfast@latest", "repair"], {
-  stdio: "inherit",
-  env: process.env,
-});
-
-if (result.error) {
-  console.error(result.error.message);
-}
-
-process.exit(result.status ?? 1);
-`;
-    const writeWatcherRunner = () => {
-        if (!context.toolchain.npx) {
-            context.toolchain.npx = resolveCommand("npx") ?? "";
-        }
-        if (!context.toolchain.npx) {
-            printLine("npx not found.");
-            printLine("Make sure npx is available in your shell.");
-            return false;
-        }
-        try {
-            (0, node_fs_3.mkdirSync)(codexfastSupportDir(), { recursive: true });
-            (0, node_fs_2.writeFileSync)(watcherCliPath(), watcherRunnerSource(), "utf8");
-            (0, node_fs_3.chmodSync)(watcherCliPath(), 0o755);
-            return true;
-        }
-        catch {
-            printLine("Failed to install the watcher runner.");
-            return false;
-        }
-    };
-    const watcherPlist = () => {
-        const environmentEntries = [
-            ["CODEXFAST_APP_BUNDLE", context.paths.bundle],
-            [
-                "PATH",
-                process.env.PATH ??
-                    "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin",
-            ],
-        ];
-        const environmentXml = environmentEntries
-            .map(([key, value]) => `      <key>${escapeXml(key)}</key>\n      <string>${escapeXml(value)}</string>`)
-            .join("\n");
-        return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>${escapeXml(launchAgentLabel)}</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>${escapeXml(process.execPath)}</string>
-    <string>${escapeXml(watcherCliPath())}</string>
-  </array>
-  <key>EnvironmentVariables</key>
-  <dict>
-${environmentXml}
-  </dict>
-  <key>WatchPaths</key>
-  <array>
-    <string>${escapeXml(context.paths.asar)}</string>
-  </array>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>ThrottleInterval</key>
-  <integer>60</integer>
-</dict>
-</plist>
-`;
-    };
-    const installWatcher = () => {
-        printActionHeader("install-watcher");
-        if (!(0, node_fs_1.existsSync)(context.paths.asar)) {
-            printLine(`app.asar not found: ${context.paths.asar}`);
-            return printExitBlock(1).exitCode;
-        }
-        if (!writeWatcherRunner()) {
-            return printExitBlock(1).exitCode;
-        }
-        try {
-            (0, node_fs_3.mkdirSync)(launchAgentsDir(), { recursive: true });
-            (0, node_fs_2.writeFileSync)(watcherPlistPath(), watcherPlist());
-        }
-        catch {
-            printLine("Failed to write the launchd watcher plist.");
-            return printExitBlock(1).exitCode;
-        }
-        runLaunchctl(["bootout", launchctlDomain(), watcherPlistPath()], {
-            quiet: true,
-        });
-        if (!runLaunchctl(["bootstrap", launchctlDomain(), watcherPlistPath()])) {
-            printLine("Watcher plist was written, but launchctl failed to load it.");
-            return printExitBlock(1).exitCode;
-        }
-        printLine(`Installed watcher: ${watcherPlistPath()}`);
-        return printExitBlock(0).exitCode;
-    };
-    const uninstallWatcher = () => {
-        printActionHeader("uninstall-watcher");
-        if (!removeWatcherFiles()) {
-            printLine("Failed to remove all watcher files.");
-            return printExitBlock(1).exitCode;
-        }
-        printLine("Uninstalled watcher.");
-        return printExitBlock(0).exitCode;
-    };
     return {
         cleanupLegacyWatcherCommand,
-        installWatcher,
         removeLegacyWatcherFiles,
-        removeWatcherFiles,
-        uninstallWatcher,
     };
 }
-const __PATCHER_SOURCE__ = "\"use strict\";\nfunction defineTargetSpecs(...specs) {\n    return specs.map((spec) => ({\n        legacyPatchedSignature: null,\n        ...spec,\n    }));\n}\nconst SPEED_LABEL_NEEDLE = \"settings.agent.speed.label\";\nconst SPEED_SLASH_COMMAND_NEEDLE = \"composer.speedSlashCommand.title\";\nconst ADD_CONTEXT_SPEED_NEEDLE = \"composer.addContext.speed.option.fast.description\";\nconst INTELLIGENCE_SPEED_NEEDLE = \"composer.intelligenceDropdown.speed.title\";\nconst GUARDED_SIGNATURE = /([A-Za-z_$][\\w$]*)=((?:_e|ae|P|N|de|ie|se)\\(\\),)(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=(?:Ce|se|be|xe|ye|Ve|de|fe)\\(\\);)if\\(!\\1\\)return null;/;\nconst PATCHED_SIGNATURE = /([A-Za-z_$][\\w$]*)=!0,(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=(Ce|se|be|xe|ye|Ve|de|fe)\\(\\);)let /;\nconst NORMALIZED_PATCHED_SIGNATURE = /([A-Za-z_$][\\w$]*)=((?:_e|ae|P|N|de|ie|se)\\(\\),)(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=(?:Ce|se|be|xe|ye|Ve|de|fe)\\(\\);)let /;\nconst SLASH_COMMAND_GUARDED_SIGNATURE = /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)([A-Za-z_$][\\w$]*)(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\\w$]*})/;\nconst SLASH_COMMAND_PATCHED_SIGNATURE = /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)!0(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\\w$]*})/;\nconst ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_OLD = /([A-Za-z_$][\\w$]*)=Cr\\(\\),(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=Ir\\([^)]+\\)[;,])/;\nconst ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_OLD = /([A-Za-z_$][\\w$]*)=!0,(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=Ir\\([^)]+\\)[;,])/;\nconst ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_NEW = /([A-Za-z_$][\\w$]*)=cr\\(\\),(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=jr\\([^)]+\\)[;,])/;\nconst ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_NEW = /([A-Za-z_$][\\w$]*)=!0,(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=jr\\([^)]+\\)[;,])/;\nconst INTELLIGENCE_SPEED_GUARDED_SIGNATURE = /(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=(?:Jp|Zp)\\([^)]*\\),)([A-Za-z_$][\\w$]*)=_f\\(\\),/;\nconst INTELLIGENCE_SPEED_PATCHED_SIGNATURE = /(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=(?:Jp|Zp)\\([^)]*\\),)([A-Za-z_$][\\w$]*)=!0,/;\nconst INTELLIGENCE_SPEED_GUARDED_SIGNATURE_GF = /(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=Yp\\([^)]*\\),)([A-Za-z_$][\\w$]*)=gf\\(\\),/;\nconst INTELLIGENCE_SPEED_PATCHED_SIGNATURE_GF = /(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=Yp\\([^)]*\\),)([A-Za-z_$][\\w$]*)=!0,/;\nconst INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QS = /(let )([A-Za-z_$][\\w$]*)=(qs|va)\\(([^)]+)\\),([A-Za-z_$][\\w$]*=(?:zr|fi)\\([A-Za-z_$][\\w$]*,n\\),)/;\nconst INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QS = /(let )([A-Za-z_$][\\w$]*)=!0,([A-Za-z_$][\\w$]*=(?:zr|fi)\\([A-Za-z_$][\\w$]*,n\\),)/;\nconst INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QA = /(let )([A-Za-z_$][\\w$]*);([^;]{0,260}\\?\\(\\2=)([A-Za-z_$][\\w$]*)(\\?\\(0,[A-Za-z_$][\\w$]*\\.jsx\\)\\([A-Za-z_$][\\w$]*,\\{selectedServiceTier:[^}]+,isLoading:[^}]+,setServiceTier:[^}]+,onSelectComplete:[^}]+\\}\\):null,)/;\nconst INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QA = /(let )([A-Za-z_$][\\w$]*);([^;]{0,260}\\?\\(\\2=)!0(\\?\\(0,[A-Za-z_$][\\w$]*\\.jsx\\)\\([A-Za-z_$][\\w$]*,\\{selectedServiceTier:[^}]+,isLoading:[^}]+,setServiceTier:[^}]+,onSelectComplete:[^}]+\\}\\):null,)/;\nfunction resolveSpeedAvailabilityCall(serviceTierFactory) {\n    const availabilityCalls = {\n        Ce: \"_e\",\n        se: \"ae\",\n        be: \"P\",\n        xe: \"P\",\n        ye: \"N\",\n        Ve: \"de\",\n        de: \"ie\",\n        fe: \"se\",\n    };\n    const availabilityCall = availabilityCalls[serviceTierFactory];\n    if (!availabilityCall) {\n        throw new Error(`Unsupported Speed setting service-tier factory: ${serviceTierFactory}.`);\n    }\n    return availabilityCall;\n}\nfunction normalizeLegacySpeedSetting(_match, enabledVariable, serviceTierSetup, serviceTierFactory) {\n    return `${enabledVariable}=${resolveSpeedAvailabilityCall(serviceTierFactory)}(),${serviceTierSetup}let `;\n}\nfunction restoreSpeedSetting(_match, enabledVariable, availabilityOrServiceTierSetup, serviceTierSetupOrFactory) {\n    if (availabilityOrServiceTierSetup.endsWith(\",\")) {\n        return `${enabledVariable}=${availabilityOrServiceTierSetup}${serviceTierSetupOrFactory}if(!${enabledVariable})return null;let `;\n    }\n    return `${enabledVariable}=${resolveSpeedAvailabilityCall(serviceTierSetupOrFactory)}(),${availabilityOrServiceTierSetup}if(!${enabledVariable})return null;let `;\n}\nconst SPEED_TARGET_SPECS = defineTargetSpecs({\n    id: \"speed-setting\",\n    label: \"Speed setting\",\n    needle: SPEED_LABEL_NEEDLE,\n    guardedSignature: GUARDED_SIGNATURE,\n    patchedSignature: NORMALIZED_PATCHED_SIGNATURE,\n    legacyPatchedSignature: PATCHED_SIGNATURE,\n    applyReplacement: \"$1=$2$3\",\n    normalizeReplacement: normalizeLegacySpeedSetting,\n    restoreReplacement: restoreSpeedSetting,\n}, {\n    id: \"add-context-speed-menu-old\",\n    label: \"Add-context Speed menu\",\n    needle: ADD_CONTEXT_SPEED_NEEDLE,\n    guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_OLD,\n    patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_OLD,\n    applyReplacement: \"$1=!0,$2\",\n    restoreReplacement: \"$1=Cr(),$2\",\n}, {\n    id: \"add-context-speed-menu-new\",\n    label: \"Add-context Speed menu\",\n    needle: ADD_CONTEXT_SPEED_NEEDLE,\n    guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_NEW,\n    patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_NEW,\n    applyReplacement: \"$1=!0,$2\",\n    restoreReplacement: \"$1=cr(),$2\",\n}, {\n    id: \"intelligence-speed-menu\",\n    label: \"Composer Intelligence Speed menu\",\n    needle: INTELLIGENCE_SPEED_NEEDLE,\n    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE,\n    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE,\n    applyReplacement: \"$1$2=!0,\",\n    restoreReplacement: \"$1$2=_f(),\",\n}, {\n    id: \"intelligence-speed-menu-gf\",\n    label: \"Composer Intelligence Speed menu\",\n    needle: INTELLIGENCE_SPEED_NEEDLE,\n    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_GF,\n    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_GF,\n    applyReplacement: \"$1$2=!0,\",\n    restoreReplacement: \"$1$2=gf(),\",\n}, {\n    id: \"intelligence-speed-menu-qs\",\n    label: \"Composer Intelligence Speed menu\",\n    needle: INTELLIGENCE_SPEED_NEEDLE,\n    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QS,\n    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QS,\n    applyReplacement: \"$1$2=!0,$5\",\n    restoreReplacement: \"$1$2=$3($4),$5\",\n}, {\n    id: \"intelligence-speed-menu-qa\",\n    label: \"Composer Intelligence Speed menu\",\n    needle: INTELLIGENCE_SPEED_NEEDLE,\n    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QA,\n    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QA,\n    applyReplacement: \"$1$2;$3!0$5\",\n    restoreReplacement: \"$1$2;$3$4$5\",\n}, {\n    id: \"fast-slash-command\",\n    label: \"Fast slash command\",\n    needle: SPEED_SLASH_COMMAND_NEEDLE,\n    guardedSignature: SLASH_COMMAND_GUARDED_SIGNATURE,\n    patchedSignature: SLASH_COMMAND_PATCHED_SIGNATURE,\n    applyReplacement: \"$1!0$3\",\n});\nconst PLUGINS_SIDEBAR_NEEDLE = \"sidebarElectron.pluginsDisabledTooltip\";\nconst PLUGINS_PAGE_CONTENT_NEEDLE = \"skills.pluginsAuthBlockedToast.title\";\nconst PLUGIN_DETAIL_AUTH_NEEDLE = \"pluginDeepLinkAuthBlocked\";\nconst PLUGIN_INSTALL_AVAILABILITY_NEEDLE = \"plugins.install.connectorUnavailable\";\nconst PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE = \"plugins.installModal.about\";\nconst COMPOSER_PLUGIN_MENTIONS_NEEDLE = \"composer.atMentionList.pluginsLoading\";\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,[^]*?cf\\(`533078438`\\),)([A-Za-z_$][\\w$]*)=\\2===`apikey`,/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,[^]*?cf\\(`533078438`\\),)([A-Za-z_$][\\w$]*)=!1,/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_NEW = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,[^]*?)([A-Za-z_$][\\w$]*)=Fs\\(\\),([A-Za-z_$][\\w$]*)=hf\\(`533078438`\\),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=\\4&&\\5,([A-Za-z_$][\\w$]*)=\\3&&!?\\5([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_NEW = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,[^]*?)([A-Za-z_$][\\w$]*)=Fs\\(\\),([A-Za-z_$][\\w$]*)=hf\\(`533078438`\\),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=!1,([A-Za-z_$][\\w$]*)=\\3([,;])/;\nconst PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_NEW = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,[^]*?)([A-Za-z_$][\\w$]*)=Fs\\(\\),([A-Za-z_$][\\w$]*)=hf\\(`533078438`\\),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=!1,([A-Za-z_$][\\w$]*)=\\3&&!?\\5([,;])/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26422 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=((?:\\$f|Qf)\\(`533078438`\\)),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=\\3&&\\5,([^]*?)([A-Za-z_$][\\w$]*)=(Ha\\(\\{hostId:[^}]+\\}\\))&&!\\5([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26422 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=((?:\\$f|Qf)\\(`533078438`\\)),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=(Ha\\(\\{hostId:[^}]+\\}\\))([,;])/;\nconst PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26422 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=((?:\\$f|Qf)\\(`533078438`\\)),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=(Ha\\(\\{hostId:[^}]+\\}\\))&&!\\5([,;])/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26429 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=ms\\(`533078438`\\),([A-Za-z_$][\\w$]*)=ed\\(\\2\\),([A-Za-z_$][\\w$]*)=\\3&&\\4,([^]*?)([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*\\(\\{hostId:[^}]+\\}\\))&&!\\4([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26429 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=ms\\(`533078438`\\),([A-Za-z_$][\\w$]*)=ed\\(\\2\\),([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*\\(\\{hostId:[^}]+\\}\\))([,;])/;\nconst PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26429 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=ms\\(`533078438`\\),([A-Za-z_$][\\w$]*)=ed\\(\\2\\),([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*\\(\\{hostId:[^}]+\\}\\))&&!\\4([,;])/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=rs\\(`533078438`\\),([A-Za-z_$][\\w$]*)=Xc\\(\\2\\),([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&\\3&&\\4,([^]*?)([A-Za-z_$][\\w$]*)=\\6&&([A-Za-z_$][\\w$]*)&&!\\4([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=rs\\(`533078438`\\),([A-Za-z_$][\\w$]*)=Xc\\(\\2\\),([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&([A-Za-z_$][\\w$]*)([,;])/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506_QO = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=Qo\\(`533078438`\\),([A-Za-z_$][\\w$]*)=Xc\\(\\2\\),([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&\\3&&\\4,([^]*?)([A-Za-z_$][\\w$]*)=\\6&&([A-Za-z_$][\\w$]*)&&!\\4([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506_QO = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=Qo\\(`533078438`\\),([A-Za-z_$][\\w$]*)=Xc\\(\\2\\),([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&([A-Za-z_$][\\w$]*)([,;])/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26513 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=((?:Is|ec)\\(`533078438`\\)),([A-Za-z_$][\\w$]*)=((?:Ml|Xl)\\(\\2\\)),([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&\\3&&\\5,([A-Za-z_$][\\w$]*)=((?:hl|Nl)\\(\\{hostId:[^}]+\\}\\)),([A-Za-z_$][\\w$]*)=\\8&&\\9&&!\\5([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26513 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=((?:Is|ec)\\(`533078438`\\)),([A-Za-z_$][\\w$]*)=((?:Ml|Xl)\\(\\2\\)),([A-Za-z_$][\\w$]*)=!1,([A-Za-z_$][\\w$]*)=((?:hl|Nl)\\(\\{hostId:[^}]+\\}\\)),([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&\\8([,;])/;\nconst PLUGINS_PAGE_CONTENT_GUARDED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*);(if\\(e\\[\\d+\\]!==[A-Za-z_$][\\w$]*\\|\\|e\\[\\d+\\]!==\\2\\|\\|)/;\nconst PLUGINS_PAGE_CONTENT_PATCHED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=!1,([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*);(if\\(e\\[\\d+\\]!==[A-Za-z_$][\\w$]*\\|\\|e\\[\\d+\\]!==\\2\\|\\|)/;\nconst PLUGIN_DETAIL_AUTH_GUARDED_SIGNATURE = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=([A-Za-z_$][\\w$]*)\\(\\);)if\\(([A-Za-z_$][\\w$]*)\\(\\2\\)\\)\\{/;\nconst PLUGIN_DETAIL_AUTH_PATCHED_SIGNATURE = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=([A-Za-z_$][\\w$]*)\\(\\);)if\\(!1\\)\\{/;\nconst PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\.length>0&&([A-Za-z_$][\\w$]*)===\\3\\.length\\?([A-Za-z_$][\\w$]*)\\?`disabled-by-admin`:`connector-unavailable`:null,([A-Za-z_$][\\w$]*);/;\nconst PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\.length>0&&([A-Za-z_$][\\w$]*)===\\3\\.length&&([A-Za-z_$][\\w$]*)\\?`disabled-by-admin`:null,([A-Za-z_$][\\w$]*);/;\nconst PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*)=\\(([A-Za-z_$][\\w$]*)\\?\\.apps\\.length\\?\\?0\\)>0&&\\5\\?\\.summary\\.authPolicy===`ON_INSTALL`,([A-Za-z_$][\\w$]*);/;\nconst PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*)=\\(([A-Za-z_$][\\w$]*)\\?\\.apps\\.length\\?\\?0\\)>0&&!1,([A-Za-z_$][\\w$]*);/;\nconst COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE = /(additionalMarketplaceKinds:)\\[`shared-with-me`\\]/;\nconst COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE = /(additionalMarketplaceKinds:)\\[\\]/;\nconst COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE_FLAGGED = /(additionalMarketplaceKinds:)([A-Za-z_$][\\w$]*)\\?\\[`shared-with-me`\\]:\\[\\]/;\nconst COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE_FLAGGED = /(additionalMarketplaceKinds:)([A-Za-z_$][\\w$]*)\\?\\[\\]:\\[\\]/;\nfunction restorePluginsSidebar26506Qo(_match, prefix, authMethodVariable, pluginsExperimentVariable, authGateVariable, disabledPluginsVariable, between, pluginsLabelVariable, desktopNavVariable, pluginsEnabledVariable, delimiter) {\n    return `${prefix}${pluginsExperimentVariable}=Qo(\\`533078438\\`),${authGateVariable}=Xc(${authMethodVariable}),${disabledPluginsVariable}=${desktopNavVariable}&&${pluginsExperimentVariable}&&${authGateVariable},${between}${pluginsLabelVariable}=${desktopNavVariable}&&${pluginsEnabledVariable}&&!${authGateVariable}${delimiter}`;\n}\nfunction patchPluginsSidebar26513(_match, prefix, _authMethodVariable, experimentVariable, experimentCall, authGateVariable, authGateCall, disabledPluginsVariable, desktopNavVariable, navCapabilityVariable, navCapabilityCall, pluginsLabelVariable, delimiter) {\n    return `${prefix}${experimentVariable}=${experimentCall},${authGateVariable}=${authGateCall},${disabledPluginsVariable}=!1,${navCapabilityVariable}=${navCapabilityCall},${pluginsLabelVariable}=${desktopNavVariable}&&${navCapabilityVariable}${delimiter}`;\n}\nfunction restorePluginsSidebar26513(_match, prefix, _authMethodVariable, experimentVariable, experimentCall, authGateVariable, authGateCall, disabledPluginsVariable, navCapabilityVariable, navCapabilityCall, pluginsLabelVariable, desktopNavVariable, delimiter) {\n    return `${prefix}${experimentVariable}=${experimentCall},${authGateVariable}=${authGateCall},${disabledPluginsVariable}=${desktopNavVariable}&&${experimentVariable}&&${authGateVariable},${navCapabilityVariable}=${navCapabilityCall},${pluginsLabelVariable}=${desktopNavVariable}&&${navCapabilityVariable}&&!${authGateVariable}${delimiter}`;\n}\nconst PLUGIN_TARGET_SPECS = defineTargetSpecs({\n    id: \"plugins-access-old\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD,\n    applyReplacement: \"$1$3=!1,\",\n    restoreReplacement: \"$1$3=$2===`apikey`,\",\n}, {\n    id: \"plugins-access-new\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_NEW,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_NEW,\n    legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_NEW,\n    applyReplacement: \"$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=!1,$7=$3$8\",\n    normalizeReplacement: \"$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=!1,$7=$3$8\",\n    restoreReplacement: \"$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=$4&&$5,$7=$3&&!$5$8\",\n}, {\n    id: \"plugins-access-26422\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26422,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26422,\n    legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26422,\n    applyReplacement: \"$1$3=$4,$5=$2===`apikey`,$6=!1,$7$8=$9$10\",\n    normalizeReplacement: \"$1$3=$4,$5=$2===`apikey`,$6=!1,$7$8=$9$10\",\n    restoreReplacement: \"$1$3=$4,$5=$2===`apikey`,$6=$3&&$5,$7$8=$9&&!$5$10\",\n}, {\n    id: \"plugins-access-26429\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26429,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26429,\n    legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26429,\n    applyReplacement: \"$1$3=ms(`533078438`),$4=ed($2),$5=!1,$6$7=$8$9\",\n    normalizeReplacement: \"$1$3=ms(`533078438`),$4=ed($2),$5=!1,$6$7=$8$9\",\n    restoreReplacement: \"$1$3=ms(`533078438`),$4=ed($2),$5=$3&&$4,$6$7=$8&&!$4$9\",\n}, {\n    id: \"plugins-access-26506\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506,\n    applyReplacement: \"$1$3=rs(`533078438`),$4=Xc($2),$5=!1,$7$8=$6&&$9$10\",\n    restoreReplacement: \"$1$3=rs(`533078438`),$4=Xc($2),$5=$6&&$3&&$4,$7$8=$6&&$9&&!$4$10\",\n}, {\n    id: \"plugins-access-26506-qo\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506_QO,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506_QO,\n    applyReplacement: \"$1$3=Qo(`533078438`),$4=Xc($2),$5=!1,$7$8=$6&&$9$10\",\n    restoreReplacement: restorePluginsSidebar26506Qo,\n}, {\n    id: \"plugins-access-26513\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26513,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26513,\n    applyReplacement: patchPluginsSidebar26513,\n    restoreReplacement: restorePluginsSidebar26513,\n}, {\n    id: \"plugins-page-content-26429\",\n    label: \"Plugins page content\",\n    needle: PLUGINS_PAGE_CONTENT_NEEDLE,\n    guardedSignature: PLUGINS_PAGE_CONTENT_GUARDED_SIGNATURE,\n    patchedSignature: PLUGINS_PAGE_CONTENT_PATCHED_SIGNATURE,\n    applyReplacement: \"$1$2=!1,$4,$5;$6\",\n    restoreReplacement: \"$1$2=$3,$4,$5;$6\",\n}, {\n    id: \"plugin-detail-access-26429\",\n    label: \"Plugin detail access\",\n    needle: PLUGIN_DETAIL_AUTH_NEEDLE,\n    guardedSignature: PLUGIN_DETAIL_AUTH_GUARDED_SIGNATURE,\n    patchedSignature: PLUGIN_DETAIL_AUTH_PATCHED_SIGNATURE,\n    applyReplacement: \"$1if(!1){\",\n    restoreReplacement: \"$1if($4($2)){\",\n}, {\n    id: \"plugin-install-availability-26429\",\n    label: \"Plugin install availability\",\n    needle: PLUGIN_INSTALL_AVAILABILITY_NEEDLE,\n    guardedSignature: PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE,\n    patchedSignature: PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE,\n    applyReplacement: \"$1$2=$3.length>0&&$4===$3.length&&$5?`disabled-by-admin`:null,$6;\",\n    restoreReplacement: \"$1$2=$3.length>0&&$4===$3.length?$5?`disabled-by-admin`:`connector-unavailable`:null,$6;\",\n}, {\n    id: \"plugin-install-availability-helper-26513\",\n    label: \"Plugin install availability\",\n    needle: \"connector-unavailable\",\n    guardedSignature: PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE,\n    patchedSignature: PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE,\n    applyReplacement: \"$1$2=$3.length>0&&$4===$3.length&&$5?`disabled-by-admin`:null,$6;\",\n    restoreReplacement: \"$1$2=$3.length>0&&$4===$3.length?$5?`disabled-by-admin`:`connector-unavailable`:null,$6;\",\n}, {\n    id: \"plugin-install-modal-content-26429\",\n    label: \"Plugin install modal content\",\n    needle: PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE,\n    guardedSignature: PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE,\n    patchedSignature: PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE,\n    applyReplacement: \"$1$2=$3,$4=($5?.apps.length??0)>0&&!1,$6;\",\n    restoreReplacement: \"$1$2=$3,$4=($5?.apps.length??0)>0&&$5?.summary.authPolicy===`ON_INSTALL`,$6;\",\n}, {\n    id: \"composer-plugin-mentions-26513\",\n    label: \"Composer plugin mentions\",\n    needle: COMPOSER_PLUGIN_MENTIONS_NEEDLE,\n    guardedSignature: COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE,\n    patchedSignature: COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE,\n    applyReplacement: \"$1[]\",\n    restoreReplacement: \"$1[`shared-with-me`]\",\n}, {\n    id: \"composer-plugin-mentions-26513-flagged\",\n    label: \"Composer plugin mentions\",\n    needle: COMPOSER_PLUGIN_MENTIONS_NEEDLE,\n    guardedSignature: COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE_FLAGGED,\n    patchedSignature: COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE_FLAGGED,\n    applyReplacement: \"$1$2?[]:[]\",\n    restoreReplacement: \"$1$2?[`shared-with-me`]:[]\",\n});\nconst MODEL_LIST_NEEDLE = \"\\\"list-models-for-host\\\"\";\nconst MODEL_QUERY_NEEDLE = \"modelsByType\";\nconst GPT_55_OFFICIAL_MODEL_LIST_MIN_VERSION = \"26.422.30944\";\nconst GPT_55_MODEL_ENTRY = \"{id:`gpt-5.5`,model:`gpt-5.5`,upgrade:null,upgradeInfo:null,availabilityNux:null,displayName:`GPT-5.5`,description:`Frontier model for complex coding, research, and real-world work.`,hidden:!1,supportedReasoningEfforts:[{reasoningEffort:`low`,description:`Fast responses with lighter reasoning`},{reasoningEffort:`medium`,description:`Balances speed and reasoning depth for everyday tasks`},{reasoningEffort:`high`,description:`Greater reasoning depth for complex problems`},{reasoningEffort:`xhigh`,description:`Extra high reasoning depth for complex problems`}],defaultReasoningEffort:`medium`,inputModalities:[`text`],supportsPersonality:!0,additionalSpeedTiers:[`fast`],isDefault:!1}\";\nconst MODEL_LIST_GUARDED_SIGNATURE = /(\"list-models-for-host\":i9\\()\\(([A-Za-z_$][\\w$]*),\\{hostId:([A-Za-z_$][\\w$]*),\\.\\.\\.([A-Za-z_$][\\w$]*)\\}\\)=>\\2\\.sendRequest\\(`model\\/list`,\\4\\)(\\))/;\nconst MODEL_LIST_PATCHED_SIGNATURE = /(\"list-models-for-host\":i9\\()async\\(([A-Za-z_$][\\w$]*),\\{hostId:([A-Za-z_$][\\w$]*),\\.\\.\\.([A-Za-z_$][\\w$]*)\\}\\)=>\\/\\*codexfast-gpt55\\*\\/\\{let ([A-Za-z_$][\\w$]*)=await \\2\\.sendRequest\\(`model\\/list`,\\4\\);return Array\\.isArray\\(\\5\\.data\\)&&!\\5\\.data\\.some\\(e=>e\\.model===`gpt-5\\.5`\\)\\?\\{\\.\\.\\.\\5,data:\\[\\.\\.\\.\\5\\.data,\\{id:`gpt-5\\.5`[^]*?isDefault:!1\\}\\]\\}:\\5\\}(\\))/;\nconst MODEL_QUERY_GUARDED_SIGNATURE = /(\\}\\}\\),)([A-Za-z_$][\\w$]*)\\?\\?=([A-Za-z_$][\\w$]*)\\.models\\.find\\(e=>e\\.model===([A-Za-z_$][\\w$]*)\\.defaultModel\\)\\?\\?null,\\{modelsByType:\\3,defaultModel:\\2\\}/;\nconst MODEL_QUERY_PATCHED_SIGNATURE = /(\\}\\}\\),)\\/\\*codexfast-gpt55-select\\*\\/([A-Za-z_$][\\w$]*)\\.models\\.some\\(e=>e\\.model===`gpt-5\\.5`\\)\\|\\|\\2\\.models\\.push\\(\\{id:`gpt-5\\.5`[^]*?isDefault:!1\\}\\),([A-Za-z_$][\\w$]*)\\?\\?=\\2\\.models\\.find\\(e=>e\\.model===([A-Za-z_$][\\w$]*)\\.defaultModel\\)\\?\\?null,\\{modelsByType:\\2,defaultModel:\\3\\}/;\nconst MODEL_TARGET_SPECS = defineTargetSpecs({\n    id: \"gpt55-model-list\",\n    label: \"GPT-5.5 model list\",\n    needle: MODEL_LIST_NEEDLE,\n    guardedSignature: MODEL_LIST_GUARDED_SIGNATURE,\n    patchedSignature: MODEL_LIST_PATCHED_SIGNATURE,\n    applyReplacement: (_match, prefix, managerVar, hostVar, paramsVar, suffix) => `${prefix}async(${managerVar},{hostId:${hostVar},...${paramsVar}})=>/*codexfast-gpt55*/{let r=await ${managerVar}.sendRequest(\\`model/list\\`,${paramsVar});return Array.isArray(r.data)&&!r.data.some(e=>e.model===\\`gpt-5.5\\`)?{...r,data:[...r.data,${GPT_55_MODEL_ENTRY}]}:r}${suffix}`,\n    restoreReplacement: (_match, prefix, managerVar, hostVar, paramsVar, _resultVar, suffix) => `${prefix}(${managerVar},{hostId:${hostVar},...${paramsVar}})=>${managerVar}.sendRequest(\\`model/list\\`,${paramsVar})${suffix}`,\n}, {\n    id: \"gpt55-model-query-selector\",\n    label: \"GPT-5.5 model query selector\",\n    needle: MODEL_QUERY_NEEDLE,\n    guardedSignature: MODEL_QUERY_GUARDED_SIGNATURE,\n    patchedSignature: MODEL_QUERY_PATCHED_SIGNATURE,\n    applyReplacement: (_match, prefix, defaultVar, modelsByTypeVar, configVar) => `${prefix}/*codexfast-gpt55-select*/${modelsByTypeVar}.models.some(e=>e.model===\\`gpt-5.5\\`)||${modelsByTypeVar}.models.push(${GPT_55_MODEL_ENTRY}),${defaultVar}??=${modelsByTypeVar}.models.find(e=>e.model===${configVar}.defaultModel)??null,{modelsByType:${modelsByTypeVar},defaultModel:${defaultVar}}`,\n    restoreReplacement: (_match, prefix, modelsByTypeVar, defaultVar, configVar) => `${prefix}${defaultVar}??=${modelsByTypeVar}.models.find(e=>e.model===${configVar}.defaultModel)??null,{modelsByType:${modelsByTypeVar},defaultModel:${defaultVar}}`,\n});\nconst TARGET_SPECS = [\n    ...SPEED_TARGET_SPECS,\n    ...PLUGIN_TARGET_SPECS,\n    ...MODEL_TARGET_SPECS,\n];\nfunction replaceContent(content, signature, replacement) {\n    if (typeof replacement === \"string\") {\n        return content.replace(signature, replacement);\n    }\n    return content.replace(signature, (...args) => replacement(String(args[0] ?? \"\"), ...args.slice(1).map((value) => String(value))));\n}\nfunction replaceContentOrThrow(content, signature, replacement, label) {\n    if (!signature || !replacement) {\n        throw new Error(`Missing replacement metadata for ${label}.`);\n    }\n    return replaceContent(content, signature, replacement);\n}\nfunction inspectSpec(content, spec) {\n    if (!content.includes(spec.needle)) {\n        return null;\n    }\n    const guarded = spec.guardedSignature.test(content);\n    const patched = spec.patchedSignature.test(content);\n    const legacyPatched = spec.legacyPatchedSignature?.test(content) ?? false;\n    if (!guarded && !patched && !legacyPatched) {\n        return null;\n    }\n    return {\n        spec,\n        guarded,\n        patched,\n        legacyPatched,\n    };\n}\nfunction describeState(match) {\n    if (match.guarded) {\n        return `${match.spec.label} disabled`;\n    }\n    if (match.patched || match.legacyPatched) {\n        return `${match.spec.label} enabled`;\n    }\n    return \"Unknown state\";\n}\nfunction applyRuntimePatchesToBody(_resourcePath, body) {\n    let content = body;\n    const matchedLabels = [];\n    const patchedLabels = [];\n    const alreadyPatchedLabels = [];\n    for (const spec of TARGET_SPECS) {\n        const match = inspectSpec(content, spec);\n        if (!match) {\n            continue;\n        }\n        matchedLabels.push(spec.label);\n        if (match.guarded) {\n            content = replaceContent(content, spec.guardedSignature, spec.applyReplacement);\n            patchedLabels.push(spec.label);\n            continue;\n        }\n        if (match.legacyPatched) {\n            content = replaceContentOrThrow(content, spec.legacyPatchedSignature, spec.normalizeReplacement, spec.label);\n            patchedLabels.push(spec.label);\n            continue;\n        }\n        if (match.patched) {\n            alreadyPatchedLabels.push(spec.label);\n        }\n    }\n    return {\n        content,\n        matchedLabels,\n        patchedLabels,\n        alreadyPatchedLabels,\n    };\n}\n// This module is transpiled to CommonJS by scripts/build-codexfast.mts and\n// executed via `node -`, where stdin defaults to CommonJS. Do not import it directly as ESM.\nconst fs = require(\"fs\");\nconst path = require(\"path\");\nconst [, , command, assetsDirArg, backupSuffix, legacyBackupSuffix = \"\", appVersionKey = \"unknown\"] = process.argv;\nconst assetsDir = path.resolve(assetsDirArg);\nconst backupSuffixes = [backupSuffix, legacyBackupSuffix].filter((suffix, index, suffixes) => suffix && suffixes.indexOf(suffix) === index);\nfunction isPresent(value) {\n    return value !== null;\n}\nfunction walkJsFiles(dir) {\n    const entries = fs.readdirSync(dir, { withFileTypes: true });\n    const results = [];\n    for (const entry of entries) {\n        const fullPath = path.join(dir, entry.name);\n        if (entry.isDirectory()) {\n            results.push(...walkJsFiles(fullPath));\n            continue;\n        }\n        if (entry.isFile() && entry.name.endsWith(\".js\")) {\n            results.push(fullPath);\n        }\n    }\n    return results;\n}\nfunction isGpt55ModelTarget(spec) {\n    return spec.id === \"gpt55-model-list\" || spec.id === \"gpt55-model-query-selector\";\n}\nfunction parseVersionParts(value) {\n    const version = value.split(\"+\", 1)[0];\n    return version.split(\".\").map((part) => {\n        const parsed = Number.parseInt(part, 10);\n        return Number.isFinite(parsed) ? parsed : 0;\n    });\n}\nfunction compareVersions(left, right) {\n    const leftParts = parseVersionParts(left);\n    const rightParts = parseVersionParts(right);\n    const length = Math.max(leftParts.length, rightParts.length);\n    for (let index = 0; index < length; index += 1) {\n        const leftPart = leftParts[index] ?? 0;\n        const rightPart = rightParts[index] ?? 0;\n        if (leftPart !== rightPart) {\n            return leftPart > rightPart ? 1 : -1;\n        }\n    }\n    return 0;\n}\nfunction hasOfficialGpt55ModelList() {\n    return compareVersions(appVersionKey, GPT_55_OFFICIAL_MODEL_LIST_MIN_VERSION) >= 0;\n}\nfunction isTargetRelevantForCommand(spec, state) {\n    if (!isGpt55ModelTarget(spec) || !hasOfficialGpt55ModelList()) {\n        return true;\n    }\n    if (command === \"apply\") {\n        return state.patched || state.legacyPatched;\n    }\n    if (command === \"status\" || command === \"restore\") {\n        return state.patched || state.legacyPatched;\n    }\n    return true;\n}\nfunction inspectFile(filePath) {\n    const content = fs.readFileSync(filePath, \"utf8\");\n    const matches = TARGET_SPECS\n        .map((spec) => inspectSpec(content, spec))\n        .filter(isPresent)\n        .filter((match) => isTargetRelevantForCommand(match.spec, match));\n    if (matches.length === 0) {\n        return null;\n    }\n    return {\n        filePath,\n        backupPath: `${filePath}${backupSuffix}`,\n        backupPaths: backupSuffixes.map((suffix) => `${filePath}${suffix}`),\n        content,\n        matches,\n    };\n}\nfunction findTargets(dir) {\n    return walkJsFiles(dir).map(inspectFile).filter(isPresent);\n}\nfunction writeBackupIfNeeded(fileTarget) {\n    if (findExistingBackupPath(fileTarget)) {\n        return;\n    }\n    fs.writeFileSync(fileTarget.backupPath, fileTarget.content, \"utf8\");\n}\nfunction findExistingBackupPath(fileTarget) {\n    return fileTarget.backupPaths.find((backupPath) => fs.existsSync(backupPath));\n}\nfunction resolveSlashCommandEnabledVariable(content) {\n    const match = content.match(/function OG\\(\\)\\{let [^;]*?,([A-Za-z_$][\\w$]*)=Lf\\(\\),/);\n    return match?.[1] ?? \"n\";\n}\nfunction status() {\n    const targets = findTargets(assetsDir);\n    if (targets.length === 0) {\n        console.log(`Feature target file not found: ${assetsDir}`);\n        return 1;\n    }\n    for (const target of targets) {\n        for (const match of target.matches) {\n            console.log(`Status: ${describeState(match)}`);\n        }\n    }\n    return 0;\n}\nfunction apply() {\n    const targets = findTargets(assetsDir);\n    if (targets.length === 0) {\n        console.log(`Feature target file not found: ${assetsDir}`);\n        return 1;\n    }\n    let changed = 0;\n    let alreadyPatched = 0;\n    for (const target of targets) {\n        let next = target.content;\n        let updated = false;\n        for (const match of target.matches) {\n            if (match.guarded) {\n                writeBackupIfNeeded(target);\n                next = replaceContent(next, match.spec.guardedSignature, match.spec.applyReplacement);\n                console.log(`patched: ${match.spec.label}`);\n                changed += 1;\n                updated = true;\n                continue;\n            }\n            if (match.legacyPatched) {\n                next = replaceContentOrThrow(next, match.spec.legacyPatchedSignature, match.spec.normalizeReplacement, match.spec.label);\n                console.log(`normalized: ${match.spec.label}`);\n                changed += 1;\n                updated = true;\n                continue;\n            }\n            if (match.patched) {\n                console.log(`already patched: ${match.spec.label}`);\n                alreadyPatched += 1;\n            }\n        }\n        if (updated) {\n            fs.writeFileSync(target.filePath, next, \"utf8\");\n        }\n    }\n    console.log(`summary: changed=${changed}, alreadyPatched=${alreadyPatched}`);\n    return 0;\n}\nfunction restore() {\n    const targets = findTargets(assetsDir);\n    if (targets.length === 0) {\n        console.log(`Feature target file not found: ${assetsDir}`);\n        return 1;\n    }\n    let restored = 0;\n    for (const target of targets) {\n        const existingBackupPath = findExistingBackupPath(target);\n        if (existingBackupPath) {\n            fs.writeFileSync(target.filePath, fs.readFileSync(existingBackupPath, \"utf8\"), \"utf8\");\n            for (const match of target.matches) {\n                console.log(`restored backup: ${match.spec.label}`);\n                restored += 1;\n            }\n            continue;\n        }\n        let next = target.content;\n        let updated = false;\n        for (const match of target.matches) {\n            if (!(match.patched || match.legacyPatched)) {\n                continue;\n            }\n            if (match.spec.id === \"fast-slash-command\") {\n                const enabledVariable = resolveSlashCommandEnabledVariable(next);\n                next = next.replace(match.spec.patchedSignature, `$1${enabledVariable}$2`);\n            }\n            else {\n                next = replaceContentOrThrow(next, match.patched ? match.spec.patchedSignature : match.spec.legacyPatchedSignature, match.spec.restoreReplacement, match.spec.label);\n            }\n            console.log(`restored inline: ${match.spec.label}`);\n            restored += 1;\n            updated = true;\n        }\n        if (updated) {\n            fs.writeFileSync(target.filePath, next, \"utf8\");\n        }\n    }\n    if (restored === 0) {\n        console.log(`No backup or modified target is available to restore.`);\n        return 1;\n    }\n    console.log(`summary: restored=${restored}`);\n    return 0;\n}\nlet exitCode = 1;\nswitch (command) {\n    case \"status\":\n        exitCode = status();\n        break;\n    case \"apply\":\n        exitCode = apply();\n        break;\n    case \"restore\":\n        exitCode = restore();\n        break;\n    default:\n        console.log(`Unknown command: ${command}`);\n        exitCode = 1;\n}\nprocess.exit(exitCode);\n";
+const __PATCHER_SOURCE__ = "\"use strict\";\nfunction defineTargetSpecs(...specs) {\n    return specs.map((spec) => ({\n        legacyPatchedSignature: null,\n        ...spec,\n    }));\n}\nconst SPEED_LABEL_NEEDLE = \"settings.agent.speed.label\";\nconst SPEED_SLASH_COMMAND_NEEDLE = \"composer.speedSlashCommand.title\";\nconst ADD_CONTEXT_SPEED_NEEDLE = \"composer.addContext.speed.option.fast.description\";\nconst INTELLIGENCE_SPEED_NEEDLE = \"composer.intelligenceDropdown.speed.title\";\nconst GUARDED_SIGNATURE = /([A-Za-z_$][\\w$]*)=((?:_e|ae|P|N|de|ie|se)\\(\\),)(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=(?:Ce|se|be|xe|ye|Ve|de|fe)\\(\\);)if\\(!\\1\\)return null;/;\nconst PATCHED_SIGNATURE = /([A-Za-z_$][\\w$]*)=!0,(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=(Ce|se|be|xe|ye|Ve|de|fe)\\(\\);)let /;\nconst NORMALIZED_PATCHED_SIGNATURE = /([A-Za-z_$][\\w$]*)=((?:_e|ae|P|N|de|ie|se)\\(\\),)(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=(?:Ce|se|be|xe|ye|Ve|de|fe)\\(\\);)let /;\nconst SLASH_COMMAND_GUARDED_SIGNATURE = /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)([A-Za-z_$][\\w$]*)(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\\w$]*})/;\nconst SLASH_COMMAND_PATCHED_SIGNATURE = /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)!0(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\\w$]*})/;\nconst ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_OLD = /([A-Za-z_$][\\w$]*)=Cr\\(\\),(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=Ir\\([^)]+\\)[;,])/;\nconst ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_OLD = /([A-Za-z_$][\\w$]*)=!0,(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=Ir\\([^)]+\\)[;,])/;\nconst ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_NEW = /([A-Za-z_$][\\w$]*)=cr\\(\\),(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=jr\\([^)]+\\)[;,])/;\nconst ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_NEW = /([A-Za-z_$][\\w$]*)=!0,(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=jr\\([^)]+\\)[;,])/;\nconst INTELLIGENCE_SPEED_GUARDED_SIGNATURE = /(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=(?:Jp|Zp)\\([^)]*\\),)([A-Za-z_$][\\w$]*)=_f\\(\\),/;\nconst INTELLIGENCE_SPEED_PATCHED_SIGNATURE = /(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=(?:Jp|Zp)\\([^)]*\\),)([A-Za-z_$][\\w$]*)=!0,/;\nconst INTELLIGENCE_SPEED_GUARDED_SIGNATURE_GF = /(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=Yp\\([^)]*\\),)([A-Za-z_$][\\w$]*)=gf\\(\\),/;\nconst INTELLIGENCE_SPEED_PATCHED_SIGNATURE_GF = /(\\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\\}=Yp\\([^)]*\\),)([A-Za-z_$][\\w$]*)=!0,/;\nconst INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QS = /(let )([A-Za-z_$][\\w$]*)=(qs|va)\\(([^)]+)\\),([A-Za-z_$][\\w$]*=(?:zr|fi)\\([A-Za-z_$][\\w$]*,n\\),)/;\nconst INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QS = /(let )([A-Za-z_$][\\w$]*)=!0,([A-Za-z_$][\\w$]*=(?:zr|fi)\\([A-Za-z_$][\\w$]*,n\\),)/;\nconst INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QA = /(let )([A-Za-z_$][\\w$]*);([^;]{0,260}\\?\\(\\2=)([A-Za-z_$][\\w$]*)(\\?\\(0,[A-Za-z_$][\\w$]*\\.jsx\\)\\([A-Za-z_$][\\w$]*,\\{selectedServiceTier:[^}]+,isLoading:[^}]+,setServiceTier:[^}]+,onSelectComplete:[^}]+\\}\\):null,)/;\nconst INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QA = /(let )([A-Za-z_$][\\w$]*);([^;]{0,260}\\?\\(\\2=)!0(\\?\\(0,[A-Za-z_$][\\w$]*\\.jsx\\)\\([A-Za-z_$][\\w$]*,\\{selectedServiceTier:[^}]+,isLoading:[^}]+,setServiceTier:[^}]+,onSelectComplete:[^}]+\\}\\):null,)/;\nfunction resolveSpeedAvailabilityCall(serviceTierFactory) {\n    const availabilityCalls = {\n        Ce: \"_e\",\n        se: \"ae\",\n        be: \"P\",\n        xe: \"P\",\n        ye: \"N\",\n        Ve: \"de\",\n        de: \"ie\",\n        fe: \"se\",\n    };\n    const availabilityCall = availabilityCalls[serviceTierFactory];\n    if (!availabilityCall) {\n        throw new Error(`Unsupported Speed setting service-tier factory: ${serviceTierFactory}.`);\n    }\n    return availabilityCall;\n}\nfunction normalizeLegacySpeedSetting(_match, enabledVariable, serviceTierSetup, serviceTierFactory) {\n    return `${enabledVariable}=${resolveSpeedAvailabilityCall(serviceTierFactory)}(),${serviceTierSetup}let `;\n}\nconst SPEED_TARGET_SPECS = defineTargetSpecs({\n    id: \"speed-setting\",\n    label: \"Speed setting\",\n    needle: SPEED_LABEL_NEEDLE,\n    guardedSignature: GUARDED_SIGNATURE,\n    patchedSignature: NORMALIZED_PATCHED_SIGNATURE,\n    legacyPatchedSignature: PATCHED_SIGNATURE,\n    applyReplacement: \"$1=$2$3\",\n    normalizeReplacement: normalizeLegacySpeedSetting,\n}, {\n    id: \"add-context-speed-menu-old\",\n    label: \"Add-context Speed menu\",\n    needle: ADD_CONTEXT_SPEED_NEEDLE,\n    guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_OLD,\n    patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_OLD,\n    applyReplacement: \"$1=!0,$2\",\n}, {\n    id: \"add-context-speed-menu-new\",\n    label: \"Add-context Speed menu\",\n    needle: ADD_CONTEXT_SPEED_NEEDLE,\n    guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_NEW,\n    patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_NEW,\n    applyReplacement: \"$1=!0,$2\",\n}, {\n    id: \"intelligence-speed-menu\",\n    label: \"Composer Intelligence Speed menu\",\n    needle: INTELLIGENCE_SPEED_NEEDLE,\n    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE,\n    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE,\n    applyReplacement: \"$1$2=!0,\",\n}, {\n    id: \"intelligence-speed-menu-gf\",\n    label: \"Composer Intelligence Speed menu\",\n    needle: INTELLIGENCE_SPEED_NEEDLE,\n    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_GF,\n    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_GF,\n    applyReplacement: \"$1$2=!0,\",\n}, {\n    id: \"intelligence-speed-menu-qs\",\n    label: \"Composer Intelligence Speed menu\",\n    needle: INTELLIGENCE_SPEED_NEEDLE,\n    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QS,\n    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QS,\n    applyReplacement: \"$1$2=!0,$5\",\n}, {\n    id: \"intelligence-speed-menu-qa\",\n    label: \"Composer Intelligence Speed menu\",\n    needle: INTELLIGENCE_SPEED_NEEDLE,\n    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QA,\n    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QA,\n    applyReplacement: \"$1$2;$3!0$5\",\n}, {\n    id: \"fast-slash-command\",\n    label: \"Fast slash command\",\n    needle: SPEED_SLASH_COMMAND_NEEDLE,\n    guardedSignature: SLASH_COMMAND_GUARDED_SIGNATURE,\n    patchedSignature: SLASH_COMMAND_PATCHED_SIGNATURE,\n    applyReplacement: \"$1!0$3\",\n});\nconst PLUGINS_SIDEBAR_NEEDLE = \"sidebarElectron.pluginsDisabledTooltip\";\nconst PLUGINS_PAGE_CONTENT_NEEDLE = \"skills.pluginsAuthBlockedToast.title\";\nconst PLUGIN_DETAIL_AUTH_NEEDLE = \"pluginDeepLinkAuthBlocked\";\nconst PLUGIN_INSTALL_AVAILABILITY_NEEDLE = \"plugins.install.connectorUnavailable\";\nconst PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE = \"plugins.installModal.about\";\nconst COMPOSER_PLUGIN_MENTIONS_NEEDLE = \"composer.atMentionList.pluginsLoading\";\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,[^]*?cf\\(`533078438`\\),)([A-Za-z_$][\\w$]*)=\\2===`apikey`,/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,[^]*?cf\\(`533078438`\\),)([A-Za-z_$][\\w$]*)=!1,/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_NEW = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,[^]*?)([A-Za-z_$][\\w$]*)=Fs\\(\\),([A-Za-z_$][\\w$]*)=hf\\(`533078438`\\),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=\\4&&\\5,([A-Za-z_$][\\w$]*)=\\3&&!?\\5([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_NEW = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,[^]*?)([A-Za-z_$][\\w$]*)=Fs\\(\\),([A-Za-z_$][\\w$]*)=hf\\(`533078438`\\),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=!1,([A-Za-z_$][\\w$]*)=\\3([,;])/;\nconst PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_NEW = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,[^]*?)([A-Za-z_$][\\w$]*)=Fs\\(\\),([A-Za-z_$][\\w$]*)=hf\\(`533078438`\\),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=!1,([A-Za-z_$][\\w$]*)=\\3&&!?\\5([,;])/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26422 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=((?:\\$f|Qf)\\(`533078438`\\)),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=\\3&&\\5,([^]*?)([A-Za-z_$][\\w$]*)=(Ha\\(\\{hostId:[^}]+\\}\\))&&!\\5([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26422 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=((?:\\$f|Qf)\\(`533078438`\\)),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=(Ha\\(\\{hostId:[^}]+\\}\\))([,;])/;\nconst PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26422 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=((?:\\$f|Qf)\\(`533078438`\\)),([A-Za-z_$][\\w$]*)=\\2===`apikey`,([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=(Ha\\(\\{hostId:[^}]+\\}\\))&&!\\5([,;])/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26429 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=ms\\(`533078438`\\),([A-Za-z_$][\\w$]*)=ed\\(\\2\\),([A-Za-z_$][\\w$]*)=\\3&&\\4,([^]*?)([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*\\(\\{hostId:[^}]+\\}\\))&&!\\4([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26429 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=ms\\(`533078438`\\),([A-Za-z_$][\\w$]*)=ed\\(\\2\\),([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*\\(\\{hostId:[^}]+\\}\\))([,;])/;\nconst PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26429 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=ms\\(`533078438`\\),([A-Za-z_$][\\w$]*)=ed\\(\\2\\),([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*\\(\\{hostId:[^}]+\\}\\))&&!\\4([,;])/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=rs\\(`533078438`\\),([A-Za-z_$][\\w$]*)=Xc\\(\\2\\),([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&\\3&&\\4,([^]*?)([A-Za-z_$][\\w$]*)=\\6&&([A-Za-z_$][\\w$]*)&&!\\4([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=rs\\(`533078438`\\),([A-Za-z_$][\\w$]*)=Xc\\(\\2\\),([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&([A-Za-z_$][\\w$]*)([,;])/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506_QO = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=Qo\\(`533078438`\\),([A-Za-z_$][\\w$]*)=Xc\\(\\2\\),([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&\\3&&\\4,([^]*?)([A-Za-z_$][\\w$]*)=\\6&&([A-Za-z_$][\\w$]*)&&!\\4([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506_QO = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=Qo\\(`533078438`\\),([A-Za-z_$][\\w$]*)=Xc\\(\\2\\),([A-Za-z_$][\\w$]*)=!1,([^]*?)([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&([A-Za-z_$][\\w$]*)([,;])/;\nconst PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26513 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=((?:Is|ec)\\(`533078438`\\)),([A-Za-z_$][\\w$]*)=((?:Ml|Xl)\\(\\2\\)),([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&\\3&&\\5,([A-Za-z_$][\\w$]*)=((?:hl|Nl)\\(\\{hostId:[^}]+\\}\\)),([A-Za-z_$][\\w$]*)=\\8&&\\9&&!\\5([,;])/;\nconst PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26513 = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=[^,]+,)([A-Za-z_$][\\w$]*)=((?:Is|ec)\\(`533078438`\\)),([A-Za-z_$][\\w$]*)=((?:Ml|Xl)\\(\\2\\)),([A-Za-z_$][\\w$]*)=!1,([A-Za-z_$][\\w$]*)=((?:hl|Nl)\\(\\{hostId:[^}]+\\}\\)),([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)&&\\8([,;])/;\nconst PLUGINS_PAGE_CONTENT_GUARDED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*);(if\\(e\\[\\d+\\]!==[A-Za-z_$][\\w$]*\\|\\|e\\[\\d+\\]!==\\2\\|\\|)/;\nconst PLUGINS_PAGE_CONTENT_PATCHED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=!1,([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*);(if\\(e\\[\\d+\\]!==[A-Za-z_$][\\w$]*\\|\\|e\\[\\d+\\]!==\\2\\|\\|)/;\nconst PLUGIN_DETAIL_AUTH_GUARDED_SIGNATURE = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=([A-Za-z_$][\\w$]*)\\(\\);)if\\(([A-Za-z_$][\\w$]*)\\(\\2\\)\\)\\{/;\nconst PLUGIN_DETAIL_AUTH_PATCHED_SIGNATURE = /(\\{authMethod:([A-Za-z_$][\\w$]*)\\}=([A-Za-z_$][\\w$]*)\\(\\);)if\\(!1\\)\\{/;\nconst PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\.length>0&&([A-Za-z_$][\\w$]*)===\\3\\.length\\?([A-Za-z_$][\\w$]*)\\?`disabled-by-admin`:`connector-unavailable`:null,([A-Za-z_$][\\w$]*);/;\nconst PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\.length>0&&([A-Za-z_$][\\w$]*)===\\3\\.length&&([A-Za-z_$][\\w$]*)\\?`disabled-by-admin`:null,([A-Za-z_$][\\w$]*);/;\nconst PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*)=\\(([A-Za-z_$][\\w$]*)\\?\\.apps\\.length\\?\\?0\\)>0&&\\5\\?\\.summary\\.authPolicy===`ON_INSTALL`,([A-Za-z_$][\\w$]*);/;\nconst PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE = /(let )([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*),([A-Za-z_$][\\w$]*)=\\(([A-Za-z_$][\\w$]*)\\?\\.apps\\.length\\?\\?0\\)>0&&!1,([A-Za-z_$][\\w$]*);/;\nconst COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE = /(additionalMarketplaceKinds:)\\[`shared-with-me`\\]/;\nconst COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE = /(additionalMarketplaceKinds:)\\[\\]/;\nconst COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE_FLAGGED = /(additionalMarketplaceKinds:)([A-Za-z_$][\\w$]*)\\?\\[`shared-with-me`\\]:\\[\\]/;\nconst COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE_FLAGGED = /(additionalMarketplaceKinds:)([A-Za-z_$][\\w$]*)\\?\\[\\]:\\[\\]/;\nfunction patchPluginsSidebar26513(_match, prefix, _authMethodVariable, experimentVariable, experimentCall, authGateVariable, authGateCall, disabledPluginsVariable, desktopNavVariable, navCapabilityVariable, navCapabilityCall, pluginsLabelVariable, delimiter) {\n    return `${prefix}${experimentVariable}=${experimentCall},${authGateVariable}=${authGateCall},${disabledPluginsVariable}=!1,${navCapabilityVariable}=${navCapabilityCall},${pluginsLabelVariable}=${desktopNavVariable}&&${navCapabilityVariable}${delimiter}`;\n}\nconst PLUGIN_TARGET_SPECS = defineTargetSpecs({\n    id: \"plugins-access-old\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD,\n    applyReplacement: \"$1$3=!1,\",\n}, {\n    id: \"plugins-access-new\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_NEW,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_NEW,\n    legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_NEW,\n    applyReplacement: \"$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=!1,$7=$3$8\",\n    normalizeReplacement: \"$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=!1,$7=$3$8\",\n}, {\n    id: \"plugins-access-26422\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26422,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26422,\n    legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26422,\n    applyReplacement: \"$1$3=$4,$5=$2===`apikey`,$6=!1,$7$8=$9$10\",\n    normalizeReplacement: \"$1$3=$4,$5=$2===`apikey`,$6=!1,$7$8=$9$10\",\n}, {\n    id: \"plugins-access-26429\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26429,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26429,\n    legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26429,\n    applyReplacement: \"$1$3=ms(`533078438`),$4=ed($2),$5=!1,$6$7=$8$9\",\n    normalizeReplacement: \"$1$3=ms(`533078438`),$4=ed($2),$5=!1,$6$7=$8$9\",\n}, {\n    id: \"plugins-access-26506\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506,\n    applyReplacement: \"$1$3=rs(`533078438`),$4=Xc($2),$5=!1,$7$8=$6&&$9$10\",\n}, {\n    id: \"plugins-access-26506-qo\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506_QO,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506_QO,\n    applyReplacement: \"$1$3=Qo(`533078438`),$4=Xc($2),$5=!1,$7$8=$6&&$9$10\",\n}, {\n    id: \"plugins-access-26513\",\n    label: \"Plugins access\",\n    needle: PLUGINS_SIDEBAR_NEEDLE,\n    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26513,\n    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26513,\n    applyReplacement: patchPluginsSidebar26513,\n}, {\n    id: \"plugins-page-content-26429\",\n    label: \"Plugins page content\",\n    needle: PLUGINS_PAGE_CONTENT_NEEDLE,\n    guardedSignature: PLUGINS_PAGE_CONTENT_GUARDED_SIGNATURE,\n    patchedSignature: PLUGINS_PAGE_CONTENT_PATCHED_SIGNATURE,\n    applyReplacement: \"$1$2=!1,$4,$5;$6\",\n}, {\n    id: \"plugin-detail-access-26429\",\n    label: \"Plugin detail access\",\n    needle: PLUGIN_DETAIL_AUTH_NEEDLE,\n    guardedSignature: PLUGIN_DETAIL_AUTH_GUARDED_SIGNATURE,\n    patchedSignature: PLUGIN_DETAIL_AUTH_PATCHED_SIGNATURE,\n    applyReplacement: \"$1if(!1){\",\n}, {\n    id: \"plugin-install-availability-26429\",\n    label: \"Plugin install availability\",\n    needle: PLUGIN_INSTALL_AVAILABILITY_NEEDLE,\n    guardedSignature: PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE,\n    patchedSignature: PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE,\n    applyReplacement: \"$1$2=$3.length>0&&$4===$3.length&&$5?`disabled-by-admin`:null,$6;\",\n}, {\n    id: \"plugin-install-availability-helper-26513\",\n    label: \"Plugin install availability\",\n    needle: \"connector-unavailable\",\n    guardedSignature: PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE,\n    patchedSignature: PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE,\n    applyReplacement: \"$1$2=$3.length>0&&$4===$3.length&&$5?`disabled-by-admin`:null,$6;\",\n}, {\n    id: \"plugin-install-modal-content-26429\",\n    label: \"Plugin install modal content\",\n    needle: PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE,\n    guardedSignature: PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE,\n    patchedSignature: PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE,\n    applyReplacement: \"$1$2=$3,$4=($5?.apps.length??0)>0&&!1,$6;\",\n}, {\n    id: \"composer-plugin-mentions-26513\",\n    label: \"Composer plugin mentions\",\n    needle: COMPOSER_PLUGIN_MENTIONS_NEEDLE,\n    guardedSignature: COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE,\n    patchedSignature: COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE,\n    applyReplacement: \"$1[]\",\n}, {\n    id: \"composer-plugin-mentions-26513-flagged\",\n    label: \"Composer plugin mentions\",\n    needle: COMPOSER_PLUGIN_MENTIONS_NEEDLE,\n    guardedSignature: COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE_FLAGGED,\n    patchedSignature: COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE_FLAGGED,\n    applyReplacement: \"$1$2?[]:[]\",\n});\nconst MODEL_LIST_NEEDLE = \"\\\"list-models-for-host\\\"\";\nconst MODEL_QUERY_NEEDLE = \"modelsByType\";\nconst GPT_55_MODEL_ENTRY = \"{id:`gpt-5.5`,model:`gpt-5.5`,upgrade:null,upgradeInfo:null,availabilityNux:null,displayName:`GPT-5.5`,description:`Frontier model for complex coding, research, and real-world work.`,hidden:!1,supportedReasoningEfforts:[{reasoningEffort:`low`,description:`Fast responses with lighter reasoning`},{reasoningEffort:`medium`,description:`Balances speed and reasoning depth for everyday tasks`},{reasoningEffort:`high`,description:`Greater reasoning depth for complex problems`},{reasoningEffort:`xhigh`,description:`Extra high reasoning depth for complex problems`}],defaultReasoningEffort:`medium`,inputModalities:[`text`],supportsPersonality:!0,additionalSpeedTiers:[`fast`],isDefault:!1}\";\nconst MODEL_LIST_GUARDED_SIGNATURE = /(\"list-models-for-host\":i9\\()\\(([A-Za-z_$][\\w$]*),\\{hostId:([A-Za-z_$][\\w$]*),\\.\\.\\.([A-Za-z_$][\\w$]*)\\}\\)=>\\2\\.sendRequest\\(`model\\/list`,\\4\\)(\\))/;\nconst MODEL_LIST_PATCHED_SIGNATURE = /(\"list-models-for-host\":i9\\()async\\(([A-Za-z_$][\\w$]*),\\{hostId:([A-Za-z_$][\\w$]*),\\.\\.\\.([A-Za-z_$][\\w$]*)\\}\\)=>\\/\\*codexfast-gpt55\\*\\/\\{let ([A-Za-z_$][\\w$]*)=await \\2\\.sendRequest\\(`model\\/list`,\\4\\);return Array\\.isArray\\(\\5\\.data\\)&&!\\5\\.data\\.some\\(e=>e\\.model===`gpt-5\\.5`\\)\\?\\{\\.\\.\\.\\5,data:\\[\\.\\.\\.\\5\\.data,\\{id:`gpt-5\\.5`[^]*?isDefault:!1\\}\\]\\}:\\5\\}(\\))/;\nconst MODEL_QUERY_GUARDED_SIGNATURE = /(\\}\\}\\),)([A-Za-z_$][\\w$]*)\\?\\?=([A-Za-z_$][\\w$]*)\\.models\\.find\\(e=>e\\.model===([A-Za-z_$][\\w$]*)\\.defaultModel\\)\\?\\?null,\\{modelsByType:\\3,defaultModel:\\2\\}/;\nconst MODEL_QUERY_PATCHED_SIGNATURE = /(\\}\\}\\),)\\/\\*codexfast-gpt55-select\\*\\/([A-Za-z_$][\\w$]*)\\.models\\.some\\(e=>e\\.model===`gpt-5\\.5`\\)\\|\\|\\2\\.models\\.push\\(\\{id:`gpt-5\\.5`[^]*?isDefault:!1\\}\\),([A-Za-z_$][\\w$]*)\\?\\?=\\2\\.models\\.find\\(e=>e\\.model===([A-Za-z_$][\\w$]*)\\.defaultModel\\)\\?\\?null,\\{modelsByType:\\2,defaultModel:\\3\\}/;\nconst MODEL_TARGET_SPECS = defineTargetSpecs({\n    id: \"gpt55-model-list\",\n    label: \"GPT-5.5 model list\",\n    needle: MODEL_LIST_NEEDLE,\n    guardedSignature: MODEL_LIST_GUARDED_SIGNATURE,\n    patchedSignature: MODEL_LIST_PATCHED_SIGNATURE,\n    applyReplacement: (_match, prefix, managerVar, hostVar, paramsVar, suffix) => `${prefix}async(${managerVar},{hostId:${hostVar},...${paramsVar}})=>/*codexfast-gpt55*/{let r=await ${managerVar}.sendRequest(\\`model/list\\`,${paramsVar});return Array.isArray(r.data)&&!r.data.some(e=>e.model===\\`gpt-5.5\\`)?{...r,data:[...r.data,${GPT_55_MODEL_ENTRY}]}:r}${suffix}`,\n}, {\n    id: \"gpt55-model-query-selector\",\n    label: \"GPT-5.5 model query selector\",\n    needle: MODEL_QUERY_NEEDLE,\n    guardedSignature: MODEL_QUERY_GUARDED_SIGNATURE,\n    patchedSignature: MODEL_QUERY_PATCHED_SIGNATURE,\n    applyReplacement: (_match, prefix, defaultVar, modelsByTypeVar, configVar) => `${prefix}/*codexfast-gpt55-select*/${modelsByTypeVar}.models.some(e=>e.model===\\`gpt-5.5\\`)||${modelsByTypeVar}.models.push(${GPT_55_MODEL_ENTRY}),${defaultVar}??=${modelsByTypeVar}.models.find(e=>e.model===${configVar}.defaultModel)??null,{modelsByType:${modelsByTypeVar},defaultModel:${defaultVar}}`,\n});\nconst TARGET_SPECS = [\n    ...SPEED_TARGET_SPECS,\n    ...PLUGIN_TARGET_SPECS,\n    ...MODEL_TARGET_SPECS,\n];\nfunction replaceContent(content, signature, replacement) {\n    if (typeof replacement === \"string\") {\n        return content.replace(signature, replacement);\n    }\n    return content.replace(signature, (...args) => replacement(String(args[0] ?? \"\"), ...args.slice(1).map((value) => String(value))));\n}\nfunction replaceContentOrThrow(content, signature, replacement, label) {\n    if (!signature || !replacement) {\n        throw new Error(`Missing replacement metadata for ${label}.`);\n    }\n    return replaceContent(content, signature, replacement);\n}\nfunction inspectSpec(content, spec) {\n    if (!content.includes(spec.needle)) {\n        return null;\n    }\n    const guarded = spec.guardedSignature.test(content);\n    const patched = spec.patchedSignature.test(content);\n    const legacyPatched = spec.legacyPatchedSignature?.test(content) ?? false;\n    if (!guarded && !patched && !legacyPatched) {\n        return null;\n    }\n    return {\n        spec,\n        guarded,\n        patched,\n        legacyPatched,\n    };\n}\nfunction describeState(match) {\n    if (match.guarded) {\n        return `${match.spec.label} disabled`;\n    }\n    if (match.patched || match.legacyPatched) {\n        return `${match.spec.label} enabled`;\n    }\n    return \"Unknown state\";\n}\nfunction applyRuntimePatchesToBody(_resourcePath, body) {\n    let content = body;\n    const matchedLabels = [];\n    const patchedLabels = [];\n    const alreadyPatchedLabels = [];\n    for (const spec of TARGET_SPECS) {\n        const match = inspectSpec(content, spec);\n        if (!match) {\n            continue;\n        }\n        matchedLabels.push(spec.label);\n        if (match.guarded) {\n            content = replaceContent(content, spec.guardedSignature, spec.applyReplacement);\n            patchedLabels.push(spec.label);\n            continue;\n        }\n        if (match.legacyPatched) {\n            content = replaceContentOrThrow(content, spec.legacyPatchedSignature, spec.normalizeReplacement, spec.label);\n            patchedLabels.push(spec.label);\n            continue;\n        }\n        if (match.patched) {\n            alreadyPatchedLabels.push(spec.label);\n        }\n    }\n    return {\n        content,\n        matchedLabels,\n        patchedLabels,\n        alreadyPatchedLabels,\n    };\n}\n";
 const __PACKAGE_VERSION__ = "0.17.0";
 const SUPPORTED_APP_VERSIONS = { "26.415.40636+1799": "Codex.app 26.415.40636 build 1799", "26.417.41555+1858": "Codex.app 26.417.41555 build 1858", "26.422.21637+2056": "Codex.app 26.422.21637 build 2056", "26.422.30944+2080": "Codex.app 26.422.30944 build 2080", "26.422.62136+2176": "Codex.app 26.422.62136 build 2176", "26.422.62136+2180": "Codex.app 26.422.62136 build 2180", "26.422.71525+2210": "Codex.app 26.422.71525 build 2210", "26.429.20946+2312": "Codex.app 26.429.20946 build 2312", "26.429.30905+2345": "Codex.app 26.429.30905 build 2345", "26.429.61741+2429": "Codex.app 26.429.61741 build 2429", "26.506.21252+2575": "Codex.app 26.506.21252 build 2575", "26.506.31421+2620": "Codex.app 26.506.31421 build 2620", "26.513.20950+2816": "Codex.app 26.513.20950 build 2816", "26.513.31313+2867": "Codex.app 26.513.31313 build 2867" };
 const context = createCodexfastContext();
-const backupSuffix = '.codexfast.bak';
-const legacyBackupSuffix = '.speed-setting.bak';
-const asarPackage = "@electron/asar@3.4.1";
-const staleArchiveTempFileMs = 10 * 60 * 1000;
 const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(', ');
-const launchAgentLabel = 'com.codexfast.watcher';
-const launchAgentFileName = `${launchAgentLabel}.plist`;
-const SPARKLE_PUBLIC_ED_KEY_BRIDGES = {
-    '26.506.31421+2620': 'mNfr1v9t63BfgDtlw4C8lRvSY6uMggIXABDOCi3tS6k=',
-};
+const launchAgentFileName = 'com.codexfast.watcher.plist';
 function printActionHeader(action) {
     printActionHeaderBlock(action, {
         resources: context.paths.resources,
@@ -2070,24 +1298,6 @@ function printActionHeader(action) {
         build: context.metadata.build,
         compatibility: context.metadata.compatibility,
     });
-}
-function validateActionRequest(action) {
-    if ((action === 'apply' || action === 'repair') &&
-        !context.metadata.supported) {
-        if (action === 'repair') {
-            printLine('Repair skipped because this Codex.app build is unsupported.');
-            printLine('No app files were modified.');
-            printLine(`Supported versions: ${supportedAppVersionKeys}`);
-            printExitBlock(0);
-            return false;
-        }
-        printLine('Enable custom API features is blocked for this Codex.app version.');
-        printLine('This script only allows apply on verified compatible builds.');
-        printLine(`Supported versions: ${supportedAppVersionKeys}`);
-        printExitBlock(1);
-        return false;
-    }
-    return true;
 }
 function printUsage() {
     printLine(`codexfast ${__PACKAGE_VERSION__}`);
@@ -2115,42 +1325,7 @@ function runRuntimeLaunchCommand() {
 }
 function watcherFlowOptions() {
     return {
-        context,
-        launchAgentLabel,
         launchAgentFileName,
-        printActionHeader,
-    };
-}
-function legacyAppMutationOptions() {
-    return {
-        asarPackage,
-        context,
-        sparklePublicEdKeyBridges: SPARKLE_PUBLIC_ED_KEY_BRIDGES,
-        staleArchiveTempFileMs,
-    };
-}
-function legacyPatchFlowOptions() {
-    const watcherFlow = createWatcherFlow(watcherFlowOptions());
-    const appMutations = createLegacyAppMutations(legacyAppMutationOptions());
-    return {
-        context,
-        patcherSource: __PATCHER_SOURCE__,
-        backupSuffix,
-        legacyBackupSuffix,
-        printActionHeader,
-        validateActionRequest,
-        removeWatcherFiles: watcherFlow.removeWatcherFiles,
-        migrateLegacyUnpackedLayout: appMutations.migrateLegacyUnpackedLayout,
-        restoreFromArchiveBackup: appMutations.restoreFromArchiveBackup,
-        printOfficialReinstallGuidanceAfterRestore: appMutations.printOfficialReinstallGuidanceAfterRestore,
-        unpackAppAsarToTemp: appMutations.unpackAppAsarToTemp,
-        cleanupTempWorkspace: appMutations.cleanupTempWorkspace,
-        ensureArchiveBackup: appMutations.ensureArchiveBackup,
-        createArchiveSnapshot: appMutations.createArchiveSnapshot,
-        packTempAppToAsar: appMutations.packTempAppToAsar,
-        commitArchiveWithIntegrity: appMutations.commitArchiveWithIntegrity,
-        syncSparklePublicEdKeyForInAppUpdates: appMutations.syncSparklePublicEdKeyForInAppUpdates,
-        resignAppBundle: appMutations.resignAppBundle,
     };
 }
 async function showMenu() {
@@ -2180,7 +1355,6 @@ async function showMenu() {
     }
     finally {
         rl.close();
-        createLegacyAppMutations(legacyAppMutationOptions()).cleanupTempWorkspace();
     }
 }
 async function main() {
@@ -2188,7 +1362,6 @@ async function main() {
     // the cleanup-only compatibility path, but do not advertise it for new use.
     const args = process.argv.slice(2).filter((arg) => arg !== '--quiet');
     const command = args[0] ?? '';
-    const legacySelftestAction = resolveLegacySelftestAction(command);
     if (isRuntimeSelftestCommand(command) && command === '__selftest-cdp-frame') {
         return runCdpFrameSelfTest();
     }
@@ -2199,10 +1372,6 @@ async function main() {
     if (isRuntimeSelftestCommand(command) &&
         command === '__selftest-runtime-patch-body') {
         return runRuntimePatchBodySourceSelfTest(__PATCHER_SOURCE__);
-    }
-    if (legacySelftestAction === '__invalid__') {
-        printUsage();
-        return 1;
     }
     if (isHelpCommand(command)) {
         printUsage();
@@ -2215,23 +1384,15 @@ async function main() {
     if (isHiddenLegacyCleanupCommand(command)) {
         return createWatcherFlow(watcherFlowOptions()).cleanupLegacyWatcherCommand();
     }
-    if (command && !isPublicLaunchCommand(command) && !legacySelftestAction) {
+    if (command && !isPublicLaunchCommand(command)) {
         printUsage();
         return 1;
     }
-    const effectiveCommand = legacySelftestAction || command;
     if (!checkRequirements({
-        command: effectiveCommand,
         context,
-        cleanupStaleArchiveTempFiles: createLegacyAppMutations(legacyAppMutationOptions())
-            .cleanupStaleArchiveTempFiles,
         supportedAppVersions: SUPPORTED_APP_VERSIONS,
     })) {
-        createLegacyAppMutations(legacyAppMutationOptions()).cleanupTempWorkspace();
         return 1;
-    }
-    if (legacySelftestAction) {
-        return runLegacyEmbeddedTool(legacyPatchFlowOptions(), legacySelftestAction);
     }
     if (isPublicLaunchCommand(command)) {
         return await runRuntimeLaunchCommand();
@@ -2243,7 +1404,6 @@ main()
     process.exitCode = exitCode;
 })
     .catch((error) => {
-    createLegacyAppMutations(legacyAppMutationOptions()).cleanupTempWorkspace();
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;
 });

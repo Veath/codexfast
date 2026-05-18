@@ -64,22 +64,6 @@ const COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE_FLAGGED =
   /(additionalMarketplaceKinds:)([A-Za-z_$][\w$]*)\?\[`shared-with-me`\]:\[\]/;
 const COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE_FLAGGED =
   /(additionalMarketplaceKinds:)([A-Za-z_$][\w$]*)\?\[\]:\[\]/;
-function restorePluginsSidebar26506Qo(
-  _match: string,
-  prefix: string,
-  authMethodVariable: string,
-  pluginsExperimentVariable: string,
-  authGateVariable: string,
-  disabledPluginsVariable: string,
-  between: string,
-  pluginsLabelVariable: string,
-  desktopNavVariable: string,
-  pluginsEnabledVariable: string,
-  delimiter: string,
-): string {
-  return `${prefix}${pluginsExperimentVariable}=Qo(\`533078438\`),${authGateVariable}=Xc(${authMethodVariable}),${disabledPluginsVariable}=${desktopNavVariable}&&${pluginsExperimentVariable}&&${authGateVariable},${between}${pluginsLabelVariable}=${desktopNavVariable}&&${pluginsEnabledVariable}&&!${authGateVariable}${delimiter}`;
-}
-
 function patchPluginsSidebar26513(
   _match: string,
   prefix: string,
@@ -98,24 +82,6 @@ function patchPluginsSidebar26513(
   return `${prefix}${experimentVariable}=${experimentCall},${authGateVariable}=${authGateCall},${disabledPluginsVariable}=!1,${navCapabilityVariable}=${navCapabilityCall},${pluginsLabelVariable}=${desktopNavVariable}&&${navCapabilityVariable}${delimiter}`;
 }
 
-function restorePluginsSidebar26513(
-  _match: string,
-  prefix: string,
-  _authMethodVariable: string,
-  experimentVariable: string,
-  experimentCall: string,
-  authGateVariable: string,
-  authGateCall: string,
-  disabledPluginsVariable: string,
-  navCapabilityVariable: string,
-  navCapabilityCall: string,
-  pluginsLabelVariable: string,
-  desktopNavVariable: string,
-  delimiter: string,
-): string {
-  return `${prefix}${experimentVariable}=${experimentCall},${authGateVariable}=${authGateCall},${disabledPluginsVariable}=${desktopNavVariable}&&${experimentVariable}&&${authGateVariable},${navCapabilityVariable}=${navCapabilityCall},${pluginsLabelVariable}=${desktopNavVariable}&&${navCapabilityVariable}&&!${authGateVariable}${delimiter}`;
-}
-
 export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
   {
     id: "plugins-access-old",
@@ -124,7 +90,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD,
     patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD,
     applyReplacement: "$1$3=!1,",
-    restoreReplacement: "$1$3=$2===`apikey`,",
   },
   {
     id: "plugins-access-new",
@@ -135,8 +100,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_NEW,
     applyReplacement: "$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=!1,$7=$3$8",
     normalizeReplacement: "$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=!1,$7=$3$8",
-    restoreReplacement:
-      "$1$3=Fs(),$4=hf(`533078438`),$5=$2===`apikey`,$6=$4&&$5,$7=$3&&!$5$8",
   },
   {
     id: "plugins-access-26422",
@@ -147,7 +110,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26422,
     applyReplacement: "$1$3=$4,$5=$2===`apikey`,$6=!1,$7$8=$9$10",
     normalizeReplacement: "$1$3=$4,$5=$2===`apikey`,$6=!1,$7$8=$9$10",
-    restoreReplacement: "$1$3=$4,$5=$2===`apikey`,$6=$3&&$5,$7$8=$9&&!$5$10",
   },
   {
     id: "plugins-access-26429",
@@ -158,7 +120,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     legacyPatchedSignature: PLUGINS_SIDEBAR_LEGACY_PATCHED_SIGNATURE_26429,
     applyReplacement: "$1$3=ms(`533078438`),$4=ed($2),$5=!1,$6$7=$8$9",
     normalizeReplacement: "$1$3=ms(`533078438`),$4=ed($2),$5=!1,$6$7=$8$9",
-    restoreReplacement: "$1$3=ms(`533078438`),$4=ed($2),$5=$3&&$4,$6$7=$8&&!$4$9",
   },
   {
     id: "plugins-access-26506",
@@ -167,7 +128,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506,
     patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506,
     applyReplacement: "$1$3=rs(`533078438`),$4=Xc($2),$5=!1,$7$8=$6&&$9$10",
-    restoreReplacement: "$1$3=rs(`533078438`),$4=Xc($2),$5=$6&&$3&&$4,$7$8=$6&&$9&&!$4$10",
   },
   {
     id: "plugins-access-26506-qo",
@@ -176,7 +136,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506_QO,
     patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506_QO,
     applyReplacement: "$1$3=Qo(`533078438`),$4=Xc($2),$5=!1,$7$8=$6&&$9$10",
-    restoreReplacement: restorePluginsSidebar26506Qo,
   },
   {
     id: "plugins-access-26513",
@@ -185,7 +144,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26513,
     patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26513,
     applyReplacement: patchPluginsSidebar26513,
-    restoreReplacement: restorePluginsSidebar26513,
   },
   {
     id: "plugins-page-content-26429",
@@ -194,7 +152,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGINS_PAGE_CONTENT_GUARDED_SIGNATURE,
     patchedSignature: PLUGINS_PAGE_CONTENT_PATCHED_SIGNATURE,
     applyReplacement: "$1$2=!1,$4,$5;$6",
-    restoreReplacement: "$1$2=$3,$4,$5;$6",
   },
   {
     id: "plugin-detail-access-26429",
@@ -203,7 +160,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGIN_DETAIL_AUTH_GUARDED_SIGNATURE,
     patchedSignature: PLUGIN_DETAIL_AUTH_PATCHED_SIGNATURE,
     applyReplacement: "$1if(!1){",
-    restoreReplacement: "$1if($4($2)){",
   },
   {
     id: "plugin-install-availability-26429",
@@ -212,7 +168,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE,
     patchedSignature: PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE,
     applyReplacement: "$1$2=$3.length>0&&$4===$3.length&&$5?`disabled-by-admin`:null,$6;",
-    restoreReplacement: "$1$2=$3.length>0&&$4===$3.length?$5?`disabled-by-admin`:`connector-unavailable`:null,$6;",
   },
   {
     id: "plugin-install-availability-helper-26513",
@@ -221,7 +176,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE,
     patchedSignature: PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE,
     applyReplacement: "$1$2=$3.length>0&&$4===$3.length&&$5?`disabled-by-admin`:null,$6;",
-    restoreReplacement: "$1$2=$3.length>0&&$4===$3.length?$5?`disabled-by-admin`:`connector-unavailable`:null,$6;",
   },
   {
     id: "plugin-install-modal-content-26429",
@@ -230,7 +184,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE,
     patchedSignature: PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE,
     applyReplacement: "$1$2=$3,$4=($5?.apps.length??0)>0&&!1,$6;",
-    restoreReplacement: "$1$2=$3,$4=($5?.apps.length??0)>0&&$5?.summary.authPolicy===`ON_INSTALL`,$6;",
   },
   {
     id: "composer-plugin-mentions-26513",
@@ -239,7 +192,6 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE,
     patchedSignature: COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE,
     applyReplacement: "$1[]",
-    restoreReplacement: "$1[`shared-with-me`]",
   },
   {
     id: "composer-plugin-mentions-26513-flagged",
@@ -248,6 +200,5 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE_FLAGGED,
     patchedSignature: COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE_FLAGGED,
     applyReplacement: "$1$2?[]:[]",
-    restoreReplacement: "$1$2?[`shared-with-me`]:[]",
   },
 );

@@ -11,7 +11,7 @@ Use these docs for decisions, troubleshooting, and bundle adaptations that futur
 - [`compatibility-matrix.md`](./compatibility-matrix.md)
   - Verified `Codex.app` version/build pairs, support status, and supported feature paths.
 - [`patch-targets.md`](./patch-targets.md)
-  - High-level mapping from exposed features to the current patch targets and restore intent.
+  - High-level mapping from exposed features to the current runtime patch targets.
 - [`../src/`](../src/)
   - TypeScript source for the generated `bin/codexfast` entrypoint.
 - [`troubleshooting.md`](./troubleshooting.md)

@@ -14,7 +14,7 @@ Repository guidance for `codexfast`.
 - Start with [`docs/README.md`](./docs/README.md) for the long-lived docs index.
 - Read [`docs/feature-scope.md`](./docs/feature-scope.md) when you need the current supported feature paths before diving into bundle-specific implementation details.
 - Read [`docs/compatibility-matrix.md`](./docs/compatibility-matrix.md) before changing the whitelist or describing a Codex build as supported.
-- Read [`docs/patch-targets.md`](./docs/patch-targets.md) before changing regexes, target specs, or internal restore mapping.
+- Read [`docs/patch-targets.md`](./docs/patch-targets.md) before changing regexes, target specs, or runtime patch mapping.
 - Read [`docs/troubleshooting.md`](./docs/troubleshooting.md) when the app fails to launch, a UI path breaks, `Plugins` remains partially unavailable, or repeated patch runs behave unexpectedly.
 - Read [`docs/real-app-validation.md`](./docs/real-app-validation.md) when claiming real installed-app compatibility.
 - Read [`docs/version-adaptation-playbook.md`](./docs/version-adaptation-playbook.md) when adapting to a new `Codex.app` build.
@@ -26,15 +26,15 @@ Repository guidance for `codexfast`.
 
 - Keep the generated CLI self-contained. New runtime dependencies should be avoided unless they are required.
 - Treat `bin/codexfast` as generated. Edit `src/*`, run `pnpm build`, and commit the regenerated entrypoint together with its source.
-- Preserve the packed `app.asar` workflow. Do not reintroduce a persistent `Contents/Resources/app` unpacked layout.
+- Preserve the runtime-only public launcher. Do not reintroduce legacy bundle unpack/repack, archive rewrite, or persistent `Contents/Resources/app` layouts.
 - Do not commit extracted Codex bundle files, temporary workspaces, or local inspection artifacts.
 - Use project-relative paths in docs and code; do not commit personal machine absolute paths.
-- Treat changes to patch signatures and internal restore logic as high risk. Update tests in the same change.
+- Treat changes to patch signatures and runtime interception as high risk. Update tests in the same change.
 - Keep user-facing script output in English unless the task explicitly requires another language.
 
 ## Validation
 
-- Run `pnpm build:check`, `pnpm typecheck`, and `pnpm test` after changing runtime launch, patch, restore, archive, integrity-hash, or re-sign logic.
+- Run `pnpm build:check`, `pnpm typecheck`, and `pnpm test` after changing runtime launch, patch targets, watcher cleanup, command dispatch, or generated CLI logic.
 - If package metadata changes, also check `package.json` and `bin/codexfast`.
 - Do not claim macOS app behavior is fixed unless the regression test passes and the real-world limitation is stated clearly.
 - Update the relevant files under `docs/` when compatibility knowledge, bundle notes, or release process knowledge changes.
@@ -57,15 +57,15 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
 
 - Confirm the target `CFBundleShortVersionString` + `CFBundleVersion` pair has been validated before adding it to the strict whitelist.
 - Confirm the current feature set still matches [`docs/feature-scope.md`](./docs/feature-scope.md).
-- Confirm the patch mapping and restore intent still match [`docs/patch-targets.md`](./docs/patch-targets.md).
+- Confirm the runtime patch mapping still matches [`docs/patch-targets.md`](./docs/patch-targets.md).
 - Confirm `pnpm test` still covers:
   - the Settings-side Fast control
   - the composer `/fast` slash command
   - the composer-side `Speed` menu, whether exposed through add-context or Intelligence UI
   - every Plugins gate required by the target build, including sidebar access, page content, plugin detail redirects, install-button availability, and install-modal content where present
   - the GPT-5.5 model-list bridge and model query selector injection targets
-  - unsupported-version blocking before unpack, backup, and re-sign
-  - internal restore symmetry for all file-patch paths
+  - unsupported-version blocking before runtime launch
+  - generated CLI behavior for runtime patch extraction
 - Confirm runtime launch still:
   - requires Codex to be fully quit before launch
   - reports patched target labels on supported builds
@@ -86,6 +86,6 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
 
 ## Safety
 
-- Public `launch` should not modify a locally installed `/Applications/Codex.app`. Be explicit when any internal legacy path affects a real app copy.
-- Preserve internal recovery paths: `app.asar1`, file-level backups, restore flow, and manual `codesign` fallback guidance.
+- Public `launch` should not modify a locally installed `/Applications/Codex.app`.
+- Do not reintroduce hidden app-bundle mutation paths. The hidden `repair` command is only a cleanup shim for old watcher files.
 - Prefer surgical diffs. Avoid unrelated refactors in the embedded Node patcher unless they directly support the requested fix.

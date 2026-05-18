@@ -8,7 +8,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 - `launch` is the public runtime path. It starts Codex with a local CDP endpoint and applies the supported target patches in memory for that launched session only.
 - Runtime launch does not modify `app.asar`, `Info.plist`, the app bundle, or the app signature.
-- Public legacy bundle patch commands are no longer exposed. The old file-patch and restore paths remain covered by internal regression tests so older patched installs can still be understood and recovered during development.
+- Legacy bundle patch commands and internal file-patch/restore flows have been removed.
 - If a user previously installed the launchd auto-repair watcher, `launch` removes the legacy watcher files before starting Codex.
 
 ## Current Feature Set
@@ -30,11 +30,6 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - On `26.422.21637`, `26.422.30944`, `26.422.62136`, `26.422.71525`, `26.429.20946`, `26.429.30905`, `26.429.61741`, `26.506.21252`, `26.506.31421`, `26.513.20950`, and `26.513.31313`, this is the composer `Intelligence` dropdown Speed submenu.
 - On supported builds this menu should surface `Standard` and `Fast`.
 
-### Sparkle in-app update bridge
-
-- Older legacy bundle patch flows used a build-specific `SUPublicEDKey` bridge for patched `26.506.31421` (`build 2620`) installs.
-- Runtime launch does not ad-hoc sign the app and does not need this bridge for new sessions.
-
 ### Plugins sidebar access for custom API users
 
 - Exposes the `Plugins` sidebar/page access path for custom API users on supported builds.
@@ -47,7 +42,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 - Exposes `GPT-5.5` in the app model list on supported builds when the bundled model catalog does not include it.
 - On `26.422.21637`, the app filters the raw `model/list` response into `modelsByType` before rendering menus, so the patch also preserves the injected entry after that query selector filter.
-- On `26.422.30944` and later builds, GPT-5.5 is expected to be visible through the official app path. `codexfast` skips GPT-5.5 apply targets from that version onward, while restore still recognizes earlier `0.5.2` GPT-5.5 patch markers.
+- On `26.422.30944` and later builds, GPT-5.5 is expected to be visible through the official app path. `codexfast` skips GPT-5.5 runtime targets from that version onward.
 - This injects the UI catalog metadata only. The configured custom API provider must still accept `gpt-5.5` at request time.
 - This does not replace the app's model execution path or make Codex merge arbitrary custom provider `/v1/models` responses into the UI catalog.
 
