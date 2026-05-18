@@ -7,7 +7,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
-import { spawn, spawnSync, type ChildProcess } from "node:child_process";
+import { spawn, type ChildProcess } from "node:child_process";
+import { asError, debugRuntime, escapeXml, printLine, resolveCommand, resolvePlistBuddy, run, sleep } from "./cli-utils.mts";
 
 declare const __PATCHER_SOURCE__: string;
 declare const __PACKAGE_VERSION__: string;
@@ -128,41 +129,6 @@ const runtimePatchHeartbeatIntervalMs = 5_000;
 const runtimePatchHeartbeatTimeoutMs = 2_000;
 const runtimePatchReconnectMaxAttempts = 3;
 const runtimePatchReconnectDelayMs = 1_000;
-
-function printLine(message = ""): void {
-  console.log(message);
-}
-
-function debugRuntime(message: string): void {
-  if (process.env.CODEXFAST_DEBUG_RUNTIME === "1") {
-    printLine(`[runtime-debug] ${message}`);
-  }
-}
-
-function resolveCommand(name: string): string | null {
-  const result = spawnSync("sh", ["-c", 'command -v -- "$1"', "sh", name], { encoding: "utf8" });
-  if (result.status !== 0) {
-    return null;
-  }
-  return result.stdout.trim() || null;
-}
-
-function resolvePlistBuddy(): string | null {
-  return existsSync("/usr/libexec/PlistBuddy") ? "/usr/libexec/PlistBuddy" : null;
-}
-
-function run(command: string, args: string[], options: { input?: string; env?: NodeJS.ProcessEnv } = {}): { status: number; stdout: string; stderr: string } {
-  const result = spawnSync(command, args, {
-    input: options.input,
-    encoding: "utf8",
-    env: options.env ?? process.env,
-  });
-  return {
-    status: result.status ?? 1,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  };
-}
 
 function encodeWebSocketTextFrame(payload: string): Buffer {
   const body = Buffer.from(payload, "utf8");
@@ -374,16 +340,6 @@ function httpGetJson<T>(url: string): Promise<T> {
   });
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
-function asError(value: unknown): Error {
-  return value instanceof Error ? value : new Error(String(value));
-}
-
 class CdpConnection {
   private nextCommandId = 1;
   private pending = new Map<number, CdpPendingCommand>();
@@ -592,15 +548,6 @@ class CdpConnection {
     }
     this.pending.clear();
   }
-}
-
-function escapeXml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
 }
 
 function userHomeDir(): string {

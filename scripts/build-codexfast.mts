@@ -18,6 +18,16 @@ function inlineLocalModuleSource(source: string): string {
   return source.replace(/^export /gm, "");
 }
 
+function inlineCliModuleSource(source: string): string {
+  return inlineLocalModuleSource(source).replace(/^import [^;]+;\r?\n/gm, "");
+}
+
+function insertAfterImports(source: string, insertedSource: string): string {
+  const importBlock = source.match(/^(?:import [^;]+;\r?\n)+/);
+  const insertIndex = importBlock ? importBlock[0].length : 0;
+  return `${source.slice(0, insertIndex)}\n${insertedSource}\n${source.slice(insertIndex)}`;
+}
+
 const patcherTargetsSource = inlineLocalModuleSource(readFileSync(join(sourceDir, "patcher-targets.mts"), "utf8"));
 const patchEngineSource = inlineLocalModuleSource(readFileSync(join(sourceDir, "patch-engine.mts"), "utf8"))
   .replace(/^import \{[^]*?\} from "\.\/patcher-targets\.mts";\r?\n\r?\n?/, "");
@@ -29,7 +39,11 @@ const patcherSource = ts.transpileModule(`"use strict";\n\n${patcherTargetsSourc
   compilerOptions,
 }).outputText;
 const packageVersion = JSON.parse(readFileSync(join(rootDir, "package.json"), "utf8")).version as string;
-const cliSource = readFileSync(join(sourceDir, "cli.mts"), "utf8")
+const cliModuleSource = inlineCliModuleSource(readFileSync(join(sourceDir, "cli-utils.mts"), "utf8"));
+const cliSource = insertAfterImports(
+  readFileSync(join(sourceDir, "cli.mts"), "utf8").replace(/^import [^\n]+ from "\.\/cli-utils\.mts";\r?\n/m, ""),
+  cliModuleSource,
+)
   .replace(
     "declare const __PATCHER_SOURCE__: string;",
     `const __PATCHER_SOURCE__ = ${JSON.stringify(patcherSource)};`,
