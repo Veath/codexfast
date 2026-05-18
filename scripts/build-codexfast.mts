@@ -29,7 +29,7 @@ function inlineCliModuleSource(source: string): string {
 }
 
 function stripCliModuleImports(source: string): string {
-  const cliModulePattern = String.raw`\.\/cli-(?:asar-transaction|cdp|command-policy|context|output|runtime-launch|runtime-patcher|utils)\.mts`;
+  const cliModulePattern = String.raw`\.\/cli-(?:asar-transaction|cdp|command-policy|context|legacy-patch-flow|output|runtime-launch|runtime-patcher|utils)\.mts`;
   return source
     .replace(
       new RegExp(
@@ -75,6 +75,7 @@ const cliModuleSource = [
   "cli-cdp.mts",
   "cli-command-policy.mts",
   "cli-context.mts",
+  "cli-legacy-patch-flow.mts",
   "cli-output.mts",
   "cli-runtime-launch.mts",
   "cli-runtime-patcher.mts",

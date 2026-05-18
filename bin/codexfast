@@ -650,6 +650,123 @@ function createCodexfastContext(appBundle = process.env.CODEXFAST_APP_BUNDLE) {
         toolchain: emptyToolchain(),
     };
 }
+function parseApplySummary(output) {
+    const match = output.match(/summary: changed=(\d+), alreadyPatched=(\d+)/);
+    if (!match) {
+        return null;
+    }
+    return {
+        changed: Number(match[1]),
+        alreadyPatched: Number(match[2]),
+    };
+}
+function runEmbeddedPatcher(options, action) {
+    const patcherAction = action === "repair" ? "apply" : action;
+    const result = run(options.context.toolchain.node, [
+        "-",
+        patcherAction,
+        options.context.temp.assetsDir,
+        options.backupSuffix,
+        options.legacyBackupSuffix,
+        options.context.metadata.versionKey,
+    ], {
+        input: options.patcherSource,
+    });
+    process.stdout.write(result.stdout);
+    process.stderr.write(result.stderr);
+    return result;
+}
+function finalizeModifiedArchive(options, action) {
+    if ((action === "apply" || action === "repair") &&
+        !options.ensureArchiveBackup()) {
+        return false;
+    }
+    const snapshot = options.createArchiveSnapshot();
+    if (!snapshot) {
+        return false;
+    }
+    if (!options.packTempAppToAsar()) {
+        return false;
+    }
+    if (!options.commitArchiveWithIntegrity(options.context.temp.asar, snapshot)) {
+        return false;
+    }
+    if (action === "apply" || action === "repair") {
+        const metadataChange = options.syncSparklePublicEdKeyForInAppUpdates();
+        if (!metadataChange.ok) {
+            return false;
+        }
+    }
+    if (!options.resignAppBundle("Codex.app resources were modified. Re-signing now.")) {
+        return false;
+    }
+    return true;
+}
+function runLegacyEmbeddedTool(options, action) {
+    let exitCode = 1;
+    options.printActionHeader(action);
+    if (!options.validateActionRequest(action)) {
+        return action === "repair" ? 0 : 1;
+    }
+    if (action === "restore" &&
+        !options.removeWatcherFiles({ quietLaunchctl: true, reportRemoved: true })) {
+        printLine("Warning: failed to remove the auto-repair watcher before restore.");
+        printLine("Run uninstall-watcher manually if restore is re-applied automatically.");
+    }
+    if (!options.migrateLegacyUnpackedLayout()) {
+        return 1;
+    }
+    if (!(0, node_fs_1.existsSync)(options.context.paths.asar)) {
+        printLine(`app.asar not found: ${options.context.paths.asar}`);
+        return 1;
+    }
+    if (action === "restore" &&
+        (0, node_fs_1.existsSync)(options.context.paths.asarBackup)) {
+        exitCode = options.restoreFromArchiveBackup() ? 0 : 1;
+        if (exitCode === 0) {
+            options.printOfficialReinstallGuidanceAfterRestore();
+        }
+        printExitBlock(exitCode);
+        return exitCode;
+    }
+    if (!options.unpackAppAsarToTemp()) {
+        options.cleanupTempWorkspace();
+        return printExitBlock(1).exitCode;
+    }
+    const patcherRun = runEmbeddedPatcher(options, action);
+    exitCode = patcherRun.status;
+    if (exitCode === 0 && action !== "status") {
+        if (action === "apply" || action === "repair") {
+            const summary = parseApplySummary(patcherRun.stdout);
+            if (summary && summary.changed === 0) {
+                const metadataChange = options.syncSparklePublicEdKeyForInAppUpdates();
+                if (!metadataChange.ok) {
+                    exitCode = 1;
+                }
+                else if (metadataChange.changed) {
+                    if (!options.resignAppBundle("Codex.app metadata was modified. Re-signing now.")) {
+                        exitCode = 1;
+                    }
+                }
+                else {
+                    printLine("No patch changes were needed; leaving app.asar and signature untouched.");
+                }
+            }
+            else if (!finalizeModifiedArchive(options, action)) {
+                exitCode = 1;
+            }
+        }
+        else if (!finalizeModifiedArchive(options, action)) {
+            exitCode = 1;
+        }
+    }
+    options.cleanupTempWorkspace();
+    if (action === "restore" && exitCode === 0) {
+        options.printOfficialReinstallGuidanceAfterRestore();
+    }
+    printExitBlock(exitCode);
+    return exitCode;
+}
 function printActionHeaderBlock(action, details) {
     printLine("");
     printLine(`Action: ${action}`);
@@ -1809,121 +1926,6 @@ function cleanupLegacyWatcherCommand() {
     }
     return printExitBlock(0).exitCode;
 }
-function parseApplySummary(output) {
-    const match = output.match(/summary: changed=(\d+), alreadyPatched=(\d+)/);
-    if (!match) {
-        return null;
-    }
-    return {
-        changed: Number(match[1]),
-        alreadyPatched: Number(match[2]),
-    };
-}
-function runEmbeddedPatcher(action) {
-    const patcherAction = action === 'repair' ? 'apply' : action;
-    const result = run(context.toolchain.node, [
-        '-',
-        patcherAction,
-        context.temp.assetsDir,
-        backupSuffix,
-        legacyBackupSuffix,
-        context.metadata.versionKey,
-    ], {
-        input: __PATCHER_SOURCE__,
-    });
-    process.stdout.write(result.stdout);
-    process.stderr.write(result.stderr);
-    return result;
-}
-function finalizeModifiedArchive(action) {
-    if ((action === 'apply' || action === 'repair') && !ensureArchiveBackup()) {
-        return false;
-    }
-    const snapshot = createArchiveSnapshot();
-    if (!snapshot) {
-        return false;
-    }
-    if (!packTempAppToAsar()) {
-        return false;
-    }
-    if (!commitArchiveWithIntegrity(context.temp.asar, snapshot)) {
-        return false;
-    }
-    if (action === 'apply' || action === 'repair') {
-        const metadataChange = syncSparklePublicEdKeyForInAppUpdates();
-        if (!metadataChange.ok) {
-            return false;
-        }
-    }
-    if (!resignAppBundle('Codex.app resources were modified. Re-signing now.')) {
-        return false;
-    }
-    return true;
-}
-function runEmbeddedTool(action) {
-    let exitCode = 1;
-    printActionHeader(action);
-    if (!validateActionRequest(action)) {
-        return action === 'repair' ? 0 : 1;
-    }
-    if (action === 'restore' &&
-        !removeWatcherFiles({ quietLaunchctl: true, reportRemoved: true })) {
-        printLine('Warning: failed to remove the auto-repair watcher before restore.');
-        printLine('Run uninstall-watcher manually if restore is re-applied automatically.');
-    }
-    if (!migrateLegacyUnpackedLayout()) {
-        return 1;
-    }
-    if (!(0, node_fs_1.existsSync)(context.paths.asar)) {
-        printLine(`app.asar not found: ${context.paths.asar}`);
-        return 1;
-    }
-    if (action === 'restore' && (0, node_fs_1.existsSync)(context.paths.asarBackup)) {
-        exitCode = restoreFromArchiveBackup() ? 0 : 1;
-        if (exitCode === 0) {
-            printOfficialReinstallGuidanceAfterRestore();
-        }
-        printExitBlock(exitCode);
-        return exitCode;
-    }
-    if (!unpackAppAsarToTemp()) {
-        cleanupTempWorkspace();
-        return printExitBlock(1).exitCode;
-    }
-    const patcherRun = runEmbeddedPatcher(action);
-    exitCode = patcherRun.status;
-    if (exitCode === 0 && action !== 'status') {
-        if (action === 'apply' || action === 'repair') {
-            const summary = parseApplySummary(patcherRun.stdout);
-            if (summary && summary.changed === 0) {
-                const metadataChange = syncSparklePublicEdKeyForInAppUpdates();
-                if (!metadataChange.ok) {
-                    exitCode = 1;
-                }
-                else if (metadataChange.changed) {
-                    if (!resignAppBundle('Codex.app metadata was modified. Re-signing now.')) {
-                        exitCode = 1;
-                    }
-                }
-                else {
-                    printLine('No patch changes were needed; leaving app.asar and signature untouched.');
-                }
-            }
-            else if (!finalizeModifiedArchive(action)) {
-                exitCode = 1;
-            }
-        }
-        else if (!finalizeModifiedArchive(action)) {
-            exitCode = 1;
-        }
-    }
-    cleanupTempWorkspace();
-    if (action === 'restore' && exitCode === 0) {
-        printOfficialReinstallGuidanceAfterRestore();
-    }
-    printExitBlock(exitCode);
-    return exitCode;
-}
 function watcherRunnerSource() {
     return `#!/usr/bin/env node
 const { spawnSync } = require("node:child_process");
@@ -2077,6 +2079,28 @@ function runRuntimeLaunchCommand() {
         removeLegacyWatcherFiles,
     });
 }
+function legacyPatchFlowOptions() {
+    return {
+        context,
+        patcherSource: __PATCHER_SOURCE__,
+        backupSuffix,
+        legacyBackupSuffix,
+        printActionHeader,
+        validateActionRequest,
+        removeWatcherFiles,
+        migrateLegacyUnpackedLayout,
+        restoreFromArchiveBackup,
+        printOfficialReinstallGuidanceAfterRestore,
+        unpackAppAsarToTemp,
+        cleanupTempWorkspace,
+        ensureArchiveBackup,
+        createArchiveSnapshot,
+        packTempAppToAsar,
+        commitArchiveWithIntegrity,
+        syncSparklePublicEdKeyForInAppUpdates,
+        resignAppBundle,
+    };
+}
 async function showMenu() {
     const rl = (0, promises_1.createInterface)({ input: node_process_1.stdin, output: node_process_1.stdout });
     try {
@@ -2149,7 +2173,7 @@ async function main() {
         return 1;
     }
     if (legacySelftestAction) {
-        return runEmbeddedTool(legacySelftestAction);
+        return runLegacyEmbeddedTool(legacyPatchFlowOptions(), legacySelftestAction);
     }
     if (isPublicLaunchCommand(command)) {
         return await runRuntimeLaunchCommand();

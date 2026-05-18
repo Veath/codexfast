@@ -45,6 +45,10 @@ import {
   printExitCode,
 } from './cli-output.mts';
 import {
+  runLegacyEmbeddedTool,
+  type LegacyPatchFlowOptions,
+} from './cli-legacy-patch-flow.mts';
+import {
   runRuntimePatchBodySourceSelfTest,
   runRuntimeUrlSelfTest,
 } from './cli-runtime-patcher.mts';
@@ -73,17 +77,6 @@ const launchAgentLabel = 'com.codexfast.watcher';
 const launchAgentFileName = `${launchAgentLabel}.plist`;
 const SPARKLE_PUBLIC_ED_KEY_BRIDGES: Record<string, string> = {
   '26.506.31421+2620': 'mNfr1v9t63BfgDtlw4C8lRvSY6uMggIXABDOCi3tS6k=',
-};
-
-type PatcherRun = {
-  status: number;
-  stdout: string;
-  stderr: string;
-};
-
-type ApplySummary = {
-  changed: number;
-  alreadyPatched: number;
 };
 
 type MetadataChangeResult = {
@@ -757,143 +750,6 @@ function cleanupLegacyWatcherCommand(): number {
   return printExitBlock(0).exitCode;
 }
 
-function parseApplySummary(output: string): ApplySummary | null {
-  const match = output.match(/summary: changed=(\d+), alreadyPatched=(\d+)/);
-  if (!match) {
-    return null;
-  }
-  return {
-    changed: Number(match[1]),
-    alreadyPatched: Number(match[2]),
-  };
-}
-
-function runEmbeddedPatcher(action: string): PatcherRun {
-  const patcherAction = action === 'repair' ? 'apply' : action;
-  const result = run(
-    context.toolchain.node,
-    [
-      '-',
-      patcherAction,
-      context.temp.assetsDir,
-      backupSuffix,
-      legacyBackupSuffix,
-      context.metadata.versionKey,
-    ],
-    {
-      input: __PATCHER_SOURCE__,
-    },
-  );
-  process.stdout.write(result.stdout);
-  process.stderr.write(result.stderr);
-  return result;
-}
-
-function finalizeModifiedArchive(action: string): boolean {
-  if ((action === 'apply' || action === 'repair') && !ensureArchiveBackup()) {
-    return false;
-  }
-  const snapshot = createArchiveSnapshot();
-  if (!snapshot) {
-    return false;
-  }
-  if (!packTempAppToAsar()) {
-    return false;
-  }
-  if (!commitArchiveWithIntegrity(context.temp.asar, snapshot)) {
-    return false;
-  }
-  if (action === 'apply' || action === 'repair') {
-    const metadataChange = syncSparklePublicEdKeyForInAppUpdates();
-    if (!metadataChange.ok) {
-      return false;
-    }
-  }
-  if (!resignAppBundle('Codex.app resources were modified. Re-signing now.')) {
-    return false;
-  }
-  return true;
-}
-
-function runEmbeddedTool(action: string): number {
-  let exitCode = 1;
-  printActionHeader(action);
-
-  if (!validateActionRequest(action)) {
-    return action === 'repair' ? 0 : 1;
-  }
-
-  if (
-    action === 'restore' &&
-    !removeWatcherFiles({ quietLaunchctl: true, reportRemoved: true })
-  ) {
-    printLine(
-      'Warning: failed to remove the auto-repair watcher before restore.',
-    );
-    printLine(
-      'Run uninstall-watcher manually if restore is re-applied automatically.',
-    );
-  }
-
-  if (!migrateLegacyUnpackedLayout()) {
-    return 1;
-  }
-  if (!existsSync(context.paths.asar)) {
-    printLine(`app.asar not found: ${context.paths.asar}`);
-    return 1;
-  }
-
-  if (action === 'restore' && existsSync(context.paths.asarBackup)) {
-    exitCode = restoreFromArchiveBackup() ? 0 : 1;
-    if (exitCode === 0) {
-      printOfficialReinstallGuidanceAfterRestore();
-    }
-    printExitBlock(exitCode);
-    return exitCode;
-  }
-
-  if (!unpackAppAsarToTemp()) {
-    cleanupTempWorkspace();
-    return printExitBlock(1).exitCode;
-  }
-
-  const patcherRun = runEmbeddedPatcher(action);
-  exitCode = patcherRun.status;
-
-  if (exitCode === 0 && action !== 'status') {
-    if (action === 'apply' || action === 'repair') {
-      const summary = parseApplySummary(patcherRun.stdout);
-      if (summary && summary.changed === 0) {
-        const metadataChange = syncSparklePublicEdKeyForInAppUpdates();
-        if (!metadataChange.ok) {
-          exitCode = 1;
-        } else if (metadataChange.changed) {
-          if (
-            !resignAppBundle('Codex.app metadata was modified. Re-signing now.')
-          ) {
-            exitCode = 1;
-          }
-        } else {
-          printLine(
-            'No patch changes were needed; leaving app.asar and signature untouched.',
-          );
-        }
-      } else if (!finalizeModifiedArchive(action)) {
-        exitCode = 1;
-      }
-    } else if (!finalizeModifiedArchive(action)) {
-      exitCode = 1;
-    }
-  }
-
-  cleanupTempWorkspace();
-  if (action === 'restore' && exitCode === 0) {
-    printOfficialReinstallGuidanceAfterRestore();
-  }
-  printExitBlock(exitCode);
-  return exitCode;
-}
-
 function watcherRunnerSource(): string {
   return `#!/usr/bin/env node
 const { spawnSync } = require("node:child_process");
@@ -1064,6 +920,29 @@ function runRuntimeLaunchCommand(): Promise<number> {
   });
 }
 
+function legacyPatchFlowOptions(): LegacyPatchFlowOptions {
+  return {
+    context,
+    patcherSource: __PATCHER_SOURCE__,
+    backupSuffix,
+    legacyBackupSuffix,
+    printActionHeader,
+    validateActionRequest,
+    removeWatcherFiles,
+    migrateLegacyUnpackedLayout,
+    restoreFromArchiveBackup,
+    printOfficialReinstallGuidanceAfterRestore,
+    unpackAppAsarToTemp,
+    cleanupTempWorkspace,
+    ensureArchiveBackup,
+    createArchiveSnapshot,
+    packTempAppToAsar,
+    commitArchiveWithIntegrity,
+    syncSparklePublicEdKeyForInAppUpdates,
+    resignAppBundle,
+  };
+}
+
 async function showMenu(): Promise<number> {
   const rl = createInterface({ input, output });
 
@@ -1146,7 +1025,10 @@ async function main(): Promise<number> {
   }
 
   if (legacySelftestAction) {
-    return runEmbeddedTool(legacySelftestAction);
+    return runLegacyEmbeddedTool(
+      legacyPatchFlowOptions(),
+      legacySelftestAction,
+    );
   }
 
   if (isPublicLaunchCommand(command)) {
