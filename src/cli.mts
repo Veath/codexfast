@@ -1,14 +1,21 @@
-import { spawn, type ChildProcess } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
+import { createHash, randomBytes } from 'node:crypto';
 import {
   chmodSync,
+  copyFileSync,
   existsSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  readdirSync,
+  renameSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
+import * as http from 'node:http';
+import * as https from 'node:https';
+import * as net from 'node:net';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { stdin as input, stdout as output } from 'node:process';
@@ -41,6 +48,13 @@ import {
   printExitCode,
 } from './cli-output.mts';
 import {
+  applyRuntimePatchesToResponseBodyWithSource,
+  isRuntimeJavaScriptResource,
+  runRuntimePatchBodySourceSelfTest,
+  runRuntimeUrlSelfTest,
+  type RuntimePatchResult,
+} from './cli-runtime-patcher.mts';
+import {
   asError,
   debugRuntime,
   escapeXml,
@@ -59,7 +73,7 @@ const SUPPORTED_APP_VERSIONS = __SUPPORTED_APP_VERSIONS__;
 const context = createCodexfastContext();
 const backupSuffix = '.codexfast.bak';
 const legacyBackupSuffix = '.speed-setting.bak';
-const asarPackage = '@electron/asar@3.4.1';
+const asarPackage = "@electron/asar@3.4.1";
 const staleArchiveTempFileMs = 10 * 60 * 1000;
 const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(', ');
 const launchAgentLabel = 'com.codexfast.watcher';
@@ -82,13 +96,6 @@ type ApplySummary = {
 type MetadataChangeResult = {
   changed: boolean;
   ok: boolean;
-};
-
-type RuntimePatchResult = {
-  content: string;
-  matchedLabels: string[];
-  patchedLabels: string[];
-  alreadyPatchedLabels: string[];
 };
 
 type FetchHeader = {
@@ -995,111 +1002,19 @@ function terminateRuntimeLaunchProcess(child: ChildProcess): void {
   }
 }
 
-let runtimePatchBodyFunction:
-  | ((resourcePath: string, body: string) => RuntimePatchResult)
-  | null = null;
-
 function applyRuntimePatchesToResponseBody(
   resourcePath: string,
   body: string,
 ): RuntimePatchResult {
-  if (!runtimePatchBodyFunction) {
-    const tailMarker = '\nlet exitCode = 1;\n';
-    const tailIndex = __PATCHER_SOURCE__.lastIndexOf(tailMarker);
-    if (tailIndex === -1) {
-      throw new Error(
-        'Embedded runtime patch engine entrypoint was not found.',
-      );
-    }
-    const patcherMarkerIndexes = [
-      '\nconst fs = require("node:fs");\n',
-      '\nconst fs = require("fs");\n',
-    ]
-      .map((marker) => __PATCHER_SOURCE__.indexOf(marker))
-      .filter((index) => index >= 0);
-    const patcherIndex =
-      patcherMarkerIndexes.length > 0 ? Math.min(...patcherMarkerIndexes) : -1;
-    const engineEnd = patcherIndex === -1 ? tailIndex : patcherIndex;
-    const engineSource = __PATCHER_SOURCE__.slice(0, engineEnd);
-    const factory = new Function(
-      `${engineSource}\nreturn applyRuntimePatchesToBody;`,
-    ) as () => unknown;
-    const candidate = factory();
-    if (typeof candidate !== 'function') {
-      throw new Error('Embedded runtime patch engine is unavailable.');
-    }
-    runtimePatchBodyFunction = candidate as (
-      resourcePath: string,
-      body: string,
-    ) => RuntimePatchResult;
-  }
-  return runtimePatchBodyFunction(resourcePath, body);
-}
-
-function isRuntimeJavaScriptResource(resourceUrl: string): boolean {
-  return /^app:\/\/[^?#]+\/(?:webview\/)?assets\/[^/?#]+\.js(?:[?#].*)?$/.test(
-    resourceUrl,
+  return applyRuntimePatchesToResponseBodyWithSource(
+    __PATCHER_SOURCE__,
+    resourcePath,
+    body,
   );
 }
 
-function runRuntimeUrlSelfTest(): number {
-  const acceptedUrls = [
-    'app://-/assets/index-DxnGmFpS.js',
-    'app://-/assets/index-DxnGmFpS.js?v=1',
-    'app://-/webview/assets/index.js',
-    'app://codex.local/webview/assets/chunk.js#hash',
-  ];
-  const rejectedUrls = [
-    'app://-/index.html',
-    'app://-/assets/style.css',
-    'https://example.com/assets/index.js',
-    'app://-/assets/nested/index.js',
-  ];
-
-  for (const url of acceptedUrls) {
-    if (!isRuntimeJavaScriptResource(url)) {
-      printLine(`Runtime URL self-test failed: expected accepted ${url}`);
-      return 1;
-    }
-  }
-
-  for (const url of rejectedUrls) {
-    if (isRuntimeJavaScriptResource(url)) {
-      printLine(`Runtime URL self-test failed: expected rejected ${url}`);
-      return 1;
-    }
-  }
-
-  printLine('Runtime URL self-test passed');
-  return 0;
-}
-
 function runRuntimePatchBodySelfTest(): number {
-  const body =
-    'settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;';
-  let result: RuntimePatchResult;
-  try {
-    result = applyRuntimePatchesToResponseBody(
-      'app://-/assets/general-settings-demo.js',
-      body,
-    );
-  } catch (error) {
-    printLine(`Runtime patch body self-test failed: ${asError(error).message}`);
-    return 1;
-  }
-
-  if (
-    !result.content.includes(
-      '{serviceTierSettings:r,setServiceTier:i}=fe();let o;',
-    ) ||
-    !result.patchedLabels.includes('Speed setting')
-  ) {
-    printLine('Runtime patch body self-test failed');
-    return 1;
-  }
-
-  printLine('Runtime patch body self-test passed');
-  return 0;
+  return runRuntimePatchBodySourceSelfTest(__PATCHER_SOURCE__);
 }
 
 function responseHeadersForFulfill(
@@ -1406,7 +1321,7 @@ async function startRuntimePatchSession(
         return;
       }
       void cdpCommandWithTimeout(
-        cdp.send('Page.getFrameTree'),
+        cdp.send("Page.getFrameTree"),
         runtimePatchHeartbeatTimeoutMs,
         'Timed out waiting for CDP heartbeat.',
       ).catch((error: unknown) => {

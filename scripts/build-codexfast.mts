@@ -28,6 +28,25 @@ function inlineCliModuleSource(source: string): string {
   return inlineLocalModuleSource(source).replace(/^import [^;]+;\r?\n/gm, "");
 }
 
+function stripCliModuleImports(source: string): string {
+  const cliModulePattern = String.raw`\.\/cli-(?:asar-transaction|cdp|command-policy|context|output|runtime-patcher|utils)\.mts`;
+  return source
+    .replace(
+      new RegExp(
+        String.raw`^import\s+(?:type\s+)?\{[^}]*\}\s+from ['"]${cliModulePattern}['"];\r?\n`,
+        "gm",
+      ),
+      "",
+    )
+    .replace(
+      new RegExp(
+        String.raw`^import\s+(?:type\s+)?[^{};\n]+from ['"]${cliModulePattern}['"];\r?\n`,
+        "gm",
+      ),
+      "",
+    );
+}
+
 function insertAfterImports(source: string, insertedSource: string): string {
   const importBlock = source.match(/^(?:import [^;]+;\r?\n)+/);
   const insertIndex = importBlock ? importBlock[0].length : 0;
@@ -57,10 +76,11 @@ const cliModuleSource = [
   "cli-command-policy.mts",
   "cli-context.mts",
   "cli-output.mts",
+  "cli-runtime-patcher.mts",
   "cli-utils.mts",
 ].map((fileName) => inlineCliModuleSource(readFileSync(join(sourceDir, fileName), "utf8"))).join("\n");
 const cliSource = insertAfterImports(
-  readFileSync(join(sourceDir, "cli.mts"), "utf8").replace(/^import [^\n]+ from "\.\/cli-(?:asar-transaction|cdp|command-policy|context|output|utils)\.mts";\r?\n/gm, ""),
+  stripCliModuleImports(readFileSync(join(sourceDir, "cli.mts"), "utf8")),
   cliModuleSource,
 )
   .replace(

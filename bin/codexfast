@@ -52,6 +52,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
+const node_child_process_1 = require("node:child_process");
 const node_crypto_1 = require("node:crypto");
 const node_fs_1 = require("node:fs");
 const http = __importStar(require("node:http"));
@@ -59,9 +60,8 @@ const https = __importStar(require("node:https"));
 const net = __importStar(require("node:net"));
 const node_os_1 = require("node:os");
 const node_path_1 = require("node:path");
-const promises_1 = require("node:readline/promises");
 const node_process_1 = require("node:process");
-const node_child_process_1 = require("node:child_process");
+const promises_1 = require("node:readline/promises");
 function calculateAsarHeaderHash(archivePath) {
     try {
         const archive = (0, node_fs_1.readFileSync)(archivePath);
@@ -668,6 +668,81 @@ function printExitBlock(exitCode) {
     printLine("");
     return printExitCode(exitCode);
 }
+let runtimePatchBodyFunction = null;
+function applyRuntimePatchesToResponseBodyWithSource(patcherSource, resourcePath, body) {
+    if (!runtimePatchBodyFunction) {
+        const tailMarker = "\nlet exitCode = 1;\n";
+        const tailIndex = patcherSource.lastIndexOf(tailMarker);
+        if (tailIndex === -1) {
+            throw new Error("Embedded runtime patch engine entrypoint was not found.");
+        }
+        const patcherMarkerIndexes = [
+            '\nconst fs = require("node:fs");\n',
+            '\nconst fs = require("fs");\n',
+        ]
+            .map((marker) => patcherSource.indexOf(marker))
+            .filter((index) => index >= 0);
+        const patcherIndex = patcherMarkerIndexes.length > 0 ? Math.min(...patcherMarkerIndexes) : -1;
+        const engineEnd = patcherIndex === -1 ? tailIndex : patcherIndex;
+        const engineSource = patcherSource.slice(0, engineEnd);
+        const factory = new Function(`${engineSource}\nreturn applyRuntimePatchesToBody;`);
+        const candidate = factory();
+        if (typeof candidate !== "function") {
+            throw new Error("Embedded runtime patch engine is unavailable.");
+        }
+        runtimePatchBodyFunction = candidate;
+    }
+    return runtimePatchBodyFunction(resourcePath, body);
+}
+function isRuntimeJavaScriptResource(resourceUrl) {
+    return /^app:\/\/[^?#]+\/(?:webview\/)?assets\/[^/?#]+\.js(?:[?#].*)?$/.test(resourceUrl);
+}
+function runRuntimeUrlSelfTest() {
+    const acceptedUrls = [
+        "app://-/assets/index-DxnGmFpS.js",
+        "app://-/assets/index-DxnGmFpS.js?v=1",
+        "app://-/webview/assets/index.js",
+        "app://codex.local/webview/assets/chunk.js#hash",
+    ];
+    const rejectedUrls = [
+        "app://-/index.html",
+        "app://-/assets/style.css",
+        "https://example.com/assets/index.js",
+        "app://-/assets/nested/index.js",
+    ];
+    for (const url of acceptedUrls) {
+        if (!isRuntimeJavaScriptResource(url)) {
+            printLine(`Runtime URL self-test failed: expected accepted ${url}`);
+            return 1;
+        }
+    }
+    for (const url of rejectedUrls) {
+        if (isRuntimeJavaScriptResource(url)) {
+            printLine(`Runtime URL self-test failed: expected rejected ${url}`);
+            return 1;
+        }
+    }
+    printLine("Runtime URL self-test passed");
+    return 0;
+}
+function runRuntimePatchBodySourceSelfTest(patcherSource) {
+    const body = "settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;";
+    let result;
+    try {
+        result = applyRuntimePatchesToResponseBodyWithSource(patcherSource, "app://-/assets/general-settings-demo.js", body);
+    }
+    catch (error) {
+        printLine(`Runtime patch body self-test failed: ${asError(error).message}`);
+        return 1;
+    }
+    if (!result.content.includes("{serviceTierSettings:r,setServiceTier:i}=fe();let o;") ||
+        !result.patchedLabels.includes("Speed setting")) {
+        printLine("Runtime patch body self-test failed");
+        return 1;
+    }
+    printLine("Runtime patch body self-test passed");
+    return 0;
+}
 function printLine(message = "") {
     console.log(message);
 }
@@ -718,15 +793,15 @@ const __PATCHER_SOURCE__ = "\"use strict\";\nfunction defineTargetSpecs(...specs
 const __PACKAGE_VERSION__ = "0.17.0";
 const SUPPORTED_APP_VERSIONS = { "26.415.40636+1799": "Codex.app 26.415.40636 build 1799", "26.417.41555+1858": "Codex.app 26.417.41555 build 1858", "26.422.21637+2056": "Codex.app 26.422.21637 build 2056", "26.422.30944+2080": "Codex.app 26.422.30944 build 2080", "26.422.62136+2176": "Codex.app 26.422.62136 build 2176", "26.422.62136+2180": "Codex.app 26.422.62136 build 2180", "26.422.71525+2210": "Codex.app 26.422.71525 build 2210", "26.429.20946+2312": "Codex.app 26.429.20946 build 2312", "26.429.30905+2345": "Codex.app 26.429.30905 build 2345", "26.429.61741+2429": "Codex.app 26.429.61741 build 2429", "26.506.21252+2575": "Codex.app 26.506.21252 build 2575", "26.506.31421+2620": "Codex.app 26.506.31421 build 2620", "26.513.20950+2816": "Codex.app 26.513.20950 build 2816", "26.513.31313+2867": "Codex.app 26.513.31313 build 2867" };
 const context = createCodexfastContext();
-const backupSuffix = ".codexfast.bak";
-const legacyBackupSuffix = ".speed-setting.bak";
+const backupSuffix = '.codexfast.bak';
+const legacyBackupSuffix = '.speed-setting.bak';
 const asarPackage = "@electron/asar@3.4.1";
 const staleArchiveTempFileMs = 10 * 60 * 1000;
-const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(", ");
-const launchAgentLabel = "com.codexfast.watcher";
+const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(', ');
+const launchAgentLabel = 'com.codexfast.watcher';
 const launchAgentFileName = `${launchAgentLabel}.plist`;
 const SPARKLE_PUBLIC_ED_KEY_BRIDGES = {
-    "26.506.31421+2620": "mNfr1v9t63BfgDtlw4C8lRvSY6uMggIXABDOCi3tS6k=",
+    '26.506.31421+2620': 'mNfr1v9t63BfgDtlw4C8lRvSY6uMggIXABDOCi3tS6k=',
 };
 const runtimePatchSessionTimeoutMs = 12_000;
 const runtimePatchSettleMs = 750;
@@ -736,63 +811,77 @@ const runtimePatchHeartbeatTimeoutMs = 2_000;
 const runtimePatchReconnectMaxAttempts = 3;
 const runtimePatchReconnectDelayMs = 1_000;
 function userHomeDir() {
-    return process.env.HOME || process.env.USERPROFILE || "";
+    return process.env.HOME || process.env.USERPROFILE || '';
 }
 function launchAgentsDir() {
-    return (0, node_path_1.join)(userHomeDir(), "Library", "LaunchAgents");
+    return (0, node_path_1.join)(userHomeDir(), 'Library', 'LaunchAgents');
 }
 function codexfastSupportDir() {
-    return (0, node_path_1.join)(userHomeDir(), "Library", "Application Support", "codexfast");
+    return (0, node_path_1.join)(userHomeDir(), 'Library', 'Application Support', 'codexfast');
 }
 function watcherPlistPath() {
     return (0, node_path_1.join)(launchAgentsDir(), launchAgentFileName);
 }
 function watcherCliPath() {
-    return (0, node_path_1.join)(codexfastSupportDir(), "codexfast-watcher.js");
+    return (0, node_path_1.join)(codexfastSupportDir(), 'codexfast-watcher.js');
 }
 function launchctlDomain() {
     const getuid = process.getuid;
-    if (typeof getuid !== "function") {
-        throw new Error("Cannot resolve the launchctl GUI domain on this platform.");
+    if (typeof getuid !== 'function') {
+        throw new Error('Cannot resolve the launchctl GUI domain on this platform.');
     }
     return `gui/${getuid()}`;
 }
-function readBundlePlistValue(key, fallback = "unknown") {
-    const result = run(context.toolchain.plistBuddy, ["-c", `Print :${key}`, context.paths.infoPlist]);
+function readBundlePlistValue(key, fallback = 'unknown') {
+    const result = run(context.toolchain.plistBuddy, [
+        '-c',
+        `Print :${key}`,
+        context.paths.infoPlist,
+    ]);
     return result.status === 0 ? result.stdout.trim() : fallback;
 }
 function loadAppCompatibilityMetadata() {
-    context.metadata.version = readBundlePlistValue("CFBundleShortVersionString");
-    context.metadata.build = readBundlePlistValue("CFBundleVersion");
+    context.metadata.version = readBundlePlistValue('CFBundleShortVersionString');
+    context.metadata.build = readBundlePlistValue('CFBundleVersion');
     context.metadata.versionKey = `${context.metadata.version}+${context.metadata.build}`;
     context.metadata.supported = Object.prototype.hasOwnProperty.call(SUPPORTED_APP_VERSIONS, context.metadata.versionKey);
-    context.metadata.compatibility = context.metadata.supported ? `supported (${SUPPORTED_APP_VERSIONS[context.metadata.versionKey]})` : "unsupported";
+    context.metadata.compatibility = context.metadata.supported
+        ? `supported (${SUPPORTED_APP_VERSIONS[context.metadata.versionKey]})`
+        : 'unsupported';
 }
 function cleanupTempWorkspace() {
     if (context.temp.root && (0, node_fs_1.existsSync)(context.temp.root)) {
         (0, node_fs_1.rmSync)(context.temp.root, { recursive: true, force: true });
     }
-    context.temp.root = "";
-    context.temp.appDir = "";
-    context.temp.assetsDir = "";
-    context.temp.asar = "";
+    context.temp.root = '';
+    context.temp.appDir = '';
+    context.temp.assetsDir = '';
+    context.temp.asar = '';
 }
 function createTempWorkspace() {
     cleanupTempWorkspace();
     try {
-        context.temp.root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), "codexfast."));
-        context.temp.appDir = (0, node_path_1.join)(context.temp.root, "app");
-        context.temp.assetsDir = (0, node_path_1.join)(context.temp.appDir, "webview", "assets");
-        context.temp.asar = (0, node_path_1.join)(context.temp.root, "app.asar");
+        context.temp.root = (0, node_fs_1.mkdtempSync)((0, node_path_1.join)((0, node_os_1.tmpdir)(), 'codexfast.'));
+        context.temp.appDir = (0, node_path_1.join)(context.temp.root, 'app');
+        context.temp.assetsDir = (0, node_path_1.join)(context.temp.appDir, 'webview', 'assets');
+        context.temp.asar = (0, node_path_1.join)(context.temp.root, 'app.asar');
         return true;
     }
     catch {
-        printLine("Failed to create a temporary workspace.");
+        printLine('Failed to create a temporary workspace.');
         return false;
     }
 }
 function runAsar(args) {
-    const result = run(context.toolchain.npm, ["exec", "--yes", "--package", asarPackage, "--", "asar", ...args]);
+    const result = run(context.toolchain.npm, [
+        'exec',
+        '--yes',
+        '--package',
+        asarPackage,
+        '--',
+        'asar',
+        ...args,
+    ]);
     if (result.status !== 0) {
         process.stdout.write(result.stdout);
         process.stderr.write(result.stderr);
@@ -801,28 +890,46 @@ function runAsar(args) {
     return true;
 }
 function readAsarIntegrityHash() {
-    const result = run(context.toolchain.plistBuddy, ["-c", "Print :ElectronAsarIntegrity:Resources/app.asar:hash", context.paths.infoPlist]);
-    return result.status === 0 ? result.stdout.trim() : "";
+    const result = run(context.toolchain.plistBuddy, [
+        '-c',
+        'Print :ElectronAsarIntegrity:Resources/app.asar:hash',
+        context.paths.infoPlist,
+    ]);
+    return result.status === 0 ? result.stdout.trim() : '';
 }
 function writeAsarIntegrityHash(hash, options = {}) {
-    const setResult = run(context.toolchain.plistBuddy, ["-c", `Set :ElectronAsarIntegrity:Resources/app.asar:hash ${hash}`, context.paths.infoPlist]);
+    const setResult = run(context.toolchain.plistBuddy, [
+        '-c',
+        `Set :ElectronAsarIntegrity:Resources/app.asar:hash ${hash}`,
+        context.paths.infoPlist,
+    ]);
     if (setResult.status !== 0) {
-        printLine(options.failureMessage ?? "Failed to update ElectronAsarIntegrity hash in Info.plist.");
+        printLine(options.failureMessage ??
+            'Failed to update ElectronAsarIntegrity hash in Info.plist.');
         return false;
     }
     if (readAsarIntegrityHash() !== hash) {
-        printLine(options.verificationFailureMessage ?? "ElectronAsarIntegrity hash verification failed after updating Info.plist.");
+        printLine(options.verificationFailureMessage ??
+            'ElectronAsarIntegrity hash verification failed after updating Info.plist.');
         return false;
     }
     return true;
 }
 function readSparklePublicEdKey() {
-    return readBundlePlistValue("SUPublicEDKey", "");
+    return readBundlePlistValue('SUPublicEDKey', '');
 }
 function writeSparklePublicEdKey(value) {
-    const setResult = run(context.toolchain.plistBuddy, ["-c", `Set :SUPublicEDKey ${value}`, context.paths.infoPlist]);
+    const setResult = run(context.toolchain.plistBuddy, [
+        '-c',
+        `Set :SUPublicEDKey ${value}`,
+        context.paths.infoPlist,
+    ]);
     if (setResult.status !== 0) {
-        const addResult = run(context.toolchain.plistBuddy, ["-c", `Add :SUPublicEDKey string ${value}`, context.paths.infoPlist]);
+        const addResult = run(context.toolchain.plistBuddy, [
+            '-c',
+            `Add :SUPublicEDKey string ${value}`,
+            context.paths.infoPlist,
+        ]);
         if (addResult.status !== 0) {
             return false;
         }
@@ -840,60 +947,60 @@ function syncSparklePublicEdKeyForInAppUpdates() {
     }
     try {
         if (!(0, node_fs_1.existsSync)(context.paths.sparklePublicEdKeyBackup)) {
-            (0, node_fs_1.writeFileSync)(context.paths.sparklePublicEdKeyBackup, currentKey, "utf8");
+            (0, node_fs_1.writeFileSync)(context.paths.sparklePublicEdKeyBackup, currentKey, 'utf8');
         }
     }
     catch {
-        printLine("Failed to back up the Sparkle public EdDSA key.");
+        printLine('Failed to back up the Sparkle public EdDSA key.');
         return { changed: false, ok: false };
     }
     if (!writeSparklePublicEdKey(targetKey)) {
-        printLine("Failed to update the Sparkle public EdDSA key for in-app updates.");
+        printLine('Failed to update the Sparkle public EdDSA key for in-app updates.');
         return { changed: false, ok: false };
     }
-    printLine("Updated Sparkle public EdDSA key for in-app updates.");
+    printLine('Updated Sparkle public EdDSA key for in-app updates.');
     return { changed: true, ok: true };
 }
 function restoreSparklePublicEdKeyBackup() {
     if (!(0, node_fs_1.existsSync)(context.paths.sparklePublicEdKeyBackup)) {
         return { changed: false, ok: true };
     }
-    let originalKey = "";
+    let originalKey = '';
     try {
-        originalKey = (0, node_fs_1.readFileSync)(context.paths.sparklePublicEdKeyBackup, "utf8").trim();
+        originalKey = (0, node_fs_1.readFileSync)(context.paths.sparklePublicEdKeyBackup, 'utf8').trim();
     }
     catch {
-        printLine("Failed to read the Sparkle public EdDSA key backup.");
+        printLine('Failed to read the Sparkle public EdDSA key backup.');
         return { changed: false, ok: false };
     }
     if (!writeSparklePublicEdKey(originalKey)) {
-        printLine("Failed to restore the Sparkle public EdDSA key backup.");
+        printLine('Failed to restore the Sparkle public EdDSA key backup.');
         return { changed: false, ok: false };
     }
     try {
         (0, node_fs_1.rmSync)(context.paths.sparklePublicEdKeyBackup, { force: true });
     }
     catch {
-        printLine("Failed to remove the Sparkle public EdDSA key backup.");
+        printLine('Failed to remove the Sparkle public EdDSA key backup.');
         return { changed: true, ok: false };
     }
-    printLine("Restored Sparkle public EdDSA key backup.");
+    printLine('Restored Sparkle public EdDSA key backup.');
     return { changed: true, ok: true };
 }
 function updateAsarIntegrityMetadata() {
     const currentHash = calculateAsarHeaderHash(context.paths.asar);
     if (!currentHash) {
-        printLine("Failed to calculate the Electron ASAR header hash for app.asar.");
+        printLine('Failed to calculate the Electron ASAR header hash for app.asar.');
         return false;
     }
     if (!readAsarIntegrityHash()) {
-        printLine("ElectronAsarIntegrity entry not found in Info.plist. Skipping metadata update.");
+        printLine('ElectronAsarIntegrity entry not found in Info.plist. Skipping metadata update.');
         return true;
     }
     if (!writeAsarIntegrityHash(currentHash)) {
         return false;
     }
-    printLine("Updated ElectronAsarIntegrity hash in Info.plist.");
+    printLine('Updated ElectronAsarIntegrity hash in Info.plist.');
     return true;
 }
 function createArchiveSnapshot() {
@@ -902,7 +1009,7 @@ function createArchiveSnapshot() {
     }
     const snapshot = snapshotArchive(context.temp.root, context.paths.asar, readAsarIntegrityHash());
     if (!snapshot) {
-        printLine("Failed to snapshot the current app.asar before replacing it.");
+        printLine('Failed to snapshot the current app.asar before replacing it.');
         return null;
     }
     return snapshot;
@@ -910,24 +1017,25 @@ function createArchiveSnapshot() {
 function restoreArchiveSnapshot(snapshot) {
     let archiveRestored = false;
     if (snapshot.archivePath) {
-        printLine("Reverting to the pre-change app.asar after failed integrity update.");
-        archiveRestored = replaceAppAsarFrom(snapshot.archivePath, "Failed to restore the previous app.asar after integrity update failure.");
+        printLine('Reverting to the pre-change app.asar after failed integrity update.');
+        archiveRestored = replaceAppAsarFrom(snapshot.archivePath, 'Failed to restore the previous app.asar after integrity update failure.');
     }
     else {
-        printLine("Removing app.asar created during failed integrity update.");
+        printLine('Removing app.asar created during failed integrity update.');
         try {
             (0, node_fs_1.rmSync)(context.paths.asar, { force: true });
             archiveRestored = true;
         }
         catch {
-            printLine("Failed to remove app.asar after integrity update failure.");
+            printLine('Failed to remove app.asar after integrity update failure.');
         }
     }
     let integrityRestored = true;
-    if (snapshot.integrityHash && readAsarIntegrityHash() !== snapshot.integrityHash) {
+    if (snapshot.integrityHash &&
+        readAsarIntegrityHash() !== snapshot.integrityHash) {
         integrityRestored = writeAsarIntegrityHash(snapshot.integrityHash, {
-            failureMessage: "Failed to restore previous ElectronAsarIntegrity hash in Info.plist.",
-            verificationFailureMessage: "ElectronAsarIntegrity hash verification failed after restoring previous Info.plist hash.",
+            failureMessage: 'Failed to restore previous ElectronAsarIntegrity hash in Info.plist.',
+            verificationFailureMessage: 'ElectronAsarIntegrity hash verification failed after restoring previous Info.plist hash.',
         });
     }
     return archiveRestored && integrityRestored;
@@ -943,7 +1051,7 @@ function ensureArchiveBackup() {
         return true;
     }
     catch {
-        printLine("Failed to create app.asar backup.");
+        printLine('Failed to create app.asar backup.');
         return false;
     }
 }
@@ -951,8 +1059,8 @@ function unpackAppAsarToTemp() {
     if (!createTempWorkspace()) {
         return false;
     }
-    if (!runAsar(["e", context.paths.asar, context.temp.appDir])) {
-        printLine("Failed to unpack app.asar.");
+    if (!runAsar(['e', context.paths.asar, context.temp.appDir])) {
+        printLine('Failed to unpack app.asar.');
         return false;
     }
     if (!(0, node_fs_1.existsSync)(context.temp.assetsDir)) {
@@ -963,17 +1071,17 @@ function unpackAppAsarToTemp() {
 }
 function packTempAppToAsar() {
     if (!context.temp.asar) {
-        printLine("Temporary archive path is not available.");
+        printLine('Temporary archive path is not available.');
         return false;
     }
-    if (!runAsar(["p", context.temp.appDir, context.temp.asar])) {
-        printLine("Failed to repack app.asar.");
+    if (!runAsar(['p', context.temp.appDir, context.temp.asar])) {
+        printLine('Failed to repack app.asar.');
         return false;
     }
     return true;
 }
 function replaceAppAsarFrom(sourceArchive, failureMessage) {
-    const tempFileName = `.codexfast.${process.pid}.${(0, node_crypto_1.randomBytes)(6).toString("hex")}.app.asar.tmp`;
+    const tempFileName = `.codexfast.${process.pid}.${(0, node_crypto_1.randomBytes)(6).toString('hex')}.app.asar.tmp`;
     if (replaceArchiveAtomically(sourceArchive, context.paths.asar, context.paths.resources, tempFileName)) {
         return true;
     }
@@ -981,14 +1089,14 @@ function replaceAppAsarFrom(sourceArchive, failureMessage) {
     return false;
 }
 function commitArchiveWithIntegrity(sourceArchive, snapshot) {
-    if (!replaceAppAsarFrom(sourceArchive, "Failed to replace app.asar with the repacked archive.")) {
+    if (!replaceAppAsarFrom(sourceArchive, 'Failed to replace app.asar with the repacked archive.')) {
         return false;
     }
     if (updateAsarIntegrityMetadata()) {
         return true;
     }
     if (!restoreArchiveSnapshot(snapshot)) {
-        printLine("Bundle may be in an inconsistent state. Re-run restore or reinstall Codex.app.");
+        printLine('Bundle may be in an inconsistent state. Re-run restore or reinstall Codex.app.');
     }
     return false;
 }
@@ -996,16 +1104,17 @@ function cleanupStaleArchiveTempFiles() {
     removeStaleArchiveTempFiles(context.paths.resources, Date.now() - staleArchiveTempFileMs);
 }
 function migrateLegacyUnpackedLayout() {
-    const unpackedAppDir = (0, node_path_1.join)(context.paths.resources, "app");
+    const unpackedAppDir = (0, node_path_1.join)(context.paths.resources, 'app');
     if (!(0, node_fs_1.existsSync)(unpackedAppDir)) {
         return true;
     }
-    printLine("Detected legacy unpacked Resources/app layout. Repacking into app.asar.");
+    printLine('Detected legacy unpacked Resources/app layout. Repacking into app.asar.');
     if (!createTempWorkspace()) {
         return false;
     }
     try {
-        if (!(0, node_fs_1.existsSync)(context.paths.asarBackup) && (0, node_fs_1.existsSync)(context.paths.asar)) {
+        if (!(0, node_fs_1.existsSync)(context.paths.asarBackup) &&
+            (0, node_fs_1.existsSync)(context.paths.asar)) {
             if (!ensureArchiveBackup()) {
                 return false;
             }
@@ -1014,15 +1123,15 @@ function migrateLegacyUnpackedLayout() {
         if (!snapshot) {
             return false;
         }
-        if (!runAsar(["p", unpackedAppDir, context.temp.asar])) {
-            printLine("Failed to repack legacy Resources/app directory.");
+        if (!runAsar(['p', unpackedAppDir, context.temp.asar])) {
+            printLine('Failed to repack legacy Resources/app directory.');
             return false;
         }
         if (!commitArchiveWithIntegrity(context.temp.asar, snapshot)) {
             return false;
         }
         (0, node_fs_1.rmSync)(unpackedAppDir, { recursive: true, force: true });
-        return resignAppBundle("Legacy unpacked layout was migrated. Re-signing now.");
+        return resignAppBundle('Legacy unpacked layout was migrated. Re-signing now.');
     }
     finally {
         cleanupTempWorkspace();
@@ -1048,7 +1157,7 @@ function restoreFromArchiveBackup() {
         if (!metadataChange.ok) {
             return false;
         }
-        if (!resignAppBundle("Original archive was restored. Re-signing now.")) {
+        if (!resignAppBundle('Original archive was restored. Re-signing now.')) {
             return false;
         }
         return true;
@@ -1058,50 +1167,62 @@ function restoreFromArchiveBackup() {
     }
 }
 function printManualResignGuidance() {
-    printLine("Manual fallback:");
+    printLine('Manual fallback:');
     printLine(`  codesign --force --deep --sign - ${context.paths.bundle}`);
     printLine(`  codesign --verify --deep --strict --verbose=2 ${context.paths.bundle}`);
-    printLine("If verification still fails, run Restore original app or reinstall Codex.app.");
+    printLine('If verification still fails, run Restore original app or reinstall Codex.app.');
 }
 function officialCodexDownloadUrl() {
-    if (!context.metadata.version || context.metadata.version === "unknown") {
+    if (!context.metadata.version || context.metadata.version === 'unknown') {
         return null;
     }
     return `https://persistent.oaistatic.com/codex-app-prod/Codex-darwin-arm64-${context.metadata.version}.zip`;
 }
 function printOfficialReinstallGuidanceAfterRestore() {
-    printLine("");
-    printLine("Official signature recovery:");
-    printLine("  Restore keeps the existing codexfast rollback behavior and re-signs locally.");
-    printLine("  To recover the OpenAI Developer ID signature, reinstall the official Codex.app build manually.");
+    printLine('');
+    printLine('Official signature recovery:');
+    printLine('  Restore keeps the existing codexfast rollback behavior and re-signs locally.');
+    printLine('  To recover the OpenAI Developer ID signature, reinstall the official Codex.app build manually.');
     const downloadUrl = officialCodexDownloadUrl();
     if (downloadUrl) {
         printLine(`  Current-version download: ${downloadUrl}`);
     }
     else {
-        printLine("  Appcast: https://persistent.oaistatic.com/codex-app-prod/appcast.xml");
+        printLine('  Appcast: https://persistent.oaistatic.com/codex-app-prod/appcast.xml');
     }
 }
 function resignAppBundle(reason) {
     printLine(reason);
-    printLine("Running local ad-hoc re-sign...");
-    const result = run(context.toolchain.codesign, ["--force", "--deep", "--sign", "-", context.paths.bundle]);
+    printLine('Running local ad-hoc re-sign...');
+    const result = run(context.toolchain.codesign, [
+        '--force',
+        '--deep',
+        '--sign',
+        '-',
+        context.paths.bundle,
+    ]);
     if (result.status !== 0) {
         process.stdout.write(result.stdout);
         process.stderr.write(result.stderr);
-        printLine("Failed to re-sign Codex.app.");
+        printLine('Failed to re-sign Codex.app.');
         printManualResignGuidance();
         return false;
     }
-    const verifyResult = run(context.toolchain.codesign, ["--verify", "--deep", "--strict", "--verbose=2", context.paths.bundle]);
+    const verifyResult = run(context.toolchain.codesign, [
+        '--verify',
+        '--deep',
+        '--strict',
+        '--verbose=2',
+        context.paths.bundle,
+    ]);
     if (verifyResult.status !== 0) {
         process.stdout.write(verifyResult.stdout);
         process.stderr.write(verifyResult.stderr);
-        printLine("Failed to verify the re-signed Codex.app.");
+        printLine('Failed to verify the re-signed Codex.app.');
         printManualResignGuidance();
         return false;
     }
-    printLine("Re-sign completed.");
+    printLine('Re-sign completed.');
     return true;
 }
 function checkRequirements(options = {}) {
@@ -1111,33 +1232,34 @@ function checkRequirements(options = {}) {
         return false;
     }
     context.toolchain.node = process.execPath;
-    context.toolchain.plistBuddy = resolvePlistBuddy() ?? "";
+    context.toolchain.plistBuddy = resolvePlistBuddy() ?? '';
     if (!context.toolchain.plistBuddy) {
-        printLine("PlistBuddy not found.");
-        printLine("This macOS environment cannot update ElectronAsarIntegrity in Info.plist.");
+        printLine('PlistBuddy not found.');
+        printLine('This macOS environment cannot update ElectronAsarIntegrity in Info.plist.');
         return false;
     }
     cleanupStaleArchiveTempFiles();
     loadAppCompatibilityMetadata();
-    if ((options.command === "repair" && !context.metadata.supported) || options.command === "launch") {
+    if ((options.command === 'repair' && !context.metadata.supported) ||
+        options.command === 'launch') {
         return true;
     }
-    context.toolchain.npm = resolveCommand("npm") ?? "";
-    context.toolchain.npx = resolveCommand("npx") ?? "";
-    context.toolchain.codesign = resolveCommand("codesign") ?? "";
+    context.toolchain.npm = resolveCommand('npm') ?? '';
+    context.toolchain.npx = resolveCommand('npx') ?? '';
+    context.toolchain.codesign = resolveCommand('codesign') ?? '';
     if (!context.toolchain.npm) {
-        printLine("npm not found.");
-        printLine("Make sure npm is available in your shell.");
+        printLine('npm not found.');
+        printLine('Make sure npm is available in your shell.');
         return false;
     }
-    if (options.command === "install-watcher" && !context.toolchain.npx) {
-        printLine("npx not found.");
-        printLine("Make sure npx is available in your shell.");
+    if (options.command === 'install-watcher' && !context.toolchain.npx) {
+        printLine('npx not found.');
+        printLine('Make sure npx is available in your shell.');
         return false;
     }
     if (!context.toolchain.codesign) {
-        printLine("codesign not found.");
-        printLine("This macOS environment cannot perform local re-signing.");
+        printLine('codesign not found.');
+        printLine('This macOS environment cannot perform local re-signing.');
         return false;
     }
     return true;
@@ -1151,16 +1273,17 @@ function printActionHeader(action) {
     });
 }
 function validateActionRequest(action) {
-    if ((action === "apply" || action === "repair") && !context.metadata.supported) {
-        if (action === "repair") {
-            printLine("Repair skipped because this Codex.app build is unsupported.");
-            printLine("No app files were modified.");
+    if ((action === 'apply' || action === 'repair') &&
+        !context.metadata.supported) {
+        if (action === 'repair') {
+            printLine('Repair skipped because this Codex.app build is unsupported.');
+            printLine('No app files were modified.');
             printLine(`Supported versions: ${supportedAppVersionKeys}`);
             printExitBlock(0);
             return false;
         }
-        printLine("Enable custom API features is blocked for this Codex.app version.");
-        printLine("This script only allows apply on verified compatible builds.");
+        printLine('Enable custom API features is blocked for this Codex.app version.');
+        printLine('This script only allows apply on verified compatible builds.');
         printLine(`Supported versions: ${supportedAppVersionKeys}`);
         printExitBlock(1);
         return false;
@@ -1169,7 +1292,9 @@ function validateActionRequest(action) {
 }
 function removeWatcherFiles(options = {}) {
     const hadWatcherFiles = (0, node_fs_1.existsSync)(watcherPlistPath()) || (0, node_fs_1.existsSync)(watcherCliPath());
-    runLaunchctl(["bootout", launchctlDomain(), watcherPlistPath()], { quiet: options.quietLaunchctl });
+    runLaunchctl(['bootout', launchctlDomain(), watcherPlistPath()], {
+        quiet: options.quietLaunchctl,
+    });
     try {
         (0, node_fs_1.rmSync)(watcherPlistPath(), { force: true });
         (0, node_fs_1.rmSync)(watcherCliPath(), { force: true });
@@ -1178,7 +1303,7 @@ function removeWatcherFiles(options = {}) {
         return false;
     }
     if (hadWatcherFiles && options.reportRemoved) {
-        printLine("Removed auto-repair watcher before restore.");
+        printLine('Removed auto-repair watcher before restore.');
     }
     return true;
 }
@@ -1188,13 +1313,13 @@ function removeLegacyWatcherFiles(options = {}) {
         return false;
     }
     if (hadWatcherFiles && options.reportRemoved) {
-        printLine("Removed legacy auto-repair watcher.");
+        printLine('Removed legacy auto-repair watcher.');
     }
     return true;
 }
 function cleanupLegacyWatcherCommand() {
     if (!removeLegacyWatcherFiles({ quietLaunchctl: true, reportRemoved: true })) {
-        printLine("Failed to remove legacy auto-repair watcher.");
+        printLine('Failed to remove legacy auto-repair watcher.');
         return printExitBlock(1).exitCode;
     }
     return printExitBlock(0).exitCode;
@@ -1210,8 +1335,15 @@ function parseApplySummary(output) {
     };
 }
 function runEmbeddedPatcher(action) {
-    const patcherAction = action === "repair" ? "apply" : action;
-    const result = run(context.toolchain.node, ["-", patcherAction, context.temp.assetsDir, backupSuffix, legacyBackupSuffix, context.metadata.versionKey], {
+    const patcherAction = action === 'repair' ? 'apply' : action;
+    const result = run(context.toolchain.node, [
+        '-',
+        patcherAction,
+        context.temp.assetsDir,
+        backupSuffix,
+        legacyBackupSuffix,
+        context.metadata.versionKey,
+    ], {
         input: __PATCHER_SOURCE__,
     });
     process.stdout.write(result.stdout);
@@ -1219,7 +1351,7 @@ function runEmbeddedPatcher(action) {
     return result;
 }
 function finalizeModifiedArchive(action) {
-    if ((action === "apply" || action === "repair") && !ensureArchiveBackup()) {
+    if ((action === 'apply' || action === 'repair') && !ensureArchiveBackup()) {
         return false;
     }
     const snapshot = createArchiveSnapshot();
@@ -1232,13 +1364,13 @@ function finalizeModifiedArchive(action) {
     if (!commitArchiveWithIntegrity(context.temp.asar, snapshot)) {
         return false;
     }
-    if (action === "apply" || action === "repair") {
+    if (action === 'apply' || action === 'repair') {
         const metadataChange = syncSparklePublicEdKeyForInAppUpdates();
         if (!metadataChange.ok) {
             return false;
         }
     }
-    if (!resignAppBundle("Codex.app resources were modified. Re-signing now.")) {
+    if (!resignAppBundle('Codex.app resources were modified. Re-signing now.')) {
         return false;
     }
     return true;
@@ -1247,11 +1379,12 @@ function runEmbeddedTool(action) {
     let exitCode = 1;
     printActionHeader(action);
     if (!validateActionRequest(action)) {
-        return action === "repair" ? 0 : 1;
+        return action === 'repair' ? 0 : 1;
     }
-    if (action === "restore" && !removeWatcherFiles({ quietLaunchctl: true, reportRemoved: true })) {
-        printLine("Warning: failed to remove the auto-repair watcher before restore.");
-        printLine("Run uninstall-watcher manually if restore is re-applied automatically.");
+    if (action === 'restore' &&
+        !removeWatcherFiles({ quietLaunchctl: true, reportRemoved: true })) {
+        printLine('Warning: failed to remove the auto-repair watcher before restore.');
+        printLine('Run uninstall-watcher manually if restore is re-applied automatically.');
     }
     if (!migrateLegacyUnpackedLayout()) {
         return 1;
@@ -1260,7 +1393,7 @@ function runEmbeddedTool(action) {
         printLine(`app.asar not found: ${context.paths.asar}`);
         return 1;
     }
-    if (action === "restore" && (0, node_fs_1.existsSync)(context.paths.asarBackup)) {
+    if (action === 'restore' && (0, node_fs_1.existsSync)(context.paths.asarBackup)) {
         exitCode = restoreFromArchiveBackup() ? 0 : 1;
         if (exitCode === 0) {
             printOfficialReinstallGuidanceAfterRestore();
@@ -1274,8 +1407,8 @@ function runEmbeddedTool(action) {
     }
     const patcherRun = runEmbeddedPatcher(action);
     exitCode = patcherRun.status;
-    if (exitCode === 0 && action !== "status") {
-        if (action === "apply" || action === "repair") {
+    if (exitCode === 0 && action !== 'status') {
+        if (action === 'apply' || action === 'repair') {
             const summary = parseApplySummary(patcherRun.stdout);
             if (summary && summary.changed === 0) {
                 const metadataChange = syncSparklePublicEdKeyForInAppUpdates();
@@ -1283,12 +1416,12 @@ function runEmbeddedTool(action) {
                     exitCode = 1;
                 }
                 else if (metadataChange.changed) {
-                    if (!resignAppBundle("Codex.app metadata was modified. Re-signing now.")) {
+                    if (!resignAppBundle('Codex.app metadata was modified. Re-signing now.')) {
                         exitCode = 1;
                     }
                 }
                 else {
-                    printLine("No patch changes were needed; leaving app.asar and signature untouched.");
+                    printLine('No patch changes were needed; leaving app.asar and signature untouched.');
                 }
             }
             else if (!finalizeModifiedArchive(action)) {
@@ -1300,34 +1433,40 @@ function runEmbeddedTool(action) {
         }
     }
     cleanupTempWorkspace();
-    if (action === "restore" && exitCode === 0) {
+    if (action === 'restore' && exitCode === 0) {
         printOfficialReinstallGuidanceAfterRestore();
     }
     printExitBlock(exitCode);
     return exitCode;
 }
 function checkCodexRunning() {
-    if (process.env.CODEXFAST_TEST_CODEX_RUNNING === "1") {
+    if (process.env.CODEXFAST_TEST_CODEX_RUNNING === '1') {
         return { ok: true, running: true };
     }
-    const pgrepBin = resolveCommand("pgrep");
+    const pgrepBin = resolveCommand('pgrep');
     if (!pgrepBin) {
-        return { ok: false, message: "Cannot determine whether Codex.app is running because pgrep was not found." };
+        return {
+            ok: false,
+            message: 'Cannot determine whether Codex.app is running because pgrep was not found.',
+        };
     }
-    const result = run(pgrepBin, ["-x", "Codex"]);
+    const result = run(pgrepBin, ['-x', 'Codex']);
     if (result.status === 0) {
         return { ok: true, running: true };
     }
     if (result.status === 1) {
         return { ok: true, running: false };
     }
-    return { ok: false, message: `Cannot determine whether Codex.app is running because pgrep failed with exit code ${result.status}.` };
+    return {
+        ok: false,
+        message: `Cannot determine whether Codex.app is running because pgrep failed with exit code ${result.status}.`,
+    };
 }
 function randomDebugPort() {
-    return 40_000 + (0, node_crypto_1.randomBytes)(2).readUInt16BE(0) % 20_000;
+    return 40_000 + ((0, node_crypto_1.randomBytes)(2).readUInt16BE(0) % 20_000);
 }
 function codexExecutablePath() {
-    return (0, node_path_1.join)(context.paths.bundle, "Contents", "MacOS", "Codex");
+    return (0, node_path_1.join)(context.paths.bundle, 'Contents', 'MacOS', 'Codex');
 }
 function launchCodexProcess(debugPort) {
     const executable = codexExecutablePath();
@@ -1336,13 +1475,13 @@ function launchCodexProcess(debugPort) {
     }
     const child = (0, node_child_process_1.spawn)(executable, [
         `--remote-debugging-port=${debugPort}`,
-        "--remote-debugging-address=127.0.0.1",
+        '--remote-debugging-address=127.0.0.1',
     ], {
         detached: true,
-        stdio: "ignore",
+        stdio: 'ignore',
         env: process.env,
     });
-    child.on("error", () => undefined);
+    child.on('error', () => undefined);
     child.unref();
     return child;
 }
@@ -1351,98 +1490,36 @@ function terminateRuntimeLaunchProcess(child) {
         return;
     }
     try {
-        process.kill(-child.pid, "SIGTERM");
+        process.kill(-child.pid, 'SIGTERM');
     }
     catch {
         child.kill();
     }
 }
-let runtimePatchBodyFunction = null;
 function applyRuntimePatchesToResponseBody(resourcePath, body) {
-    if (!runtimePatchBodyFunction) {
-        const tailMarker = "\nlet exitCode = 1;\n";
-        const tailIndex = __PATCHER_SOURCE__.lastIndexOf(tailMarker);
-        if (tailIndex === -1) {
-            throw new Error("Embedded runtime patch engine entrypoint was not found.");
-        }
-        const patcherMarkerIndexes = ['\nconst fs = require("node:fs");\n', '\nconst fs = require("fs");\n']
-            .map((marker) => __PATCHER_SOURCE__.indexOf(marker))
-            .filter((index) => index >= 0);
-        const patcherIndex = patcherMarkerIndexes.length > 0 ? Math.min(...patcherMarkerIndexes) : -1;
-        const engineEnd = patcherIndex === -1 ? tailIndex : patcherIndex;
-        const engineSource = __PATCHER_SOURCE__.slice(0, engineEnd);
-        const factory = new Function(`${engineSource}\nreturn applyRuntimePatchesToBody;`);
-        const candidate = factory();
-        if (typeof candidate !== "function") {
-            throw new Error("Embedded runtime patch engine is unavailable.");
-        }
-        runtimePatchBodyFunction = candidate;
-    }
-    return runtimePatchBodyFunction(resourcePath, body);
-}
-function isRuntimeJavaScriptResource(resourceUrl) {
-    return /^app:\/\/[^?#]+\/(?:webview\/)?assets\/[^/?#]+\.js(?:[?#].*)?$/.test(resourceUrl);
-}
-function runRuntimeUrlSelfTest() {
-    const acceptedUrls = [
-        "app://-/assets/index-DxnGmFpS.js",
-        "app://-/assets/index-DxnGmFpS.js?v=1",
-        "app://-/webview/assets/index.js",
-        "app://codex.local/webview/assets/chunk.js#hash",
-    ];
-    const rejectedUrls = [
-        "app://-/index.html",
-        "app://-/assets/style.css",
-        "https://example.com/assets/index.js",
-        "app://-/assets/nested/index.js",
-    ];
-    for (const url of acceptedUrls) {
-        if (!isRuntimeJavaScriptResource(url)) {
-            printLine(`Runtime URL self-test failed: expected accepted ${url}`);
-            return 1;
-        }
-    }
-    for (const url of rejectedUrls) {
-        if (isRuntimeJavaScriptResource(url)) {
-            printLine(`Runtime URL self-test failed: expected rejected ${url}`);
-            return 1;
-        }
-    }
-    printLine("Runtime URL self-test passed");
-    return 0;
+    return applyRuntimePatchesToResponseBodyWithSource(__PATCHER_SOURCE__, resourcePath, body);
 }
 function runRuntimePatchBodySelfTest() {
-    const body = "settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;";
-    let result;
-    try {
-        result = applyRuntimePatchesToResponseBody("app://-/assets/general-settings-demo.js", body);
-    }
-    catch (error) {
-        printLine(`Runtime patch body self-test failed: ${asError(error).message}`);
-        return 1;
-    }
-    if (!result.content.includes("{serviceTierSettings:r,setServiceTier:i}=fe();let o;") || !result.patchedLabels.includes("Speed setting")) {
-        printLine("Runtime patch body self-test failed");
-        return 1;
-    }
-    printLine("Runtime patch body self-test passed");
-    return 0;
+    return runRuntimePatchBodySourceSelfTest(__PATCHER_SOURCE__);
 }
 function responseHeadersForFulfill(headers) {
     const forwarded = [];
     for (const header of headers ?? []) {
         const name = header.name.toLowerCase();
-        if (name === "content-type" || name === "charset") {
+        if (name === 'content-type' || name === 'charset') {
             forwarded.push({ name: header.name, value: header.value });
         }
     }
-    if (!forwarded.some((header) => header.name.toLowerCase() === "content-type")) {
-        forwarded.push({ name: "content-type", value: "application/javascript; charset=utf-8" });
+    if (!forwarded.some((header) => header.name.toLowerCase() === 'content-type')) {
+        forwarded.push({
+            name: 'content-type',
+            value: 'application/javascript; charset=utf-8',
+        });
     }
     return forwarded;
 }
 async function continueFetchRequest(cdp, requestId) {
-    await cdp.send("Fetch.continueRequest", { requestId });
+    await cdp.send('Fetch.continueRequest', { requestId });
 }
 async function handleFetchRequestPaused(cdp, params) {
     const resourceUrl = params.request.url;
@@ -1453,19 +1530,23 @@ async function handleFetchRequestPaused(cdp, params) {
     debugRuntime(`paused ${resourceUrl}`);
     let bodyResult;
     try {
-        bodyResult = await cdp.send("Fetch.getResponseBody", { requestId: params.requestId });
+        bodyResult = await cdp.send('Fetch.getResponseBody', {
+            requestId: params.requestId,
+        });
     }
     catch {
         debugRuntime(`getResponseBody failed ${resourceUrl}`);
         await continueFetchRequest(cdp, params.requestId);
         return [];
     }
-    if (typeof bodyResult.body !== "string") {
+    if (typeof bodyResult.body !== 'string') {
         debugRuntime(`missing body ${resourceUrl}`);
         await continueFetchRequest(cdp, params.requestId);
         return [];
     }
-    const body = bodyResult.base64Encoded ? Buffer.from(bodyResult.body, "base64").toString("utf8") : bodyResult.body;
+    const body = bodyResult.base64Encoded
+        ? Buffer.from(bodyResult.body, 'base64').toString('utf8')
+        : bodyResult.body;
     let patchResult;
     try {
         patchResult = applyRuntimePatchesToResponseBody(resourceUrl, body);
@@ -1475,19 +1556,22 @@ async function handleFetchRequestPaused(cdp, params) {
         await continueFetchRequest(cdp, params.requestId);
         return [];
     }
-    const labels = [...patchResult.patchedLabels, ...patchResult.alreadyPatchedLabels];
+    const labels = [
+        ...patchResult.patchedLabels,
+        ...patchResult.alreadyPatchedLabels,
+    ];
     if (patchResult.matchedLabels.length > 0) {
-        debugRuntime(`matched ${resourceUrl}: ${patchResult.matchedLabels.join(", ")}`);
+        debugRuntime(`matched ${resourceUrl}: ${patchResult.matchedLabels.join(', ')}`);
     }
     if (patchResult.content === body) {
         await continueFetchRequest(cdp, params.requestId);
         return labels;
     }
-    await cdp.send("Fetch.fulfillRequest", {
+    await cdp.send('Fetch.fulfillRequest', {
         requestId: params.requestId,
         responseCode: params.responseStatusCode ?? 200,
         responseHeaders: responseHeadersForFulfill(params.responseHeaders),
-        body: Buffer.from(patchResult.content, "utf8").toString("base64"),
+        body: Buffer.from(patchResult.content, 'utf8').toString('base64'),
     });
     return labels;
 }
@@ -1496,18 +1580,18 @@ function runtimePatchSessionLostMessage(error) {
 }
 function printRuntimePatchSessionLost(error) {
     printLine(error.message);
-    printLine("Codex.app will keep running without further runtime patching.");
-    printLine("Lazy-loaded features that were not patched before this point may stay unavailable until you fully quit Codex and relaunch with codexfast.");
+    printLine('Codex.app will keep running without further runtime patching.');
+    printLine('Lazy-loaded features that were not patched before this point may stay unavailable until you fully quit Codex and relaunch with codexfast.');
 }
 function printRuntimeLaunchReady(patchedLabels) {
-    printLine("Patched targets:");
+    printLine('Patched targets:');
     for (const label of patchedLabels) {
         printLine(`  ${label}`);
     }
-    printLine("");
-    printLine("Runtime launch completed.");
-    printLine("Keep this codexfast launch process running while you use Codex.");
-    printLine("Quit Codex to end the runtime patch session.");
+    printLine('');
+    printLine('Runtime launch completed.');
+    printLine('Keep this codexfast launch process running while you use Codex.');
+    printLine('Quit Codex to end the runtime patch session.');
 }
 function waitForRuntimeInitialPageLoad(cdp) {
     return new Promise((resolve) => {
@@ -1524,33 +1608,33 @@ function waitForRuntimeInitialPageLoad(cdp) {
             resolve();
         };
         timeout = setTimeout(resolveOnce, runtimePatchInitialLoadSettleMs);
-        cdp.on("Page.loadEventFired", resolveOnce);
-        cdp.on("Page.frameStoppedLoading", resolveOnce);
+        cdp.on('Page.loadEventFired', resolveOnce);
+        cdp.on('Page.frameStoppedLoading', resolveOnce);
     });
 }
 async function enableRuntimePatchInterception(cdp, options) {
-    await cdp.send("Page.enable");
-    debugRuntime("Page.enable ok");
+    await cdp.send('Page.enable');
+    debugRuntime('Page.enable ok');
     if (options.waitForInitialLoad) {
         await waitForRuntimeInitialPageLoad(cdp);
-        debugRuntime("initial page load settled");
+        debugRuntime('initial page load settled');
     }
-    await cdp.send("Fetch.enable", {
+    await cdp.send('Fetch.enable', {
         patterns: [
             {
-                urlPattern: "app://*/assets/*.js",
-                requestStage: "Response",
+                urlPattern: 'app://*/assets/*.js',
+                requestStage: 'Response',
             },
             {
-                urlPattern: "app://*/webview/assets/*.js",
-                requestStage: "Response",
+                urlPattern: 'app://*/webview/assets/*.js',
+                requestStage: 'Response',
             },
         ],
     });
-    debugRuntime("Fetch.enable ok");
+    debugRuntime('Fetch.enable ok');
     if (options.reload) {
-        await cdp.send("Page.reload", { ignoreCache: true });
-        debugRuntime("Page.reload ok");
+        await cdp.send('Page.reload', { ignoreCache: true });
+        debugRuntime('Page.reload ok');
     }
 }
 async function startRuntimePatchSession(debugPort) {
@@ -1606,8 +1690,11 @@ async function startRuntimePatchSession(debugPort) {
                 connectionGeneration += 1;
                 cdp = nextCdp;
                 registerRuntimeFetchHandler(connectionGeneration);
-                await enableRuntimePatchInterception(cdp, { waitForInitialLoad: false, reload: true });
-                printLine("Runtime patch session reconnected.");
+                await enableRuntimePatchInterception(cdp, {
+                    waitForInitialLoad: false,
+                    reload: true,
+                });
+                printLine('Runtime patch session reconnected.');
                 reconnecting = false;
                 return;
             }
@@ -1634,9 +1721,8 @@ async function startRuntimePatchSession(debugPort) {
         attachedCdp.onEventError((error) => {
             handleConnectionFailure(generation, error);
         });
-        attachedCdp.on("Fetch.requestPaused", (params) => {
-            const task = handleFetchRequestPaused(attachedCdp, params)
-                .then((labels) => {
+        attachedCdp.on('Fetch.requestPaused', (params) => {
+            const task = handleFetchRequestPaused(attachedCdp, params).then((labels) => {
                 let sawNewLabel = false;
                 for (const label of labels) {
                     if (!observedLabels.has(label)) {
@@ -1648,7 +1734,7 @@ async function startRuntimePatchSession(debugPort) {
                     markInitialObserved();
                 }
                 if (initialCompleted && sawNewLabel) {
-                    debugRuntime(`patched labels now active: ${[...observedLabels].join(", ")}`);
+                    debugRuntime(`patched labels now active: ${[...observedLabels].join(', ')}`);
                 }
             });
             pausedRequestHandlers.add(task);
@@ -1662,11 +1748,10 @@ async function startRuntimePatchSession(debugPort) {
                 return;
             }
             if (cdp.isClosed()) {
-                void reconnectRuntimePatchSession(new Error("CDP WebSocket connection closed."));
+                void reconnectRuntimePatchSession(new Error('CDP WebSocket connection closed.'));
                 return;
             }
-            void cdpCommandWithTimeout(cdp.send("Page.getFrameTree"), runtimePatchHeartbeatTimeoutMs, "Timed out waiting for CDP heartbeat.")
-                .catch((error) => {
+            void cdpCommandWithTimeout(cdp.send("Page.getFrameTree"), runtimePatchHeartbeatTimeoutMs, 'Timed out waiting for CDP heartbeat.').catch((error) => {
                 void reconnectRuntimePatchSession(asError(error));
             });
         }, runtimePatchHeartbeatIntervalMs);
@@ -1715,7 +1800,7 @@ async function startRuntimePatchSession(debugPort) {
                         return;
                     }
                     if (observedLabels.size === 0) {
-                        fail(new Error("Runtime patch interception completed without required targets."));
+                        fail(new Error('Runtime patch interception completed without required targets.'));
                         return;
                     }
                     completed = true;
@@ -1735,7 +1820,10 @@ async function startRuntimePatchSession(debugPort) {
         void initialSession.catch(() => undefined);
         registerRuntimeFetchHandler(connectionGeneration);
         try {
-            await enableRuntimePatchInterception(cdp, { waitForInitialLoad: true, reload: true });
+            await enableRuntimePatchInterception(cdp, {
+                waitForInitialLoad: true,
+                reload: true,
+            });
         }
         catch (error) {
             failSession(asError(error));
@@ -1774,19 +1862,19 @@ function waitForRuntimeLaunchProcessExit(child) {
             settled = true;
             resolve(exitCode);
         };
-        child.once("error", () => finish(1));
-        child.once("exit", (code) => finish(code ?? 0));
+        child.once('error', () => finish(1));
+        child.once('exit', (code) => finish(code ?? 0));
     });
 }
 async function runRuntimeLaunch() {
-    printActionHeader("launch");
+    printActionHeader('launch');
     if (!context.metadata.supported) {
-        printLine("Runtime launch is blocked for this Codex.app version.");
+        printLine('Runtime launch is blocked for this Codex.app version.');
         printLine(`Supported versions: ${supportedAppVersionKeys}`);
         return printExitBlock(1).exitCode;
     }
     if (!removeLegacyWatcherFiles({ quietLaunchctl: true, reportRemoved: true })) {
-        printLine("Failed to remove legacy auto-repair watcher.");
+        printLine('Failed to remove legacy auto-repair watcher.');
         return printExitBlock(1).exitCode;
     }
     const runningCheck = checkCodexRunning();
@@ -1795,13 +1883,13 @@ async function runRuntimeLaunch() {
         return printExitBlock(1).exitCode;
     }
     if (runningCheck.running) {
-        printLine("Codex.app is already running. Quit Codex.app before using runtime launch.");
+        printLine('Codex.app is already running. Quit Codex.app before using runtime launch.');
         return printExitBlock(1).exitCode;
     }
-    if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS === "1") {
-        printRuntimeLaunchReady(["Speed setting"]);
-        if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SESSION_LOST === "1") {
-            printRuntimePatchSessionLost(new Error(runtimePatchSessionLostMessage(new Error("simulated CDP heartbeat failure"))));
+    if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS === '1') {
+        printRuntimeLaunchReady(['Speed setting']);
+        if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SESSION_LOST === '1') {
+            printRuntimePatchSessionLost(new Error(runtimePatchSessionLostMessage(new Error('simulated CDP heartbeat failure'))));
             return printExitBlock(0).exitCode;
         }
         return printExitCode(0).exitCode;
@@ -1815,10 +1903,10 @@ async function runRuntimeLaunch() {
         session = await waitForRuntimePatchSession(debugPort);
         printRuntimeLaunchReady(session.patchedLabels);
         const outcome = await Promise.race([
-            childExit.then((exitCode) => ({ type: "child-exit", exitCode })),
-            session.lost.then((error) => ({ type: "session-lost", error })),
+            childExit.then((exitCode) => ({ type: 'child-exit', exitCode })),
+            session.lost.then((error) => ({ type: 'session-lost', error })),
         ]);
-        if (outcome.type === "session-lost") {
+        if (outcome.type === 'session-lost') {
             session.close();
             session = null;
             printRuntimePatchSessionLost(outcome.error);
@@ -1859,32 +1947,36 @@ process.exit(result.status ?? 1);
 }
 function writeWatcherRunner() {
     if (!context.toolchain.npx) {
-        context.toolchain.npx = resolveCommand("npx") ?? "";
+        context.toolchain.npx = resolveCommand('npx') ?? '';
     }
     if (!context.toolchain.npx) {
-        printLine("npx not found.");
-        printLine("Make sure npx is available in your shell.");
+        printLine('npx not found.');
+        printLine('Make sure npx is available in your shell.');
         return false;
     }
     try {
         (0, node_fs_1.mkdirSync)(codexfastSupportDir(), { recursive: true });
-        (0, node_fs_1.writeFileSync)(watcherCliPath(), watcherRunnerSource(), "utf8");
+        (0, node_fs_1.writeFileSync)(watcherCliPath(), watcherRunnerSource(), 'utf8');
         (0, node_fs_1.chmodSync)(watcherCliPath(), 0o755);
         return true;
     }
     catch {
-        printLine("Failed to install the watcher runner.");
+        printLine('Failed to install the watcher runner.');
         return false;
     }
 }
 function watcherPlist() {
     const environmentEntries = [
-        ["CODEXFAST_APP_BUNDLE", context.paths.bundle],
-        ["PATH", process.env.PATH ?? "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"],
+        ['CODEXFAST_APP_BUNDLE', context.paths.bundle],
+        [
+            'PATH',
+            process.env.PATH ??
+                '/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin',
+        ],
     ];
     const environmentXml = environmentEntries
         .map(([key, value]) => `      <key>${escapeXml(key)}</key>\n      <string>${escapeXml(value)}</string>`)
-        .join("\n");
+        .join('\n');
     return `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -1913,10 +2005,10 @@ ${environmentXml}
 `;
 }
 function runLaunchctl(args, options = {}) {
-    const launchctlBin = resolveCommand("launchctl");
+    const launchctlBin = resolveCommand('launchctl');
     if (!launchctlBin) {
         if (!options.quiet) {
-            printLine("launchctl not found.");
+            printLine('launchctl not found.');
         }
         return false;
     }
@@ -1931,7 +2023,7 @@ function runLaunchctl(args, options = {}) {
     return true;
 }
 function installWatcher() {
-    printActionHeader("install-watcher");
+    printActionHeader('install-watcher');
     if (!(0, node_fs_1.existsSync)(context.paths.asar)) {
         printLine(`app.asar not found: ${context.paths.asar}`);
         return printExitBlock(1).exitCode;
@@ -1944,37 +2036,39 @@ function installWatcher() {
         (0, node_fs_1.writeFileSync)(watcherPlistPath(), watcherPlist());
     }
     catch {
-        printLine("Failed to write the launchd watcher plist.");
+        printLine('Failed to write the launchd watcher plist.');
         return printExitBlock(1).exitCode;
     }
-    runLaunchctl(["bootout", launchctlDomain(), watcherPlistPath()], { quiet: true });
-    if (!runLaunchctl(["bootstrap", launchctlDomain(), watcherPlistPath()])) {
-        printLine("Watcher plist was written, but launchctl failed to load it.");
+    runLaunchctl(['bootout', launchctlDomain(), watcherPlistPath()], {
+        quiet: true,
+    });
+    if (!runLaunchctl(['bootstrap', launchctlDomain(), watcherPlistPath()])) {
+        printLine('Watcher plist was written, but launchctl failed to load it.');
         return printExitBlock(1).exitCode;
     }
     printLine(`Installed watcher: ${watcherPlistPath()}`);
     return printExitBlock(0).exitCode;
 }
 function uninstallWatcher() {
-    printActionHeader("uninstall-watcher");
+    printActionHeader('uninstall-watcher');
     if (!removeWatcherFiles()) {
-        printLine("Failed to remove all watcher files.");
+        printLine('Failed to remove all watcher files.');
         return printExitBlock(1).exitCode;
     }
-    printLine("Uninstalled watcher.");
+    printLine('Uninstalled watcher.');
     return printExitBlock(0).exitCode;
 }
 function printUsage() {
     printLine(`codexfast ${__PACKAGE_VERSION__}`);
-    printLine("");
-    printLine("Usage:");
-    printLine("  codexfast");
-    printLine("  codexfast <command>");
-    printLine("");
-    printLine("Commands:");
-    printLine("  launch             Launch Codex with runtime patches (recommended)");
-    printLine("  version            Print the codexfast version");
-    printLine("  help               Show this help");
+    printLine('');
+    printLine('Usage:');
+    printLine('  codexfast');
+    printLine('  codexfast <command>');
+    printLine('');
+    printLine('Commands:');
+    printLine('  launch             Launch Codex with runtime patches (recommended)');
+    printLine('  version            Print the codexfast version');
+    printLine('  help               Show this help');
 }
 function printVersion() {
     printLine(`codexfast ${__PACKAGE_VERSION__}`);
@@ -1983,24 +2077,24 @@ async function showMenu() {
     const rl = (0, promises_1.createInterface)({ input: node_process_1.stdin, output: node_process_1.stdout });
     try {
         while (true) {
-            run("clear", []);
-            printLine("codexfast");
-            printLine("");
-            printLine("1) Launch Codex with runtime patches (recommended)");
-            printLine("q) Quit");
-            printLine("");
-            const choice = (await rl.question("Select an option: ")).trim();
+            run('clear', []);
+            printLine('codexfast');
+            printLine('');
+            printLine('1) Launch Codex with runtime patches (recommended)');
+            printLine('q) Quit');
+            printLine('');
+            const choice = (await rl.question('Select an option: ')).trim();
             switch (choice) {
-                case "1":
+                case '1':
                     await runRuntimeLaunch();
-                    await rl.question("Press Enter to continue...");
+                    await rl.question('Press Enter to continue...');
                     break;
-                case "q":
-                case "Q":
+                case 'q':
+                case 'Q':
                     return 0;
                 default:
-                    printLine("Unknown option.");
-                    await rl.question("Press Enter to continue...");
+                    printLine('Unknown option.');
+                    await rl.question('Press Enter to continue...');
             }
         }
     }
@@ -2012,19 +2106,21 @@ async function showMenu() {
 async function main() {
     // Keep accepting the old watcher marker so existing launchd plists can reach
     // the cleanup-only compatibility path, but do not advertise it for new use.
-    const args = process.argv.slice(2).filter((arg) => arg !== "--quiet");
-    const command = args[0] ?? "";
+    const args = process.argv.slice(2).filter((arg) => arg !== '--quiet');
+    const command = args[0] ?? '';
     const legacySelftestAction = resolveLegacySelftestAction(command);
-    if (isRuntimeSelftestCommand(command) && command === "__selftest-cdp-frame") {
+    if (isRuntimeSelftestCommand(command) && command === '__selftest-cdp-frame') {
         return runCdpFrameSelfTest();
     }
-    if (isRuntimeSelftestCommand(command) && command === "__selftest-runtime-url") {
+    if (isRuntimeSelftestCommand(command) &&
+        command === '__selftest-runtime-url') {
         return runRuntimeUrlSelfTest();
     }
-    if (isRuntimeSelftestCommand(command) && command === "__selftest-runtime-patch-body") {
+    if (isRuntimeSelftestCommand(command) &&
+        command === '__selftest-runtime-patch-body') {
         return runRuntimePatchBodySelfTest();
     }
-    if (legacySelftestAction === "__invalid__") {
+    if (legacySelftestAction === '__invalid__') {
         printUsage();
         return 1;
     }
