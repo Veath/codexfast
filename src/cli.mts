@@ -12,6 +12,7 @@ import { calculateAsarHeaderHash, removeStaleArchiveTempFiles, replaceArchiveAto
 import { CdpConnection, cdpCommandWithTimeout, runCdpFrameSelfTest, waitForRuntimePatchConnection } from "./cli-cdp.mts";
 import { isHelpCommand, isHiddenLegacyCleanupCommand, isPublicLaunchCommand, isRuntimeSelftestCommand, isVersionCommand, resolveLegacySelftestAction } from "./cli-command-policy.mts";
 import { createCodexfastContext, emptyTempWorkspace } from "./cli-context.mts";
+import { printActionHeaderBlock, printExitBlock, printExitCode } from "./cli-output.mts";
 import { asError, debugRuntime, escapeXml, printLine, resolveCommand, resolvePlistBuddy, run, sleep } from "./cli-utils.mts";
 
 declare const __PATCHER_SOURCE__: string;
@@ -542,14 +543,12 @@ function checkRequirements(options: { command?: string } = {}): boolean {
 }
 
 function printActionHeader(action: string): void {
-  printLine("");
-  printLine(`Action: ${action}`);
-  printLine(`Resources: ${context.paths.resources}`);
-  printLine(`Detected version: ${context.metadata.version}`);
-  printLine(`Detected build: ${context.metadata.build}`);
-  printLine(`Compatibility: ${context.metadata.compatibility}`);
-  printLine("Mode: self-contained single file");
-  printLine("");
+  printActionHeaderBlock(action, {
+    resources: context.paths.resources,
+    version: context.metadata.version,
+    build: context.metadata.build,
+    compatibility: context.metadata.compatibility,
+  });
 }
 
 function validateActionRequest(action: string): boolean {
@@ -558,15 +557,13 @@ function validateActionRequest(action: string): boolean {
       printLine("Repair skipped because this Codex.app build is unsupported.");
       printLine("No app files were modified.");
       printLine(`Supported versions: ${supportedAppVersionKeys}`);
-      printLine("");
-      printLine("Exit code: 0");
+      printExitBlock(0);
       return false;
     }
     printLine("Enable custom API features is blocked for this Codex.app version.");
     printLine("This script only allows apply on verified compatible builds.");
     printLine(`Supported versions: ${supportedAppVersionKeys}`);
-    printLine("");
-    printLine("Exit code: 1");
+    printExitBlock(1);
     return false;
   }
   return true;
@@ -601,13 +598,9 @@ function removeLegacyWatcherFiles(options: { quietLaunchctl?: boolean; reportRem
 function cleanupLegacyWatcherCommand(): number {
   if (!removeLegacyWatcherFiles({ quietLaunchctl: true, reportRemoved: true })) {
     printLine("Failed to remove legacy auto-repair watcher.");
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
-  printLine("");
-  printLine("Exit code: 0");
-  return 0;
+  return printExitBlock(0).exitCode;
 }
 
 function parseApplySummary(output: string): ApplySummary | null {
@@ -683,16 +676,13 @@ function runEmbeddedTool(action: string): number {
     if (exitCode === 0) {
       printOfficialReinstallGuidanceAfterRestore();
     }
-    printLine("");
-    printLine(`Exit code: ${exitCode}`);
+    printExitBlock(exitCode);
     return exitCode;
   }
 
   if (!unpackAppAsarToTemp()) {
     cleanupTempWorkspace();
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
 
   const patcherRun = runEmbeddedPatcher(action);
@@ -724,8 +714,7 @@ function runEmbeddedTool(action: string): number {
   if (action === "restore" && exitCode === 0) {
     printOfficialReinstallGuidanceAfterRestore();
   }
-  printLine("");
-  printLine(`Exit code: ${exitCode}`);
+  printExitBlock(exitCode);
   return exitCode;
 }
 
@@ -1265,43 +1254,32 @@ async function runRuntimeLaunch(): Promise<number> {
   if (!context.metadata.supported) {
     printLine("Runtime launch is blocked for this Codex.app version.");
     printLine(`Supported versions: ${supportedAppVersionKeys}`);
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
 
   if (!removeLegacyWatcherFiles({ quietLaunchctl: true, reportRemoved: true })) {
     printLine("Failed to remove legacy auto-repair watcher.");
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
 
   const runningCheck = checkCodexRunning();
   if (!runningCheck.ok) {
     printLine(runningCheck.message);
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
 
   if (runningCheck.running) {
     printLine("Codex.app is already running. Quit Codex.app before using runtime launch.");
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
 
   if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS === "1") {
     printRuntimeLaunchReady(["Speed setting"]);
     if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SESSION_LOST === "1") {
       printRuntimePatchSessionLost(new Error(runtimePatchSessionLostMessage(new Error("simulated CDP heartbeat failure"))));
-      printLine("");
-      printLine("Exit code: 0");
-      return 0;
+      return printExitBlock(0).exitCode;
     }
-    printLine("Exit code: 0");
-    return 0;
+    return printExitCode(0).exitCode;
   }
 
   let child: ChildProcess | null = null;
@@ -1320,13 +1298,11 @@ async function runRuntimeLaunch(): Promise<number> {
       session.close();
       session = null;
       printRuntimePatchSessionLost(outcome.error);
-      printLine("");
-      printLine("Exit code: 0");
-      return 0;
+      return printExitBlock(0).exitCode;
     }
     session.close();
     session = null;
-    printLine(`Exit code: ${outcome.exitCode}`);
+    printExitCode(outcome.exitCode);
     return outcome.exitCode;
   } catch (error) {
     if (session) {
@@ -1339,9 +1315,7 @@ async function runRuntimeLaunch(): Promise<number> {
     printLine(`Runtime launch failed: ${asError(error).message}`);
   }
 
-  printLine("");
-  printLine("Exit code: 1");
-  return 1;
+  return printExitBlock(1).exitCode;
 }
 
 function watcherRunnerSource(): string {
@@ -1441,50 +1415,36 @@ function installWatcher(): number {
   printActionHeader("install-watcher");
   if (!existsSync(context.paths.asar)) {
     printLine(`app.asar not found: ${context.paths.asar}`);
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
   if (!writeWatcherRunner()) {
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
   try {
     mkdirSync(launchAgentsDir(), { recursive: true });
     writeFileSync(watcherPlistPath(), watcherPlist());
   } catch {
     printLine("Failed to write the launchd watcher plist.");
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
 
   runLaunchctl(["bootout", launchctlDomain(), watcherPlistPath()], { quiet: true });
   if (!runLaunchctl(["bootstrap", launchctlDomain(), watcherPlistPath()])) {
     printLine("Watcher plist was written, but launchctl failed to load it.");
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
   printLine(`Installed watcher: ${watcherPlistPath()}`);
-  printLine("");
-  printLine("Exit code: 0");
-  return 0;
+  return printExitBlock(0).exitCode;
 }
 
 function uninstallWatcher(): number {
   printActionHeader("uninstall-watcher");
   if (!removeWatcherFiles()) {
     printLine("Failed to remove all watcher files.");
-    printLine("");
-    printLine("Exit code: 1");
-    return 1;
+    return printExitBlock(1).exitCode;
   }
   printLine("Uninstalled watcher.");
-  printLine("");
-  printLine("Exit code: 0");
-  return 0;
+  return printExitBlock(0).exitCode;
 }
 
 function printUsage(): void {

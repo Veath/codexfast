@@ -56,10 +56,11 @@ const cliModuleSource = [
   "cli-cdp.mts",
   "cli-command-policy.mts",
   "cli-context.mts",
+  "cli-output.mts",
   "cli-utils.mts",
 ].map((fileName) => inlineCliModuleSource(readFileSync(join(sourceDir, fileName), "utf8"))).join("\n");
 const cliSource = insertAfterImports(
-  readFileSync(join(sourceDir, "cli.mts"), "utf8").replace(/^import [^\n]+ from "\.\/cli-(?:asar-transaction|cdp|command-policy|context|utils)\.mts";\r?\n/gm, ""),
+  readFileSync(join(sourceDir, "cli.mts"), "utf8").replace(/^import [^\n]+ from "\.\/cli-(?:asar-transaction|cdp|command-policy|context|output|utils)\.mts";\r?\n/gm, ""),
   cliModuleSource,
 )
   .replace(
