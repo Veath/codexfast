@@ -13,7 +13,7 @@ This repo is high risk because it launches and can internally test patches again
 
 ## When To Use
 
-- Adding or updating a patch target in `src/patcher.mts`
+- Adding or updating a patch target in `src/targets/*` or `src/patcher-targets.mts`
 - Adapting to a new Codex bundle version
 - Changing compatibility gating or bundle metadata handling
 - Updating internal restore, re-sign, backup, or archive logic
@@ -34,7 +34,10 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 ## Workflow
 
 1. Inspect the current repo state.
-   - Read `AGENTS.md`, `src/cli.mts`, `src/patcher.mts`, `test/re-sign-flow.sh`, and the relevant README sections.
+   - Read `AGENTS.md`, `src/cli.mts`, `src/patcher-targets.mts`, the relevant `src/targets/*` module, `test/re-sign-flow.mts`, `test/re-sign-flow.sh`, and the relevant README sections.
+   - Use `src/targets/speed.mts`, `src/targets/plugins.mts`, and `src/targets/models.mts` for feature-specific target definitions; keep shared target builders in `src/targets/builders.mts`.
+   - Treat `src/patcher.mts` as legacy file-patch orchestration, not the primary home for new target metadata.
+   - For runtime launch behavior, inspect `src/cli-cdp.mts`, `src/cli-asar-transaction.mts`, and `src/cli.mts` together because the generated CLI inlines those modules.
    - If the change is bundle-specific, identify the exact gated text key, target file shape, runtime URL shape, and internal restore path first.
    - Do not trust `status`/matcher output as proof that a feature target is gone. For every expected feature path, search the extracted bundle by stable needles such as `settings.agent.speed.label`, `composer.speedSlashCommand.title`, `composer.intelligenceDropdown.speed.title`, `sidebarElectron.pluginsDisabledTooltip`, `skills.pluginsAuthBlockedToast.title`, `pluginDeepLinkAuthBlocked`, `plugins.install.connectorUnavailable`, `plugins.installModal.about`, and nearby `serviceTierSettings` / auth-method gates.
    - Distinguish "target absent" from "target present but regex stale". A target is absent only after broad non-locale JS search shows the user-facing needle and adjacent gate are no longer present anywhere in `webview/assets`.
@@ -47,7 +50,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
    - If changing the generated entrypoint, edit the source pieces and regenerate `bin/codexfast`.
 
 3. Update regression coverage in the same change.
-   - Extend `test/re-sign-flow.sh` for every new target, runtime path, restore path, or compatibility guard.
+   - Extend `test/re-sign-flow.mts` for every new target, runtime path, restore path, or compatibility guard. Keep `test/re-sign-flow.sh` as the compatibility entrypoint.
    - Cover both positive and negative cases when relevant.
    - When changing runtime launch, cover generated single-file behavior. A source-level `patch-engine` import is not enough because the embedded runtime engine is extracted from generated `__PATCHER_SOURCE__`.
 
@@ -62,7 +65,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 5. Verify before calling the work done.
    - Run `pnpm build:check`.
    - Run `pnpm typecheck`.
-   - Run `pnpm test` or `bash test/re-sign-flow.sh`.
+   - Run `pnpm test` or, for a narrow local check, `bash test/re-sign-flow.sh`.
    - If package metadata changed, also inspect `package.json` and `bin/codexfast`.
    - If packaging or docs changed materially, run `pnpm pack --dry-run`.
    - For runtime launch changes, run a real installed-app `launch` pass when possible, then confirm `app.asar`, `Info.plist`, and the app signature are unchanged.

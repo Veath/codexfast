@@ -10,6 +10,15 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 
 For file-patch regression coverage, target files are inspected inside `app/webview/assets` after extracting `app.asar`. For runtime launch, the same renderer assets may be requested with different `app://` URL shapes. Current `26.513.20950` uses `app://-/assets/*.js`; older assumptions used `app://-/webview/assets/*.js`. Runtime matchers must account for both when CDP Fetch interception changes.
 
+Source layout:
+
+- `src/targets/speed.mts` owns Settings Fast, `/fast`, and composer Speed target definitions.
+- `src/targets/plugins.mts` owns Plugins sidebar, page, detail, install, modal, and composer mention target definitions.
+- `src/targets/models.mts` owns GPT-5.5 model-list bridge targets.
+- `src/targets/builders.mts` owns shared target-spec builders.
+- `src/patcher-targets.mts` aggregates the feature target modules for both runtime launch and internal file-patch coverage.
+- `src/patcher.mts` remains the legacy file-patch orchestration layer; do not put new target metadata there.
+
 | Feature | Target label | Current file | Needle | Patch intent |
 | --- | --- | --- | --- | --- |
 | Settings-side Fast control | `Speed setting` | `general-settings-*.js` | `settings.agent.speed.label` | Remove the guarded Fast-settings early return. |

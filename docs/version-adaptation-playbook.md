@@ -27,12 +27,15 @@ Determine whether the new build can be supported, update patch logic if needed, 
 
 4. Update the script narrowly.
    - Keep new regexes or target specs as small as possible
+   - Put feature-specific target definitions in `src/targets/speed.mts`, `src/targets/plugins.mts`, or `src/targets/models.mts`
+   - Keep shared target builder helpers in `src/targets/builders.mts` and aggregate exported targets through `src/patcher-targets.mts`
    - Preserve internal legacy apply/restore symmetry if touching file-patch targets
    - Preserve runtime launch fail-closed behavior without writing the app bundle
    - Do not widen support claims before validation
 
 5. Update tests in the same change.
-   - Extend `test/re-sign-flow.sh` for every changed target or new guard
+   - Extend `test/re-sign-flow.mts` for every changed target or new guard
+   - Keep `test/re-sign-flow.sh` as the shell compatibility entrypoint
    - Keep unsupported-version blocking coverage intact
    - When runtime launch changes, cover generated single-file behavior, not only source-level patch helpers
 
@@ -43,7 +46,11 @@ Determine whether the new build can be supported, update patch logic if needed, 
    - `README.md` and `README.zh-CN.md` if support scope changed materially
 
 7. Verify.
+   - `pnpm build:check`
+   - `pnpm typecheck`
+   - `pnpm check:version-drift`
    - `bash test/re-sign-flow.sh`
+   - `pnpm test` before merging or releasing the adaptation
    - Manual checks from `docs/real-app-validation.md` when claiming real-app support
    - For runtime launch support, verify launch success on the installed app and confirm `app.asar`, `Info.plist`, and the app signature are unchanged
 
