@@ -54,7 +54,7 @@ npx codexfast version
 交互菜单只保留 launch：
 
 ```text
-1) Launch Codex with runtime patches (recommended)
+1) Launch Codex with runtime patches
 q) Quit
 ```
 

@@ -126,9 +126,7 @@ function printUsage(): void {
   printLine('  codexfast <command>');
   printLine('');
   printLine('Commands:');
-  printLine(
-    '  launch             Launch Codex with runtime patches (recommended)',
-  );
+  printLine('  launch             Launch Codex with runtime patches');
   printLine('  version            Print the codexfast version');
   printLine('  help               Show this help');
 }
@@ -201,7 +199,7 @@ async function showMenu(): Promise<number> {
       run('clear', []);
       printLine('codexfast');
       printLine('');
-      printLine('1) Launch Codex with runtime patches (recommended)');
+      printLine('1) Launch Codex with runtime patches');
       printLine('q) Quit');
       printLine('');
 

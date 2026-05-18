@@ -54,7 +54,7 @@ npx codexfast version
 The interactive menu exposes the same launch path:
 
 ```text
-1) Launch Codex with runtime patches (recommended)
+1) Launch Codex with runtime patches
 q) Quit
 ```
 

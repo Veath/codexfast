@@ -6,7 +6,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 ## Delivery Modes
 
-- `launch` is the recommended path. It starts Codex with a local CDP endpoint and applies the supported target patches in memory for that launched session only.
+- `launch` is the public runtime path. It starts Codex with a local CDP endpoint and applies the supported target patches in memory for that launched session only.
 - Runtime launch does not modify `app.asar`, `Info.plist`, the app bundle, or the app signature.
 - Public legacy bundle patch commands are no longer exposed. The old file-patch and restore paths remain covered by internal regression tests so older patched installs can still be understood and recovered during development.
 - If a user previously installed the launchd auto-repair watcher, `launch` removes the legacy watcher files before starting Codex.

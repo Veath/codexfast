@@ -2093,7 +2093,7 @@ function printUsage() {
     printLine('  codexfast <command>');
     printLine('');
     printLine('Commands:');
-    printLine('  launch             Launch Codex with runtime patches (recommended)');
+    printLine('  launch             Launch Codex with runtime patches');
     printLine('  version            Print the codexfast version');
     printLine('  help               Show this help');
 }
@@ -2156,7 +2156,7 @@ async function showMenu() {
             run('clear', []);
             printLine('codexfast');
             printLine('');
-            printLine('1) Launch Codex with runtime patches (recommended)');
+            printLine('1) Launch Codex with runtime patches');
             printLine('q) Quit');
             printLine('');
             const choice = (await rl.question('Select an option: ')).trim();

@@ -16,6 +16,7 @@ This project follows a simple release-oriented changelog format.
 
 ### Documentation
 
+- Removed the `recommended` label from the public runtime launch menu and README examples.
 - Updated maintenance guidance for the split patch-target modules, TypeScript regression runner, and supported-version drift check.
 
 ## [0.17.0] - 2026-05-17

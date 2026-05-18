@@ -266,7 +266,7 @@ function main(): void {
   runScriptCommand(join(tmpDir, "MissingForHelp.app"), ["help"], helpOutput);
   assertContains(readOutput(helpOutput), `codexfast ${packageVersion}`, "expected help to print the current package version", readOutput(helpOutput));
   assertContains(readOutput(helpOutput), "Commands:", "expected help to list commands", readOutput(helpOutput));
-  assertContains(readOutput(helpOutput), "launch             Launch Codex with runtime patches (recommended)", "expected help to recommend runtime launch mode", readOutput(helpOutput));
+  assertContains(readOutput(helpOutput), "launch             Launch Codex with runtime patches", "expected help to list runtime launch mode", readOutput(helpOutput));
   assertContains(readOutput(helpOutput), "version", "expected help to include version command", readOutput(helpOutput));
   assertNotContains(readOutput(helpOutput), "status", "expected help not to advertise legacy status command", readOutput(helpOutput));
   assertNotContains(readOutput(helpOutput), "apply", "expected help not to advertise legacy apply command", readOutput(helpOutput));
@@ -282,7 +282,7 @@ function main(): void {
   const menuOutput = join(tmpDir, "menu-output.txt");
   prepareArchivedFakeApp(join(tmpDir, "Menu.app"), join(tmpDir, "menu-assets"));
   runScript(join(tmpDir, "Menu.app"), "q\n", menuOutput);
-  assertContains(readOutput(menuOutput), "1) Launch Codex with runtime patches (recommended)", "expected no-arg menu to recommend runtime launch mode", readOutput(menuOutput));
+  assertContains(readOutput(menuOutput), "1) Launch Codex with runtime patches", "expected no-arg menu to list runtime launch mode", readOutput(menuOutput));
   assertNotContains(readOutput(menuOutput), "2) Check current status", "expected no-arg menu to remove legacy status option", readOutput(menuOutput));
   assertNotContains(readOutput(menuOutput), "Apply legacy bundle patches", "expected no-arg menu to remove legacy apply option", readOutput(menuOutput));
   assertNotContains(readOutput(menuOutput), "Restore legacy bundle patch backups", "expected no-arg menu to remove legacy restore option", readOutput(menuOutput));
