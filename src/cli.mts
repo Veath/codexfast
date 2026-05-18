@@ -54,8 +54,11 @@ import {
 } from './cli-runtime-patcher.mts';
 import { runRuntimeLaunch } from './cli-runtime-launch.mts';
 import {
+  createWatcherFlow,
+  type WatcherFlowOptions,
+} from './cli-watcher.mts';
+import {
   asError,
-  escapeXml,
   printLine,
   resolveCommand,
   resolvePlistBuddy,
@@ -83,36 +86,6 @@ type MetadataChangeResult = {
   changed: boolean;
   ok: boolean;
 };
-
-function userHomeDir(): string {
-  return process.env.HOME || process.env.USERPROFILE || '';
-}
-
-function launchAgentsDir(): string {
-  return join(userHomeDir(), 'Library', 'LaunchAgents');
-}
-
-function codexfastSupportDir(): string {
-  return join(userHomeDir(), 'Library', 'Application Support', 'codexfast');
-}
-
-function watcherPlistPath(): string {
-  return join(launchAgentsDir(), launchAgentFileName);
-}
-
-function watcherCliPath(): string {
-  return join(codexfastSupportDir(), 'codexfast-watcher.js');
-}
-
-function launchctlDomain(): string {
-  const getuid = process.getuid;
-  if (typeof getuid !== 'function') {
-    throw new Error(
-      'Cannot resolve the launchctl GUI domain on this platform.',
-    );
-  }
-  return `gui/${getuid()}`;
-}
 
 function readBundlePlistValue(key: string, fallback = 'unknown'): string {
   const result = run(context.toolchain.plistBuddy, [
@@ -706,191 +679,6 @@ function validateActionRequest(action: string): boolean {
   return true;
 }
 
-function removeWatcherFiles(
-  options: { quietLaunchctl?: boolean; reportRemoved?: boolean } = {},
-): boolean {
-  const hadWatcherFiles =
-    existsSync(watcherPlistPath()) || existsSync(watcherCliPath());
-  runLaunchctl(['bootout', launchctlDomain(), watcherPlistPath()], {
-    quiet: options.quietLaunchctl,
-  });
-  try {
-    rmSync(watcherPlistPath(), { force: true });
-    rmSync(watcherCliPath(), { force: true });
-  } catch {
-    return false;
-  }
-  if (hadWatcherFiles && options.reportRemoved) {
-    printLine('Removed auto-repair watcher before restore.');
-  }
-  return true;
-}
-
-function removeLegacyWatcherFiles(
-  options: { quietLaunchctl?: boolean; reportRemoved?: boolean } = {},
-): boolean {
-  const hadWatcherFiles =
-    existsSync(watcherPlistPath()) || existsSync(watcherCliPath());
-  if (!removeWatcherFiles({ quietLaunchctl: options.quietLaunchctl })) {
-    return false;
-  }
-  if (hadWatcherFiles && options.reportRemoved) {
-    printLine('Removed legacy auto-repair watcher.');
-  }
-  return true;
-}
-
-function cleanupLegacyWatcherCommand(): number {
-  if (
-    !removeLegacyWatcherFiles({ quietLaunchctl: true, reportRemoved: true })
-  ) {
-    printLine('Failed to remove legacy auto-repair watcher.');
-    return printExitBlock(1).exitCode;
-  }
-  return printExitBlock(0).exitCode;
-}
-
-function watcherRunnerSource(): string {
-  return `#!/usr/bin/env node
-const { spawnSync } = require("node:child_process");
-
-const result = spawnSync(${JSON.stringify(context.toolchain.npx)}, ["--yes", "codexfast@latest", "repair"], {
-  stdio: "inherit",
-  env: process.env,
-});
-
-if (result.error) {
-  console.error(result.error.message);
-}
-
-process.exit(result.status ?? 1);
-`;
-}
-
-function writeWatcherRunner(): boolean {
-  if (!context.toolchain.npx) {
-    context.toolchain.npx = resolveCommand('npx') ?? '';
-  }
-  if (!context.toolchain.npx) {
-    printLine('npx not found.');
-    printLine('Make sure npx is available in your shell.');
-    return false;
-  }
-  try {
-    mkdirSync(codexfastSupportDir(), { recursive: true });
-    writeFileSync(watcherCliPath(), watcherRunnerSource(), 'utf8');
-    chmodSync(watcherCliPath(), 0o755);
-    return true;
-  } catch {
-    printLine('Failed to install the watcher runner.');
-    return false;
-  }
-}
-
-function watcherPlist(): string {
-  const environmentEntries = [
-    ['CODEXFAST_APP_BUNDLE', context.paths.bundle],
-    [
-      'PATH',
-      process.env.PATH ??
-        '/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin',
-    ],
-  ];
-  const environmentXml = environmentEntries
-    .map(
-      ([key, value]) =>
-        `      <key>${escapeXml(key)}</key>\n      <string>${escapeXml(value)}</string>`,
-    )
-    .join('\n');
-
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>Label</key>
-  <string>${escapeXml(launchAgentLabel)}</string>
-  <key>ProgramArguments</key>
-  <array>
-    <string>${escapeXml(process.execPath)}</string>
-    <string>${escapeXml(watcherCliPath())}</string>
-  </array>
-  <key>EnvironmentVariables</key>
-  <dict>
-${environmentXml}
-  </dict>
-  <key>WatchPaths</key>
-  <array>
-    <string>${escapeXml(context.paths.asar)}</string>
-  </array>
-  <key>RunAtLoad</key>
-  <true/>
-  <key>ThrottleInterval</key>
-  <integer>60</integer>
-</dict>
-</plist>
-`;
-}
-
-function runLaunchctl(
-  args: string[],
-  options: { quiet?: boolean } = {},
-): boolean {
-  const launchctlBin = resolveCommand('launchctl');
-  if (!launchctlBin) {
-    if (!options.quiet) {
-      printLine('launchctl not found.');
-    }
-    return false;
-  }
-  const result = run(launchctlBin, args);
-  if (result.status !== 0) {
-    if (!options.quiet) {
-      process.stdout.write(result.stdout);
-      process.stderr.write(result.stderr);
-    }
-    return false;
-  }
-  return true;
-}
-
-function installWatcher(): number {
-  printActionHeader('install-watcher');
-  if (!existsSync(context.paths.asar)) {
-    printLine(`app.asar not found: ${context.paths.asar}`);
-    return printExitBlock(1).exitCode;
-  }
-  if (!writeWatcherRunner()) {
-    return printExitBlock(1).exitCode;
-  }
-  try {
-    mkdirSync(launchAgentsDir(), { recursive: true });
-    writeFileSync(watcherPlistPath(), watcherPlist());
-  } catch {
-    printLine('Failed to write the launchd watcher plist.');
-    return printExitBlock(1).exitCode;
-  }
-
-  runLaunchctl(['bootout', launchctlDomain(), watcherPlistPath()], {
-    quiet: true,
-  });
-  if (!runLaunchctl(['bootstrap', launchctlDomain(), watcherPlistPath()])) {
-    printLine('Watcher plist was written, but launchctl failed to load it.');
-    return printExitBlock(1).exitCode;
-  }
-  printLine(`Installed watcher: ${watcherPlistPath()}`);
-  return printExitBlock(0).exitCode;
-}
-
-function uninstallWatcher(): number {
-  printActionHeader('uninstall-watcher');
-  if (!removeWatcherFiles()) {
-    printLine('Failed to remove all watcher files.');
-    return printExitBlock(1).exitCode;
-  }
-  printLine('Uninstalled watcher.');
-  return printExitBlock(0).exitCode;
-}
-
 function printUsage(): void {
   printLine(`codexfast ${__PACKAGE_VERSION__}`);
   printLine('');
@@ -916,11 +704,22 @@ function runRuntimeLaunchCommand(): Promise<number> {
     patcherSource: __PATCHER_SOURCE__,
     supportedAppVersionKeys,
     printActionHeader,
-    removeLegacyWatcherFiles,
+    removeLegacyWatcherFiles: (options) =>
+      createWatcherFlow(watcherFlowOptions()).removeLegacyWatcherFiles(options),
   });
 }
 
+function watcherFlowOptions(): WatcherFlowOptions {
+  return {
+    context,
+    launchAgentLabel,
+    launchAgentFileName,
+    printActionHeader,
+  };
+}
+
 function legacyPatchFlowOptions(): LegacyPatchFlowOptions {
+  const watcherFlow = createWatcherFlow(watcherFlowOptions());
   return {
     context,
     patcherSource: __PATCHER_SOURCE__,
@@ -928,7 +727,7 @@ function legacyPatchFlowOptions(): LegacyPatchFlowOptions {
     legacyBackupSuffix,
     printActionHeader,
     validateActionRequest,
-    removeWatcherFiles,
+    removeWatcherFiles: watcherFlow.removeWatcherFiles,
     migrateLegacyUnpackedLayout,
     restoreFromArchiveBackup,
     printOfficialReinstallGuidanceAfterRestore,
@@ -1011,7 +810,7 @@ async function main(): Promise<number> {
     return 0;
   }
   if (isHiddenLegacyCleanupCommand(command)) {
-    return cleanupLegacyWatcherCommand();
+    return createWatcherFlow(watcherFlowOptions()).cleanupLegacyWatcherCommand();
   }
   if (command && !isPublicLaunchCommand(command) && !legacySelftestAction) {
     printUsage();
