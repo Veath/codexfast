@@ -239,7 +239,7 @@ function renameBackupSuffixes(dir: string, fromSuffix: string, toSuffix: string)
   }
 }
 
-function runApplyRestoreCase(caseConfig: {
+type ApplyRestoreCaseConfig = {
   name: string;
   appDir: string;
   assetsRoot: string;
@@ -251,7 +251,9 @@ function runApplyRestoreCase(caseConfig: {
   restoreContext: string;
   statusAssert?: (output: string) => void;
   postApplyAssert?: (output: string) => void;
-}): void {
+};
+
+function runApplyRestoreCase(caseConfig: ApplyRestoreCaseConfig): void {
   const resourcesDir = join(caseConfig.appDir, "Contents", "Resources");
   const archivePath = join(resourcesDir, "app.asar");
   const applyOutput = join(tmpDir, `${caseConfig.name}-apply.txt`);
@@ -500,258 +502,264 @@ function main(): void {
   assertApplyState26417(join(partial26417Resources, "app.asar"));
   resetCodesignCalls();
 
-  runApplyRestoreCase({
-    name: "supported-26422",
-    appDir: join(tmpDir, "Supported26422.app"),
-    assetsRoot: join(tmpDir, "supported-26422-assets"),
-    appVersion: "26.422.21637",
-    appBuild: "2056",
-    assetProfile: "26422",
-    applyAssert: assertApplyState26422,
-    restoreAssert: assertGuardedState26422,
-    restoreContext: "26.422 restore",
-    statusAssert: (output) => {
-      assertNotContains(output, "Status: GPT-5.5 model query selector disabled", "expected 26.422 status to report the GPT-5.5 model query selector as enabled after apply", output);
-      assertContains(output, "Status: GPT-5.5 model query selector enabled", "expected 26.422 status to include the GPT-5.5 model query selector target", output);
+  const applyRestoreMatrix: ApplyRestoreCaseConfig[] = [
+    {
+      name: "supported-26422",
+      appDir: join(tmpDir, "Supported26422.app"),
+      assetsRoot: join(tmpDir, "supported-26422-assets"),
+      appVersion: "26.422.21637",
+      appBuild: "2056",
+      assetProfile: "26422",
+      applyAssert: assertApplyState26422,
+      restoreAssert: assertGuardedState26422,
+      restoreContext: "26.422 restore",
+      statusAssert: (output) => {
+        assertNotContains(output, "Status: GPT-5.5 model query selector disabled", "expected 26.422 status to report the GPT-5.5 model query selector as enabled after apply", output);
+        assertContains(output, "Status: GPT-5.5 model query selector enabled", "expected 26.422 status to include the GPT-5.5 model query selector target", output);
     },
-  });
-
-  runApplyRestoreCase({
-    name: "supported-26422-2080",
-    appDir: join(tmpDir, "Supported26422Build2080.app"),
-    assetsRoot: join(tmpDir, "supported-26422-2080-assets"),
-    appVersion: "26.422.30944",
-    appBuild: "2080",
-    assetProfile: "26422",
-    applyAssert: assertApplyState26422WithoutGptPatch,
-    restoreAssert: assertGuardedState26422,
-    restoreContext: "26.422 build 2080 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2080 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2080 status to omit unpatched GPT-5.5 compatibility targets", output),
-  });
-
-  runApplyRestoreCase({
-    name: "supported-26422-2176",
-    appDir: join(tmpDir, "Supported26422Build2176.app"),
-    assetsRoot: join(tmpDir, "supported-26422-2176-assets"),
-    appVersion: "26.422.62136",
-    appBuild: "2176",
-    assetProfile: "26422-2176",
-    applyAssert: assertApplyState26422Build2176Or2180,
-    restoreAssert: assertGuardedState26422Build2176Or2180,
-    restoreContext: "26.422 build 2176 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2176 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => {
-      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.422 build 2176 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Status: Plugins access enabled", "expected 26.422 build 2176 status to report Plugins after apply", output);
-      assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2176 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
-  });
 
-  runApplyRestoreCase({
-    name: "supported-26422-2180",
-    appDir: join(tmpDir, "Supported26422Build2180.app"),
-    assetsRoot: join(tmpDir, "supported-26422-2180-assets"),
-    appVersion: "26.422.62136",
-    appBuild: "2180",
-    assetProfile: "26422-2176",
-    applyAssert: assertApplyState26422Build2176Or2180,
-    restoreAssert: assertGuardedState26422Build2176Or2180,
-    restoreContext: "26.422 build 2180 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2180 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => {
-      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.422 build 2180 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Status: Plugins access enabled", "expected 26.422 build 2180 status to report Plugins after apply", output);
-      assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2180 status to omit unpatched GPT-5.5 compatibility targets", output);
+    {
+      name: "supported-26422-2080",
+      appDir: join(tmpDir, "Supported26422Build2080.app"),
+      assetsRoot: join(tmpDir, "supported-26422-2080-assets"),
+      appVersion: "26.422.30944",
+      appBuild: "2080",
+      assetProfile: "26422",
+      applyAssert: assertApplyState26422WithoutGptPatch,
+      restoreAssert: assertGuardedState26422,
+      restoreContext: "26.422 build 2080 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2080 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2080 status to omit unpatched GPT-5.5 compatibility targets", output),
     },
-  });
 
-  runApplyRestoreCase({
-    name: "supported-26422-2210",
-    appDir: join(tmpDir, "Supported26422Build2210.app"),
-    assetsRoot: join(tmpDir, "supported-26422-2210-assets"),
-    appVersion: "26.422.71525",
-    appBuild: "2210",
-    assetProfile: "26422-2210",
-    applyAssert: assertApplyState26422Build2210,
-    restoreAssert: assertGuardedState26422Build2210,
-    restoreContext: "26.422 build 2210 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2210 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => {
-      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.422 build 2210 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Status: Plugins access enabled", "expected 26.422 build 2210 status to report Plugins after apply", output);
-      assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2210 status to omit unpatched GPT-5.5 compatibility targets", output);
+    {
+      name: "supported-26422-2176",
+      appDir: join(tmpDir, "Supported26422Build2176.app"),
+      assetsRoot: join(tmpDir, "supported-26422-2176-assets"),
+      appVersion: "26.422.62136",
+      appBuild: "2176",
+      assetProfile: "26422-2176",
+      applyAssert: assertApplyState26422Build2176Or2180,
+      restoreAssert: assertGuardedState26422Build2176Or2180,
+      restoreContext: "26.422 build 2176 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2176 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => {
+        assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.422 build 2176 status to report the Intelligence Speed target after apply", output);
+        assertContains(output, "Status: Plugins access enabled", "expected 26.422 build 2176 status to report Plugins after apply", output);
+        assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2176 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
-  });
+    },
 
-  runApplyRestoreCase({
-    name: "supported-26429-2312",
-    appDir: join(tmpDir, "Supported26429Build2312.app"),
-    assetsRoot: join(tmpDir, "supported-26429-2312-assets"),
-    appVersion: "26.429.20946",
-    appBuild: "2312",
-    assetProfile: "26429-2312",
-    applyAssert: assertApplyState26429Build2312,
-    restoreAssert: assertGuardedState26429Build2312,
-    restoreContext: "26.429 build 2312 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.429 build 2312 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => {
-      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.429 build 2312 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Status: Plugins access enabled", "expected 26.429 build 2312 status to report Plugins after apply", output);
-      assertContains(output, "Status: Plugins page content enabled", "expected 26.429 build 2312 status to report Plugins page content after apply", output);
-      assertContains(output, "Status: Plugin detail access enabled", "expected 26.429 build 2312 status to report Plugin detail access after apply", output);
-      assertContains(output, "Status: Plugin install availability enabled", "expected 26.429 build 2312 status to report Plugin install availability after apply", output);
-      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.429 build 2312 status to report Plugin install modal content after apply", output);
-      assertNotContains(output, "GPT-5.5 model", "expected 26.429 build 2312 status to omit unpatched GPT-5.5 compatibility targets", output);
+    {
+      name: "supported-26422-2180",
+      appDir: join(tmpDir, "Supported26422Build2180.app"),
+      assetsRoot: join(tmpDir, "supported-26422-2180-assets"),
+      appVersion: "26.422.62136",
+      appBuild: "2180",
+      assetProfile: "26422-2176",
+      applyAssert: assertApplyState26422Build2176Or2180,
+      restoreAssert: assertGuardedState26422Build2176Or2180,
+      restoreContext: "26.422 build 2180 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2180 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => {
+        assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.422 build 2180 status to report the Intelligence Speed target after apply", output);
+        assertContains(output, "Status: Plugins access enabled", "expected 26.422 build 2180 status to report Plugins after apply", output);
+        assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2180 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
-  });
+    },
 
-  runApplyRestoreCase({
-    name: "supported-26429-2345",
-    appDir: join(tmpDir, "Supported26429Build2345.app"),
-    assetsRoot: join(tmpDir, "supported-26429-2345-assets"),
-    appVersion: "26.429.30905",
-    appBuild: "2345",
-    assetProfile: "26429-2345",
-    applyAssert: assertApplyState26429Build2345,
-    restoreAssert: assertGuardedState26429Build2345,
-    restoreContext: "26.429 build 2345 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.429 build 2345 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => {
-      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.429 build 2345 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Status: Plugins access enabled", "expected 26.429 build 2345 status to report Plugins after apply", output);
-      assertContains(output, "Status: Plugins page content enabled", "expected 26.429 build 2345 status to report Plugins page content after apply", output);
-      assertContains(output, "Status: Plugin detail access enabled", "expected 26.429 build 2345 status to report Plugin detail access after apply", output);
-      assertContains(output, "Status: Plugin install availability enabled", "expected 26.429 build 2345 status to report Plugin install availability after apply", output);
-      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.429 build 2345 status to report Plugin install modal content after apply", output);
-      assertNotContains(output, "GPT-5.5 model", "expected 26.429 build 2345 status to omit unpatched GPT-5.5 compatibility targets", output);
+    {
+      name: "supported-26422-2210",
+      appDir: join(tmpDir, "Supported26422Build2210.app"),
+      assetsRoot: join(tmpDir, "supported-26422-2210-assets"),
+      appVersion: "26.422.71525",
+      appBuild: "2210",
+      assetProfile: "26422-2210",
+      applyAssert: assertApplyState26422Build2210,
+      restoreAssert: assertGuardedState26422Build2210,
+      restoreContext: "26.422 build 2210 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.422 build 2210 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => {
+        assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.422 build 2210 status to report the Intelligence Speed target after apply", output);
+        assertContains(output, "Status: Plugins access enabled", "expected 26.422 build 2210 status to report Plugins after apply", output);
+        assertNotContains(output, "GPT-5.5 model", "expected 26.422 build 2210 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
-  });
+    },
 
-  runApplyRestoreCase({
-    name: "supported-26429-2429",
-    appDir: join(tmpDir, "Supported26429Build2429.app"),
-    assetsRoot: join(tmpDir, "supported-26429-2429-assets"),
-    appVersion: "26.429.61741",
-    appBuild: "2429",
-    assetProfile: "26429-2345",
-    applyAssert: assertApplyState26429Build2345,
-    restoreAssert: assertGuardedState26429Build2345,
-    restoreContext: "26.429 build 2429 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.429 build 2429 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => {
-      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.429 build 2429 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Status: Plugins access enabled", "expected 26.429 build 2429 status to report Plugins after apply", output);
-      assertContains(output, "Status: Plugins page content enabled", "expected 26.429 build 2429 status to report Plugins page content after apply", output);
-      assertContains(output, "Status: Plugin detail access enabled", "expected 26.429 build 2429 status to report Plugin detail access after apply", output);
-      assertContains(output, "Status: Plugin install availability enabled", "expected 26.429 build 2429 status to report Plugin install availability after apply", output);
-      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.429 build 2429 status to report Plugin install modal content after apply", output);
-      assertNotContains(output, "GPT-5.5 model", "expected 26.429 build 2429 status to omit unpatched GPT-5.5 compatibility targets", output);
+    {
+      name: "supported-26429-2312",
+      appDir: join(tmpDir, "Supported26429Build2312.app"),
+      assetsRoot: join(tmpDir, "supported-26429-2312-assets"),
+      appVersion: "26.429.20946",
+      appBuild: "2312",
+      assetProfile: "26429-2312",
+      applyAssert: assertApplyState26429Build2312,
+      restoreAssert: assertGuardedState26429Build2312,
+      restoreContext: "26.429 build 2312 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.429 build 2312 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => {
+        assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.429 build 2312 status to report the Intelligence Speed target after apply", output);
+        assertContains(output, "Status: Plugins access enabled", "expected 26.429 build 2312 status to report Plugins after apply", output);
+        assertContains(output, "Status: Plugins page content enabled", "expected 26.429 build 2312 status to report Plugins page content after apply", output);
+        assertContains(output, "Status: Plugin detail access enabled", "expected 26.429 build 2312 status to report Plugin detail access after apply", output);
+        assertContains(output, "Status: Plugin install availability enabled", "expected 26.429 build 2312 status to report Plugin install availability after apply", output);
+        assertContains(output, "Status: Plugin install modal content enabled", "expected 26.429 build 2312 status to report Plugin install modal content after apply", output);
+        assertNotContains(output, "GPT-5.5 model", "expected 26.429 build 2312 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
-  });
+    },
 
-  runApplyRestoreCase({
-    name: "supported-26506-2575",
-    appDir: join(tmpDir, "Supported26506Build2575.app"),
-    assetsRoot: join(tmpDir, "supported-26506-2575-assets"),
-    appVersion: "26.506.21252",
-    appBuild: "2575",
-    assetProfile: "26506",
-    applyAssert: assertApplyState26506Build2575,
-    restoreAssert: assertGuardedState26506Build2575,
-    restoreContext: "26.506 build 2575 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.506 build 2575 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => {
-      assertContains(output, "Status: Speed setting enabled", "expected 26.506 build 2575 status to report the Settings Speed target after apply", output);
-      assertContains(output, "Status: Fast slash command enabled", "expected 26.506 build 2575 status to report the Fast slash command after apply", output);
-      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.506 build 2575 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Status: Plugins access enabled", "expected 26.506 build 2575 status to report Plugins after apply", output);
-      assertContains(output, "Status: Plugins page content enabled", "expected 26.506 build 2575 status to report Plugins page content after apply", output);
-      assertContains(output, "Status: Plugin detail access enabled", "expected 26.506 build 2575 status to report Plugin detail access after apply", output);
-      assertContains(output, "Status: Plugin install availability enabled", "expected 26.506 build 2575 status to report Plugin install availability after apply", output);
-      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.506 build 2575 status to report Plugin install modal content after apply", output);
-      assertNotContains(output, "GPT-5.5 model", "expected 26.506 build 2575 status to omit unpatched GPT-5.5 compatibility targets", output);
+    {
+      name: "supported-26429-2345",
+      appDir: join(tmpDir, "Supported26429Build2345.app"),
+      assetsRoot: join(tmpDir, "supported-26429-2345-assets"),
+      appVersion: "26.429.30905",
+      appBuild: "2345",
+      assetProfile: "26429-2345",
+      applyAssert: assertApplyState26429Build2345,
+      restoreAssert: assertGuardedState26429Build2345,
+      restoreContext: "26.429 build 2345 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.429 build 2345 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => {
+        assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.429 build 2345 status to report the Intelligence Speed target after apply", output);
+        assertContains(output, "Status: Plugins access enabled", "expected 26.429 build 2345 status to report Plugins after apply", output);
+        assertContains(output, "Status: Plugins page content enabled", "expected 26.429 build 2345 status to report Plugins page content after apply", output);
+        assertContains(output, "Status: Plugin detail access enabled", "expected 26.429 build 2345 status to report Plugin detail access after apply", output);
+        assertContains(output, "Status: Plugin install availability enabled", "expected 26.429 build 2345 status to report Plugin install availability after apply", output);
+        assertContains(output, "Status: Plugin install modal content enabled", "expected 26.429 build 2345 status to report Plugin install modal content after apply", output);
+        assertNotContains(output, "GPT-5.5 model", "expected 26.429 build 2345 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
-  });
+    },
 
-  runApplyRestoreCase({
-    name: "supported-26506-2620",
-    appDir: join(tmpDir, "Supported26506Build2620.app"),
-    assetsRoot: join(tmpDir, "supported-26506-2620-assets"),
-    appVersion: "26.506.31421",
-    appBuild: "2620",
-    assetProfile: "26506-2620",
-    applyAssert: assertApplyState26506Build2620,
-    restoreAssert: assertGuardedState26506Build2620,
-    restoreContext: "26.506 build 2620 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.506 build 2620 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => {
-      assertContains(output, "Status: Speed setting enabled", "expected 26.506 build 2620 status to report the Settings Speed target after apply", output);
-      assertContains(output, "Status: Fast slash command enabled", "expected 26.506 build 2620 status to report the Fast slash command after apply", output);
-      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.506 build 2620 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Status: Plugins access enabled", "expected 26.506 build 2620 status to report Plugins after apply", output);
-      assertContains(output, "Status: Plugins page content enabled", "expected 26.506 build 2620 status to report Plugins page content after apply", output);
-      assertContains(output, "Status: Plugin detail access enabled", "expected 26.506 build 2620 status to report Plugin detail access after apply", output);
-      assertContains(output, "Status: Plugin install availability enabled", "expected 26.506 build 2620 status to report Plugin install availability after apply", output);
-      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.506 build 2620 status to report Plugin install modal content after apply", output);
-      assertNotContains(output, "Target file:", "expected 26.506 build 2620 status to omit internal target paths", output);
-      assertNotContains(output, "Backup file:", "expected 26.506 build 2620 status to omit internal backup paths", output);
-      assertNotContains(output, "GPT-5.5 model", "expected 26.506 build 2620 status to omit unpatched GPT-5.5 compatibility targets", output);
+    {
+      name: "supported-26429-2429",
+      appDir: join(tmpDir, "Supported26429Build2429.app"),
+      assetsRoot: join(tmpDir, "supported-26429-2429-assets"),
+      appVersion: "26.429.61741",
+      appBuild: "2429",
+      assetProfile: "26429-2345",
+      applyAssert: assertApplyState26429Build2345,
+      restoreAssert: assertGuardedState26429Build2345,
+      restoreContext: "26.429 build 2429 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.429 build 2429 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => {
+        assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.429 build 2429 status to report the Intelligence Speed target after apply", output);
+        assertContains(output, "Status: Plugins access enabled", "expected 26.429 build 2429 status to report Plugins after apply", output);
+        assertContains(output, "Status: Plugins page content enabled", "expected 26.429 build 2429 status to report Plugins page content after apply", output);
+        assertContains(output, "Status: Plugin detail access enabled", "expected 26.429 build 2429 status to report Plugin detail access after apply", output);
+        assertContains(output, "Status: Plugin install availability enabled", "expected 26.429 build 2429 status to report Plugin install availability after apply", output);
+        assertContains(output, "Status: Plugin install modal content enabled", "expected 26.429 build 2429 status to report Plugin install modal content after apply", output);
+        assertNotContains(output, "GPT-5.5 model", "expected 26.429 build 2429 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
-  });
+    },
 
-  runApplyRestoreCase({
-    name: "supported-26513-2816",
-    appDir: join(tmpDir, "Supported26513Build2816.app"),
-    assetsRoot: join(tmpDir, "supported-26513-2816-assets"),
-    appVersion: "26.513.20950",
-    appBuild: "2816",
-    assetProfile: "26513-2816",
-    applyAssert: assertApplyState26513Build2816,
-    restoreAssert: assertGuardedState26513Build2816,
-    restoreContext: "26.513 build 2816 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.513 build 2816 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => {
-      assertContains(output, "Status: Speed setting enabled", "expected 26.513 build 2816 status to report the Settings Speed target after apply", output);
-      assertContains(output, "Status: Fast slash command enabled", "expected 26.513 build 2816 status to report the Fast slash command after apply", output);
-      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.513 build 2816 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Status: Plugins access enabled", "expected 26.513 build 2816 status to report Plugins after apply", output);
-      assertContains(output, "Status: Plugins page content enabled", "expected 26.513 build 2816 status to report Plugins page content after apply", output);
-      assertContains(output, "Status: Plugin detail access enabled", "expected 26.513 build 2816 status to report Plugin detail access after apply", output);
-      assertContains(output, "Status: Plugin install availability enabled", "expected 26.513 build 2816 status to report Plugin install availability after apply", output);
-      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.513 build 2816 status to report Plugin install modal content after apply", output);
-      assertContains(output, "Status: Composer plugin mentions enabled", "expected 26.513 build 2816 status to report Composer plugin mentions after apply", output);
-      assertNotContains(output, "Browser-use native pipe peer auth", "expected 26.513 build 2816 status to omit removed browser-use native pipe target", output);
-      assertNotContains(output, "Target file:", "expected 26.513 build 2816 status to omit internal target paths", output);
-      assertNotContains(output, "Backup file:", "expected 26.513 build 2816 status to omit internal backup paths", output);
-      assertNotContains(output, "GPT-5.5 model", "expected 26.513 build 2816 status to omit unpatched GPT-5.5 compatibility targets", output);
+    {
+      name: "supported-26506-2575",
+      appDir: join(tmpDir, "Supported26506Build2575.app"),
+      assetsRoot: join(tmpDir, "supported-26506-2575-assets"),
+      appVersion: "26.506.21252",
+      appBuild: "2575",
+      assetProfile: "26506",
+      applyAssert: assertApplyState26506Build2575,
+      restoreAssert: assertGuardedState26506Build2575,
+      restoreContext: "26.506 build 2575 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.506 build 2575 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => {
+        assertContains(output, "Status: Speed setting enabled", "expected 26.506 build 2575 status to report the Settings Speed target after apply", output);
+        assertContains(output, "Status: Fast slash command enabled", "expected 26.506 build 2575 status to report the Fast slash command after apply", output);
+        assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.506 build 2575 status to report the Intelligence Speed target after apply", output);
+        assertContains(output, "Status: Plugins access enabled", "expected 26.506 build 2575 status to report Plugins after apply", output);
+        assertContains(output, "Status: Plugins page content enabled", "expected 26.506 build 2575 status to report Plugins page content after apply", output);
+        assertContains(output, "Status: Plugin detail access enabled", "expected 26.506 build 2575 status to report Plugin detail access after apply", output);
+        assertContains(output, "Status: Plugin install availability enabled", "expected 26.506 build 2575 status to report Plugin install availability after apply", output);
+        assertContains(output, "Status: Plugin install modal content enabled", "expected 26.506 build 2575 status to report Plugin install modal content after apply", output);
+        assertNotContains(output, "GPT-5.5 model", "expected 26.506 build 2575 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
-  });
+    },
 
-  runApplyRestoreCase({
-    name: "supported-26513-2867",
-    appDir: join(tmpDir, "Supported26513Build2867.app"),
-    assetsRoot: join(tmpDir, "supported-26513-2867-assets"),
-    appVersion: "26.513.31313",
-    appBuild: "2867",
-    assetProfile: "26513-2867",
-    applyAssert: assertApplyState26513Build2867,
-    restoreAssert: assertGuardedState26513Build2867,
-    restoreContext: "26.513 build 2867 restore",
-    postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.513 build 2867 apply to skip GPT-5.5 patch targets", output),
-    statusAssert: (output) => {
-      assertContains(output, "Status: Speed setting enabled", "expected 26.513 build 2867 status to report the Settings Speed target after apply", output);
-      assertContains(output, "Status: Fast slash command enabled", "expected 26.513 build 2867 status to report the Fast slash command after apply", output);
-      assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.513 build 2867 status to report the Intelligence Speed target after apply", output);
-      assertContains(output, "Status: Plugins access enabled", "expected 26.513 build 2867 status to report Plugins after apply", output);
-      assertContains(output, "Status: Plugins page content enabled", "expected 26.513 build 2867 status to report Plugins page content after apply", output);
-      assertContains(output, "Status: Plugin detail access enabled", "expected 26.513 build 2867 status to report Plugin detail access after apply", output);
-      assertContains(output, "Status: Plugin install availability enabled", "expected 26.513 build 2867 status to report Plugin install availability after apply", output);
-      assertContains(output, "Status: Plugin install modal content enabled", "expected 26.513 build 2867 status to report Plugin install modal content after apply", output);
-      assertContains(output, "Status: Composer plugin mentions enabled", "expected 26.513 build 2867 status to report Composer plugin mentions after apply", output);
-      assertNotContains(output, "GPT-5.5 model", "expected 26.513 build 2867 status to omit unpatched GPT-5.5 compatibility targets", output);
+    {
+      name: "supported-26506-2620",
+      appDir: join(tmpDir, "Supported26506Build2620.app"),
+      assetsRoot: join(tmpDir, "supported-26506-2620-assets"),
+      appVersion: "26.506.31421",
+      appBuild: "2620",
+      assetProfile: "26506-2620",
+      applyAssert: assertApplyState26506Build2620,
+      restoreAssert: assertGuardedState26506Build2620,
+      restoreContext: "26.506 build 2620 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.506 build 2620 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => {
+        assertContains(output, "Status: Speed setting enabled", "expected 26.506 build 2620 status to report the Settings Speed target after apply", output);
+        assertContains(output, "Status: Fast slash command enabled", "expected 26.506 build 2620 status to report the Fast slash command after apply", output);
+        assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.506 build 2620 status to report the Intelligence Speed target after apply", output);
+        assertContains(output, "Status: Plugins access enabled", "expected 26.506 build 2620 status to report Plugins after apply", output);
+        assertContains(output, "Status: Plugins page content enabled", "expected 26.506 build 2620 status to report Plugins page content after apply", output);
+        assertContains(output, "Status: Plugin detail access enabled", "expected 26.506 build 2620 status to report Plugin detail access after apply", output);
+        assertContains(output, "Status: Plugin install availability enabled", "expected 26.506 build 2620 status to report Plugin install availability after apply", output);
+        assertContains(output, "Status: Plugin install modal content enabled", "expected 26.506 build 2620 status to report Plugin install modal content after apply", output);
+        assertNotContains(output, "Target file:", "expected 26.506 build 2620 status to omit internal target paths", output);
+        assertNotContains(output, "Backup file:", "expected 26.506 build 2620 status to omit internal backup paths", output);
+        assertNotContains(output, "GPT-5.5 model", "expected 26.506 build 2620 status to omit unpatched GPT-5.5 compatibility targets", output);
     },
-  });
+    },
+
+    {
+      name: "supported-26513-2816",
+      appDir: join(tmpDir, "Supported26513Build2816.app"),
+      assetsRoot: join(tmpDir, "supported-26513-2816-assets"),
+      appVersion: "26.513.20950",
+      appBuild: "2816",
+      assetProfile: "26513-2816",
+      applyAssert: assertApplyState26513Build2816,
+      restoreAssert: assertGuardedState26513Build2816,
+      restoreContext: "26.513 build 2816 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.513 build 2816 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => {
+        assertContains(output, "Status: Speed setting enabled", "expected 26.513 build 2816 status to report the Settings Speed target after apply", output);
+        assertContains(output, "Status: Fast slash command enabled", "expected 26.513 build 2816 status to report the Fast slash command after apply", output);
+        assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.513 build 2816 status to report the Intelligence Speed target after apply", output);
+        assertContains(output, "Status: Plugins access enabled", "expected 26.513 build 2816 status to report Plugins after apply", output);
+        assertContains(output, "Status: Plugins page content enabled", "expected 26.513 build 2816 status to report Plugins page content after apply", output);
+        assertContains(output, "Status: Plugin detail access enabled", "expected 26.513 build 2816 status to report Plugin detail access after apply", output);
+        assertContains(output, "Status: Plugin install availability enabled", "expected 26.513 build 2816 status to report Plugin install availability after apply", output);
+        assertContains(output, "Status: Plugin install modal content enabled", "expected 26.513 build 2816 status to report Plugin install modal content after apply", output);
+        assertContains(output, "Status: Composer plugin mentions enabled", "expected 26.513 build 2816 status to report Composer plugin mentions after apply", output);
+        assertNotContains(output, "Browser-use native pipe peer auth", "expected 26.513 build 2816 status to omit removed browser-use native pipe target", output);
+        assertNotContains(output, "Target file:", "expected 26.513 build 2816 status to omit internal target paths", output);
+        assertNotContains(output, "Backup file:", "expected 26.513 build 2816 status to omit internal backup paths", output);
+        assertNotContains(output, "GPT-5.5 model", "expected 26.513 build 2816 status to omit unpatched GPT-5.5 compatibility targets", output);
+    },
+    },
+
+    {
+      name: "supported-26513-2867",
+      appDir: join(tmpDir, "Supported26513Build2867.app"),
+      assetsRoot: join(tmpDir, "supported-26513-2867-assets"),
+      appVersion: "26.513.31313",
+      appBuild: "2867",
+      assetProfile: "26513-2867",
+      applyAssert: assertApplyState26513Build2867,
+      restoreAssert: assertGuardedState26513Build2867,
+      restoreContext: "26.513 build 2867 restore",
+      postApplyAssert: (output) => assertNotContains(output, "patched: GPT-5.5", "expected 26.513 build 2867 apply to skip GPT-5.5 patch targets", output),
+      statusAssert: (output) => {
+        assertContains(output, "Status: Speed setting enabled", "expected 26.513 build 2867 status to report the Settings Speed target after apply", output);
+        assertContains(output, "Status: Fast slash command enabled", "expected 26.513 build 2867 status to report the Fast slash command after apply", output);
+        assertContains(output, "Status: Composer Intelligence Speed menu enabled", "expected 26.513 build 2867 status to report the Intelligence Speed target after apply", output);
+        assertContains(output, "Status: Plugins access enabled", "expected 26.513 build 2867 status to report Plugins after apply", output);
+        assertContains(output, "Status: Plugins page content enabled", "expected 26.513 build 2867 status to report Plugins page content after apply", output);
+        assertContains(output, "Status: Plugin detail access enabled", "expected 26.513 build 2867 status to report Plugin detail access after apply", output);
+        assertContains(output, "Status: Plugin install availability enabled", "expected 26.513 build 2867 status to report Plugin install availability after apply", output);
+        assertContains(output, "Status: Plugin install modal content enabled", "expected 26.513 build 2867 status to report Plugin install modal content after apply", output);
+        assertContains(output, "Status: Composer plugin mentions enabled", "expected 26.513 build 2867 status to report Composer plugin mentions after apply", output);
+        assertNotContains(output, "GPT-5.5 model", "expected 26.513 build 2867 status to omit unpatched GPT-5.5 compatibility targets", output);
+    },
+    },
+  ];
+
+  for (const caseConfig of applyRestoreMatrix) {
+    runApplyRestoreCase(caseConfig);
+  }
 
   const sparkleBridgeApp = join(tmpDir, "SparkleBridge.app");
   const sparkleBridgeResources = join(sparkleBridgeApp, "Contents", "Resources");
