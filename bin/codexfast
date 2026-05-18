@@ -576,6 +576,35 @@ function cdpCommandWithTimeout(command, timeoutMs, timeoutMessage) {
         });
     });
 }
+const legacySelftestPrefix = "__selftest-legacy-";
+const legacySelftestActions = new Set(["status", "apply", "repair", "restore"]);
+const runtimeSelftestCommands = new Set([
+    "__selftest-cdp-frame",
+    "__selftest-runtime-url",
+    "__selftest-runtime-patch-body",
+]);
+function resolveLegacySelftestAction(command) {
+    if (!command.startsWith(legacySelftestPrefix)) {
+        return "";
+    }
+    const action = command.slice(legacySelftestPrefix.length);
+    return legacySelftestActions.has(action) ? action : "__invalid__";
+}
+function isRuntimeSelftestCommand(command) {
+    return runtimeSelftestCommands.has(command);
+}
+function isHelpCommand(command) {
+    return command === "-h" || command === "--help" || command === "help";
+}
+function isVersionCommand(command) {
+    return command === "-v" || command === "--version" || command === "version";
+}
+function isPublicLaunchCommand(command) {
+    return command === "launch";
+}
+function isHiddenLegacyCleanupCommand(command) {
+    return command === "repair";
+}
 function createAppPaths(appBundle = "/Applications/Codex.app") {
     const resources = (0, node_path_1.join)(appBundle, "Contents", "Resources");
     return {
@@ -2008,34 +2037,32 @@ async function main() {
     // the cleanup-only compatibility path, but do not advertise it for new use.
     const args = process.argv.slice(2).filter((arg) => arg !== "--quiet");
     const command = args[0] ?? "";
-    const legacySelftestPrefix = "__selftest-legacy-";
-    const legacySelftestAction = command.startsWith(legacySelftestPrefix) ? command.slice(legacySelftestPrefix.length) : "";
-    const legacySelftestActions = new Set(["status", "apply", "repair", "restore"]);
-    if (command === "__selftest-cdp-frame") {
+    const legacySelftestAction = resolveLegacySelftestAction(command);
+    if (isRuntimeSelftestCommand(command) && command === "__selftest-cdp-frame") {
         return runCdpFrameSelfTest();
     }
-    if (command === "__selftest-runtime-url") {
+    if (isRuntimeSelftestCommand(command) && command === "__selftest-runtime-url") {
         return runRuntimeUrlSelfTest();
     }
-    if (command === "__selftest-runtime-patch-body") {
+    if (isRuntimeSelftestCommand(command) && command === "__selftest-runtime-patch-body") {
         return runRuntimePatchBodySelfTest();
     }
-    if (legacySelftestAction && !legacySelftestActions.has(legacySelftestAction)) {
+    if (legacySelftestAction === "__invalid__") {
         printUsage();
         return 1;
     }
-    if (command === "-h" || command === "--help" || command === "help") {
+    if (isHelpCommand(command)) {
         printUsage();
         return 0;
     }
-    if (command === "-v" || command === "--version" || command === "version") {
+    if (isVersionCommand(command)) {
         printVersion();
         return 0;
     }
-    if (command === "repair") {
+    if (isHiddenLegacyCleanupCommand(command)) {
         return cleanupLegacyWatcherCommand();
     }
-    if (command && command !== "launch" && !legacySelftestAction) {
+    if (command && !isPublicLaunchCommand(command) && !legacySelftestAction) {
         printUsage();
         return 1;
     }
@@ -2047,7 +2074,7 @@ async function main() {
     if (legacySelftestAction) {
         return runEmbeddedTool(legacySelftestAction);
     }
-    if (command === "launch") {
+    if (isPublicLaunchCommand(command)) {
         return await runRuntimeLaunch();
     }
     return showMenu();

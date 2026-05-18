@@ -10,6 +10,7 @@ import { stdin as input, stdout as output } from "node:process";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 import { calculateAsarHeaderHash, removeStaleArchiveTempFiles, replaceArchiveAtomically, snapshotArchive, type ArchiveSnapshot } from "./cli-asar-transaction.mts";
 import { CdpConnection, cdpCommandWithTimeout, runCdpFrameSelfTest, waitForRuntimePatchConnection } from "./cli-cdp.mts";
+import { isHelpCommand, isHiddenLegacyCleanupCommand, isPublicLaunchCommand, isRuntimeSelftestCommand, isVersionCommand, resolveLegacySelftestAction } from "./cli-command-policy.mts";
 import { createCodexfastContext, emptyTempWorkspace } from "./cli-context.mts";
 import { asError, debugRuntime, escapeXml, printLine, resolveCommand, resolvePlistBuddy, run, sleep } from "./cli-utils.mts";
 
@@ -1540,36 +1541,34 @@ async function main(): Promise<number> {
   // the cleanup-only compatibility path, but do not advertise it for new use.
   const args = process.argv.slice(2).filter((arg) => arg !== "--quiet");
   const command = args[0] ?? "";
-  const legacySelftestPrefix = "__selftest-legacy-";
-  const legacySelftestAction = command.startsWith(legacySelftestPrefix) ? command.slice(legacySelftestPrefix.length) : "";
-  const legacySelftestActions = new Set(["status", "apply", "repair", "restore"]);
+  const legacySelftestAction = resolveLegacySelftestAction(command);
 
-  if (command === "__selftest-cdp-frame") {
+  if (isRuntimeSelftestCommand(command) && command === "__selftest-cdp-frame") {
     return runCdpFrameSelfTest();
   }
-  if (command === "__selftest-runtime-url") {
+  if (isRuntimeSelftestCommand(command) && command === "__selftest-runtime-url") {
     return runRuntimeUrlSelfTest();
   }
-  if (command === "__selftest-runtime-patch-body") {
+  if (isRuntimeSelftestCommand(command) && command === "__selftest-runtime-patch-body") {
     return runRuntimePatchBodySelfTest();
   }
-  if (legacySelftestAction && !legacySelftestActions.has(legacySelftestAction)) {
+  if (legacySelftestAction === "__invalid__") {
     printUsage();
     return 1;
   }
 
-  if (command === "-h" || command === "--help" || command === "help") {
+  if (isHelpCommand(command)) {
     printUsage();
     return 0;
   }
-  if (command === "-v" || command === "--version" || command === "version") {
+  if (isVersionCommand(command)) {
     printVersion();
     return 0;
   }
-  if (command === "repair") {
+  if (isHiddenLegacyCleanupCommand(command)) {
     return cleanupLegacyWatcherCommand();
   }
-  if (command && command !== "launch" && !legacySelftestAction) {
+  if (command && !isPublicLaunchCommand(command) && !legacySelftestAction) {
     printUsage();
     return 1;
   }
@@ -1584,7 +1583,7 @@ async function main(): Promise<number> {
     return runEmbeddedTool(legacySelftestAction);
   }
 
-  if (command === "launch") {
+  if (isPublicLaunchCommand(command)) {
     return await runRuntimeLaunch();
   }
 
