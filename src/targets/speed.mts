@@ -1,4 +1,4 @@
-import type { TargetSpec } from "../patcher-targets.mts";
+import { defineTargetSpecs } from "./builders.mts";
 
 const SPEED_LABEL_NEEDLE = "settings.agent.speed.label";
 const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
@@ -78,7 +78,7 @@ function restoreSpeedSetting(
     serviceTierSetupOrFactory,
   )}(),${availabilityOrServiceTierSetup}if(!${enabledVariable})return null;let `;
 }
-export const SPEED_TARGET_SPECS: TargetSpec[] = [
+export const SPEED_TARGET_SPECS = defineTargetSpecs(
   {
     id: "speed-setting",
     label: "Speed setting",
@@ -96,7 +96,6 @@ export const SPEED_TARGET_SPECS: TargetSpec[] = [
     needle: ADD_CONTEXT_SPEED_NEEDLE,
     guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_OLD,
     patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_OLD,
-    legacyPatchedSignature: null,
     applyReplacement: "$1=!0,$2",
     restoreReplacement: "$1=Cr(),$2",
   },
@@ -106,7 +105,6 @@ export const SPEED_TARGET_SPECS: TargetSpec[] = [
     needle: ADD_CONTEXT_SPEED_NEEDLE,
     guardedSignature: ADD_CONTEXT_SPEED_GUARDED_SIGNATURE_NEW,
     patchedSignature: ADD_CONTEXT_SPEED_PATCHED_SIGNATURE_NEW,
-    legacyPatchedSignature: null,
     applyReplacement: "$1=!0,$2",
     restoreReplacement: "$1=cr(),$2",
   },
@@ -116,7 +114,6 @@ export const SPEED_TARGET_SPECS: TargetSpec[] = [
     needle: INTELLIGENCE_SPEED_NEEDLE,
     guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE,
     patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$2=!0,",
     restoreReplacement: "$1$2=_f(),",
   },
@@ -126,7 +123,6 @@ export const SPEED_TARGET_SPECS: TargetSpec[] = [
     needle: INTELLIGENCE_SPEED_NEEDLE,
     guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_GF,
     patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_GF,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$2=!0,",
     restoreReplacement: "$1$2=gf(),",
   },
@@ -136,7 +132,6 @@ export const SPEED_TARGET_SPECS: TargetSpec[] = [
     needle: INTELLIGENCE_SPEED_NEEDLE,
     guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QS,
     patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QS,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$2=!0,$5",
     restoreReplacement: "$1$2=$3($4),$5",
   },
@@ -146,7 +141,6 @@ export const SPEED_TARGET_SPECS: TargetSpec[] = [
     needle: INTELLIGENCE_SPEED_NEEDLE,
     guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_QA,
     patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_QA,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$2;$3!0$5",
     restoreReplacement: "$1$2;$3$4$5",
   },
@@ -156,7 +150,6 @@ export const SPEED_TARGET_SPECS: TargetSpec[] = [
     needle: SPEED_SLASH_COMMAND_NEEDLE,
     guardedSignature: SLASH_COMMAND_GUARDED_SIGNATURE,
     patchedSignature: SLASH_COMMAND_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
     applyReplacement: "$1!0$3",
   },
-];
+);

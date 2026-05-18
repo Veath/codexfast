@@ -35,6 +35,7 @@ function insertAfterImports(source: string, insertedSource: string): string {
 }
 
 const patcherTargetsSource = [
+  "targets/builders.mts",
   "targets/speed.mts",
   "targets/plugins.mts",
   "targets/models.mts",

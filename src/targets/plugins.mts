@@ -1,4 +1,4 @@
-import type { TargetSpec } from "../patcher-targets.mts";
+import { defineTargetSpecs } from "./builders.mts";
 
 const PLUGINS_SIDEBAR_NEEDLE = "sidebarElectron.pluginsDisabledTooltip";
 const PLUGINS_PAGE_CONTENT_NEEDLE = "skills.pluginsAuthBlockedToast.title";
@@ -116,14 +116,13 @@ function restorePluginsSidebar26513(
   return `${prefix}${experimentVariable}=${experimentCall},${authGateVariable}=${authGateCall},${disabledPluginsVariable}=${desktopNavVariable}&&${experimentVariable}&&${authGateVariable},${navCapabilityVariable}=${navCapabilityCall},${pluginsLabelVariable}=${desktopNavVariable}&&${navCapabilityVariable}&&!${authGateVariable}${delimiter}`;
 }
 
-export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
+export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
   {
     id: "plugins-access-old",
     label: "Plugins access",
     needle: PLUGINS_SIDEBAR_NEEDLE,
     guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD,
     patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$3=!1,",
     restoreReplacement: "$1$3=$2===`apikey`,",
   },
@@ -167,7 +166,6 @@ export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
     needle: PLUGINS_SIDEBAR_NEEDLE,
     guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506,
     patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$3=rs(`533078438`),$4=Xc($2),$5=!1,$7$8=$6&&$9$10",
     restoreReplacement: "$1$3=rs(`533078438`),$4=Xc($2),$5=$6&&$3&&$4,$7$8=$6&&$9&&!$4$10",
   },
@@ -177,7 +175,6 @@ export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
     needle: PLUGINS_SIDEBAR_NEEDLE,
     guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26506_QO,
     patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26506_QO,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$3=Qo(`533078438`),$4=Xc($2),$5=!1,$7$8=$6&&$9$10",
     restoreReplacement: restorePluginsSidebar26506Qo,
   },
@@ -187,7 +184,6 @@ export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
     needle: PLUGINS_SIDEBAR_NEEDLE,
     guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26513,
     patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26513,
-    legacyPatchedSignature: null,
     applyReplacement: patchPluginsSidebar26513,
     restoreReplacement: restorePluginsSidebar26513,
   },
@@ -197,7 +193,6 @@ export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
     needle: PLUGINS_PAGE_CONTENT_NEEDLE,
     guardedSignature: PLUGINS_PAGE_CONTENT_GUARDED_SIGNATURE,
     patchedSignature: PLUGINS_PAGE_CONTENT_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$2=!1,$4,$5;$6",
     restoreReplacement: "$1$2=$3,$4,$5;$6",
   },
@@ -207,7 +202,6 @@ export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
     needle: PLUGIN_DETAIL_AUTH_NEEDLE,
     guardedSignature: PLUGIN_DETAIL_AUTH_GUARDED_SIGNATURE,
     patchedSignature: PLUGIN_DETAIL_AUTH_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
     applyReplacement: "$1if(!1){",
     restoreReplacement: "$1if($4($2)){",
   },
@@ -217,7 +211,6 @@ export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
     needle: PLUGIN_INSTALL_AVAILABILITY_NEEDLE,
     guardedSignature: PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE,
     patchedSignature: PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$2=$3.length>0&&$4===$3.length&&$5?`disabled-by-admin`:null,$6;",
     restoreReplacement: "$1$2=$3.length>0&&$4===$3.length?$5?`disabled-by-admin`:`connector-unavailable`:null,$6;",
   },
@@ -227,7 +220,6 @@ export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
     needle: "connector-unavailable",
     guardedSignature: PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE,
     patchedSignature: PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$2=$3.length>0&&$4===$3.length&&$5?`disabled-by-admin`:null,$6;",
     restoreReplacement: "$1$2=$3.length>0&&$4===$3.length?$5?`disabled-by-admin`:`connector-unavailable`:null,$6;",
   },
@@ -237,7 +229,6 @@ export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
     needle: PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE,
     guardedSignature: PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE,
     patchedSignature: PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$2=$3,$4=($5?.apps.length??0)>0&&!1,$6;",
     restoreReplacement: "$1$2=$3,$4=($5?.apps.length??0)>0&&$5?.summary.authPolicy===`ON_INSTALL`,$6;",
   },
@@ -247,7 +238,6 @@ export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
     needle: COMPOSER_PLUGIN_MENTIONS_NEEDLE,
     guardedSignature: COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE,
     patchedSignature: COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
     applyReplacement: "$1[]",
     restoreReplacement: "$1[`shared-with-me`]",
   },
@@ -257,8 +247,7 @@ export const PLUGIN_TARGET_SPECS: TargetSpec[] = [
     needle: COMPOSER_PLUGIN_MENTIONS_NEEDLE,
     guardedSignature: COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE_FLAGGED,
     patchedSignature: COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE_FLAGGED,
-    legacyPatchedSignature: null,
     applyReplacement: "$1$2?[]:[]",
     restoreReplacement: "$1$2?[`shared-with-me`]:[]",
   },
-];
+);

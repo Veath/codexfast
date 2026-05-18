@@ -1,4 +1,4 @@
-import type { TargetSpec } from "../patcher-targets.mts";
+import { defineTargetSpecs } from "./builders.mts";
 
 const MODEL_LIST_NEEDLE = "\"list-models-for-host\"";
 const MODEL_QUERY_NEEDLE = "modelsByType";
@@ -14,14 +14,13 @@ const MODEL_QUERY_GUARDED_SIGNATURE =
 const MODEL_QUERY_PATCHED_SIGNATURE =
   /(\}\}\),)\/\*codexfast-gpt55-select\*\/([A-Za-z_$][\w$]*)\.models\.some\(e=>e\.model===`gpt-5\.5`\)\|\|\2\.models\.push\(\{id:`gpt-5\.5`[^]*?isDefault:!1\}\),([A-Za-z_$][\w$]*)\?\?=\2\.models\.find\(e=>e\.model===([A-Za-z_$][\w$]*)\.defaultModel\)\?\?null,\{modelsByType:\2,defaultModel:\3\}/;
 
-export const MODEL_TARGET_SPECS: TargetSpec[] = [
+export const MODEL_TARGET_SPECS = defineTargetSpecs(
   {
     id: "gpt55-model-list",
     label: "GPT-5.5 model list",
     needle: MODEL_LIST_NEEDLE,
     guardedSignature: MODEL_LIST_GUARDED_SIGNATURE,
     patchedSignature: MODEL_LIST_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
     applyReplacement: (_match: string, prefix: string, managerVar: string, hostVar: string, paramsVar: string, suffix: string) =>
       `${prefix}async(${managerVar},{hostId:${hostVar},...${paramsVar}})=>/*codexfast-gpt55*/{let r=await ${managerVar}.sendRequest(\`model/list\`,${paramsVar});return Array.isArray(r.data)&&!r.data.some(e=>e.model===\`gpt-5.5\`)?{...r,data:[...r.data,${GPT_55_MODEL_ENTRY}]}:r}${suffix}`,
     restoreReplacement: (_match: string, prefix: string, managerVar: string, hostVar: string, paramsVar: string, _resultVar: string, suffix: string) =>
@@ -33,10 +32,9 @@ export const MODEL_TARGET_SPECS: TargetSpec[] = [
     needle: MODEL_QUERY_NEEDLE,
     guardedSignature: MODEL_QUERY_GUARDED_SIGNATURE,
     patchedSignature: MODEL_QUERY_PATCHED_SIGNATURE,
-    legacyPatchedSignature: null,
     applyReplacement: (_match: string, prefix: string, defaultVar: string, modelsByTypeVar: string, configVar: string) =>
       `${prefix}/*codexfast-gpt55-select*/${modelsByTypeVar}.models.some(e=>e.model===\`gpt-5.5\`)||${modelsByTypeVar}.models.push(${GPT_55_MODEL_ENTRY}),${defaultVar}??=${modelsByTypeVar}.models.find(e=>e.model===${configVar}.defaultModel)??null,{modelsByType:${modelsByTypeVar},defaultModel:${defaultVar}}`,
     restoreReplacement: (_match: string, prefix: string, modelsByTypeVar: string, defaultVar: string, configVar: string) =>
       `${prefix}${defaultVar}??=${modelsByTypeVar}.models.find(e=>e.model===${configVar}.defaultModel)??null,{modelsByType:${modelsByTypeVar},defaultModel:${defaultVar}}`,
   },
-];
+);
