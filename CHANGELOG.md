@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-05-22
+
 ### Added
 
 - Added support for `Codex.app` `26.519.22136` (`build 3003`) after direct installed-bundle inspection confirmed the updated Settings Fast, service-tier slash command, composer `Intelligence` Speed menu, and Plugins target shapes.
