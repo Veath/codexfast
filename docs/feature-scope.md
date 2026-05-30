@@ -27,7 +27,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 - Exposes the composer-side `Speed` menu.
 - On `26.415.40636` and `26.417.41555`, this is the `Add files and more / +` Speed submenu.
-- On `26.422.21637`, `26.422.30944`, `26.422.62136`, `26.422.71525`, `26.429.20946`, `26.429.30905`, `26.429.61741`, `26.506.21252`, `26.506.31421`, `26.513.20950`, `26.513.31313`, `26.519.22136`, `26.519.31651`, `26.519.41501`, and `26.519.81530`, this is the composer `Intelligence` dropdown Speed submenu.
+- On `26.422.21637`, `26.422.30944`, `26.422.62136`, `26.422.71525`, `26.429.20946`, `26.429.30905`, `26.429.61741`, `26.506.21252`, `26.506.31421`, `26.513.20950`, `26.513.31313`, `26.519.22136`, `26.519.31651`, `26.519.41501`, `26.519.81530`, and `26.527.31326`, this is the composer `Intelligence` dropdown Speed submenu.
 - On supported builds this menu should surface `Standard` and `Fast`.
 
 ### Plugins sidebar access for custom API users

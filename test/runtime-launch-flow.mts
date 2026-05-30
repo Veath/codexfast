@@ -224,7 +224,7 @@ function main(): void {
 
   const nonRunningLaunchApp = join(tmpDir, "NonRunningLaunch.app");
   const nonRunningLaunchOutput = join(tmpDir, "non-running-launch-output.txt");
-  prepareFakeApp(nonRunningLaunchApp, "26.519.81530", "3178");
+  prepareFakeApp(nonRunningLaunchApp, "26.527.31326", "3390");
   runScriptCommand(nonRunningLaunchApp, ["launch"], nonRunningLaunchOutput, { CODEXFAST_TEST_ALLOW_NONZERO: "1" });
   assertContains(readOutput(nonRunningLaunchOutput), "Action: launch", "expected launch to print an action header", readOutput(nonRunningLaunchOutput));
   assertContains(readOutput(nonRunningLaunchOutput), "Compatibility: supported", "expected supported launch to print compatibility", readOutput(nonRunningLaunchOutput));

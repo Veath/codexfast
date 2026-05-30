@@ -44,6 +44,10 @@ const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26519 =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=Li\(`533078438`\),([A-Za-z_$][\w$]*)=Cc\(\2\),([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)&&\3&&\4,([A-Za-z_$][\w$]*)=bs\(\{hostId:[^}]+\}\),([A-Za-z_$][\w$]*)=\6&&\7&&!\4([,;])/;
 const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26519 =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=Li\(`533078438`\),([A-Za-z_$][\w$]*)=Cc\(\2\),([A-Za-z_$][\w$]*)=!1,([A-Za-z_$][\w$]*)=bs\(\{hostId:[^}]+\}\),([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)&&\7([,;])/;
+const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26527 =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=xa\(`533078438`\),([A-Za-z_$][\w$]*)=wl\(\2\),([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)&&\3&&\4,([A-Za-z_$][\w$]*)=(mc\(\{hostId:[^}]+\}\)),([A-Za-z_$][\w$]*)=\6&&\7&&!\4([,;])/;
+const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26527 =
+  /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,)([A-Za-z_$][\w$]*)=xa\(`533078438`\),([A-Za-z_$][\w$]*)=wl\(\2\),([A-Za-z_$][\w$]*)=!1,([A-Za-z_$][\w$]*)=(mc\(\{hostId:[^}]+\}\)),([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)&&\7([,;])/;
 const PLUGINS_PAGE_CONTENT_GUARDED_SIGNATURE =
   /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*);(if\(e\[\d+\]!==[A-Za-z_$][\w$]*\|\|e\[\d+\]!==\2\|\|)/;
 const PLUGINS_PAGE_CONTENT_PATCHED_SIGNATURE =
@@ -156,6 +160,14 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26519,
     patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26519,
     applyReplacement: "$1$3=Li(`533078438`),$4=Cc($2),$5=!1,$7=bs({hostId:Tt}),$8=$6&&$7$9",
+  },
+  {
+    id: "plugins-access-26527",
+    label: "Plugins access",
+    needle: PLUGINS_SIDEBAR_NEEDLE,
+    guardedSignature: PLUGINS_SIDEBAR_GUARDED_SIGNATURE_26527,
+    patchedSignature: PLUGINS_SIDEBAR_PATCHED_SIGNATURE_26527,
+    applyReplacement: "$1$3=xa(`533078438`),$4=wl($2),$5=!1,$7=$8,$9=$6&&$7$10",
   },
   {
     id: "plugins-page-content-26429",

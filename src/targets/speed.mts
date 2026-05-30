@@ -6,15 +6,15 @@ const SPEED_SLASH_COMMAND_DISABLE_NEEDLE = "composer.speedSlashCommand.disableDe
 const ADD_CONTEXT_SPEED_NEEDLE = "composer.addContext.speed.option.fast.description";
 const INTELLIGENCE_SPEED_NEEDLE = "composer.intelligenceDropdown.speed.title";
 const GUARDED_SIGNATURE_WITH_OPTION_COUNT =
-  /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|xe)\(\),)(\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe)\(\);)if\(!\1\|\|\4\.availableOptions\.length<=1\)return null;/;
+  /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|xe|je)\(\),)(\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(!\1\|\|\4\.availableOptions\.length<=1\)return null;/;
 const PATCHED_SIGNATURE_WITH_OPTION_COUNT =
-  /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|xe)\(\),)(\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe)\(\);)if\(\4\.availableOptions\.length<=1\)return null;/;
+  /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|xe|je)\(\),)(\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(\4\.availableOptions\.length<=1\)return null;/;
 const GUARDED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe)\(\);)if\(!\1\)return null;/;
+  /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|je)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(Ce|se|be|xe|ye|Ve|de|fe)\(\);)let /;
+  /([A-Za-z_$][\w$]*)=!0,(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)let /;
 const NORMALIZED_PATCHED_SIGNATURE =
-  /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe)\(\);)let /;
+  /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|je)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)let /;
 const SLASH_COMMAND_GUARDED_SIGNATURE =
   /(id:`speed`,title:[^,]+,description:[^,]+,requiresEmptyComposer:!1,enabled:)([A-Za-z_$][\w$]*)(,Icon:[^,]+,onSelect:[^,]+,dependencies:[A-Za-z_$][\w$]*})/;
 const SLASH_COMMAND_PATCHED_SIGNATURE =
@@ -65,6 +65,7 @@ function resolveSpeedAvailabilityCall(serviceTierFactory: string): string {
     Ve: "de",
     de: "ie",
     fe: "se",
+    _e: "je",
   };
   const availabilityCall = availabilityCalls[serviceTierFactory];
   if (!availabilityCall) {
