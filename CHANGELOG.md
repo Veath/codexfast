@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-05-30
+
 ### Added
 
 - Added support for `Codex.app` `26.527.31326` (`build 3390`) after direct installed-bundle inspection confirmed updated Settings Fast and Plugins sidebar patch signatures.
