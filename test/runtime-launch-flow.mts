@@ -196,6 +196,21 @@ function main(): void {
   assertNotContains(readOutput(launchSuccessOutput), "Browser-use native pipe peer auth", "expected launch dry-run hook not to report removed native pipe target", readOutput(launchSuccessOutput));
   assertNoBundleMutationTools(launchSuccessOutput);
 
+  const launchPendingTargetsApp = join(tmpDir, "LaunchPendingTargets.app");
+  const launchPendingTargetsOutput = join(tmpDir, "launch-pending-targets-output.txt");
+  prepareFakeApp(launchPendingTargetsApp, "26.527.60818", "3437");
+  runScriptCommand(launchPendingTargetsApp, ["launch"], launchPendingTargetsOutput, {
+    CODEXFAST_TEST_RUNTIME_LAUNCH_PENDING_TARGETS: "1",
+    CODEXFAST_TEST_ALLOW_NONZERO: "1",
+  });
+  assertContains(readOutput(launchPendingTargetsOutput), "Runtime launch failed: Runtime patch interception did not observe required targets:", "expected launch not to report success before required initial targets are patched", readOutput(launchPendingTargetsOutput));
+  assertContains(readOutput(launchPendingTargetsOutput), "Retried renderer reload 1 time while waiting for required targets.", "expected missing required target output to document the bounded reload retry", readOutput(launchPendingTargetsOutput));
+  assertContains(readOutput(launchPendingTargetsOutput), "Plugins access", "expected missing required target output to name Plugins access", readOutput(launchPendingTargetsOutput));
+  assertNotContains(readOutput(launchPendingTargetsOutput), "Runtime launch completed.", "expected missing required targets not to report launch completion", readOutput(launchPendingTargetsOutput));
+  assertNotContains(readOutput(launchPendingTargetsOutput), "No supported target chunks loaded yet.", "expected launch not to treat missing required initial targets as a lazy success state", readOutput(launchPendingTargetsOutput));
+  assertContains(readOutput(launchPendingTargetsOutput), "Exit code: 1", "expected missing required target launch simulation to return exit code 1", readOutput(launchPendingTargetsOutput));
+  assertNoBundleMutationTools(launchPendingTargetsOutput);
+
   const launchSessionLostApp = join(tmpDir, "LaunchSessionLost.app");
   const launchSessionLostOutput = join(tmpDir, "launch-session-lost-output.txt");
   prepareFakeApp(launchSessionLostApp, "26.519.22136", "3003");

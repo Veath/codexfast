@@ -41,6 +41,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
    - Do not trust a missing runtime match as proof that a feature target is gone. For every expected feature path, search the extracted bundle by stable needles such as `settings.agent.speed.label`, `composer.speedSlashCommand.title`, `composer.intelligenceDropdown.speed.title`, `sidebarElectron.pluginsDisabledTooltip`, `skills.pluginsAuthBlockedToast.title`, `pluginDeepLinkAuthBlocked`, `plugins.install.connectorUnavailable`, `plugins.installModal.about`, and nearby `serviceTierSettings` / auth-method gates.
    - Distinguish "target absent" from "target present but regex stale". A target is absent only after broad non-locale JS search shows the user-facing needle and adjacent gate are no longer present anywhere in `webview/assets`.
    - For runtime launch work, inspect the real CDP request URLs as well as the extracted archive paths. Current `26.513.20950` serves renderer JavaScript as `app://-/assets/*.js`, while older assumptions used `app://-/webview/assets/*.js`.
+   - For runtime launch interception issues, verify the browser-level CDP auto-attach path first: `Target.setAutoAttach` must use `waitForDebuggerOnStart` and flattened sessions, `Fetch.enable` must run in the renderer `sessionId` before `Runtime.runIfWaitingForDebugger`, and the heartbeat should stay browser-level rather than page-level.
 
 2. Make the smallest viable code change.
    - Keep patch logic narrow.

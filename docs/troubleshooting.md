@@ -9,8 +9,8 @@ Expected behavior:
 - `npx codexfast launch` is the public runtime path.
 - It starts Codex with a local CDP endpoint and applies runtime patches only to that launched session.
 - Keep the `codexfast launch` process running while you use Codex. Settings and Plugins load some chunks lazily, and those later requests still need the runtime interceptor.
-- During initial startup, the launcher waits for patch targets while intercepted JavaScript traffic is still active. It only treats missing initial targets as a launch failure after the renderer has gone quiet or after the bounded startup cap is reached.
-- The launcher sends a lightweight CDP heartbeat. If the runtime patch session drops, it reconnects at most three times, re-enables `Page` and `Fetch`, reloads the renderer, and then reports `Runtime patch session lost` if reconnects are exhausted.
+- During initial startup, the launcher connects to the browser-level CDP target, auto-attaches to renderer targets with `waitForDebuggerOnStart`, enables `Fetch` interception in the renderer session, and then lets the renderer continue. If a required target such as `Plugins access` is still not observed, launch retries one renderer reload and then fails closed instead of repeatedly refreshing the app.
+- The launcher sends a lightweight browser-level CDP heartbeat. If the runtime patch session drops, it reconnects at most three times, re-enables browser auto-attach, and then reports `Runtime patch session lost` if reconnects are exhausted.
 - It does not modify `app.asar`, `Info.plist`, the app bundle, the app signature, backups, or macOS privacy permissions.
 - It removes the legacy launchd auto-repair watcher if an older codexfast version installed one.
 

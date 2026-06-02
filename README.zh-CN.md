@@ -22,9 +22,9 @@ npx codexfast launch
 
 `Codex.app` 的前端 bundle 里已经包含 Fast、`/fast`、Speed、模型列表和 Plugins 相关 UI 路径，但 custom API 用户会被本地 gate 隐藏或禁用。`codexfast` 不新增后端服务，也不调用 OpenAI 私有 API。
 
-`codexfast launch` 会用本地 Chrome DevTools Protocol endpoint 启动 Codex，拦截当前会话里匹配的 renderer JavaScript 响应，并在内存里应用窄范围 patch。使用 Codex 时需要保持 `codexfast launch` 进程运行；Settings 和 Plugins 的部分 chunk 是懒加载的，首次窗口打开后仍然需要 runtime interceptor。
+`codexfast launch` 会用本地 Chrome DevTools Protocol endpoint 启动 Codex，通过 browser-level CDP target 在 renderer JavaScript 执行前挂载拦截，拦截当前会话里匹配的 renderer JavaScript 响应，并在内存里应用窄范围 patch。使用 Codex 时需要保持 `codexfast launch` 进程运行；Settings 和 Plugins 的部分 chunk 是懒加载的，首次窗口打开后仍然需要 runtime interceptor。
 
-launcher 会发送轻量 CDP heartbeat。runtime patch session 断开时最多做三次 bounded reconnect，仍失败则打印 `Runtime patch session lost`，不会静默继续跑一个未 patch 的会话。如果 launch 进程退出，或者 Codex 启动后 runtime patch session 断开，Codex 会继续运行；但断开后才懒加载的功能 chunk 可能不会再被 patch，需要完全退出 Codex 并重新用 `codexfast` 启动。
+launcher 会发送轻量 browser-level CDP heartbeat。runtime patch session 断开时最多做三次 bounded reconnect，仍失败则打印 `Runtime patch session lost`，不会静默继续跑一个未 patch 的会话。如果 launch 进程退出，或者 Codex 启动后 runtime patch session 断开，Codex 会继续运行；但断开后才懒加载的功能 chunk 可能不会再被 patch，需要完全退出 Codex 并重新用 `codexfast` 启动。
 
 如果旧版 codexfast 安装过 launchd auto-repair watcher，`launch` 会在启动 Codex 前自动移除这个 legacy watcher。
 

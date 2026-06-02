@@ -5,7 +5,7 @@ import { join } from "node:path";
 import {
   CdpConnection,
   cdpCommandWithTimeout,
-  waitForRuntimePatchConnection,
+  waitForRuntimeBrowserConnection,
 } from "./cli-cdp.mts";
 import type { CodexfastContext } from "./cli-context.mts";
 import { printExitBlock, printExitCode } from "./cli-output.mts";
@@ -35,6 +35,15 @@ type FetchRequestPausedParams = {
   };
   responseHeaders?: FetchHeader[];
   responseStatusCode?: number;
+};
+
+type TargetAttachedToTargetParams = {
+  sessionId: string;
+  targetInfo: {
+    type: string;
+    url: string;
+  };
+  waitingForDebugger?: boolean;
 };
 
 type RuntimePatchSessionHandle = {
@@ -71,6 +80,8 @@ const runtimePatchHeartbeatIntervalMs = 5_000;
 const runtimePatchHeartbeatTimeoutMs = 2_000;
 const runtimePatchReconnectMaxAttempts = 3;
 const runtimePatchReconnectDelayMs = 1_000;
+const runtimePatchRequiredInitialLabels = ["Plugins access"];
+const runtimePatchRequiredInitialReloadMaxAttempts = 1;
 
 function checkCodexRunning(): CodexRunningCheck {
   if (process.env.CODEXFAST_TEST_CODEX_RUNNING === "1") {
@@ -168,18 +179,20 @@ function responseHeadersForFulfill(
 async function continueFetchRequest(
   cdp: CdpConnection,
   requestId: string,
+  sessionId?: string,
 ): Promise<void> {
-  await cdp.send("Fetch.continueRequest", { requestId });
+  await cdp.send("Fetch.continueRequest", { requestId }, sessionId);
 }
 
 async function handleFetchRequestPaused(
   cdp: CdpConnection,
   patcherSource: string,
   params: FetchRequestPausedParams,
+  sessionId?: string,
 ): Promise<RuntimeFetchPatchOutcome> {
   const resourceUrl = params.request.url;
   if (!isRuntimeJavaScriptResource(resourceUrl)) {
-    await continueFetchRequest(cdp, params.requestId);
+    await continueFetchRequest(cdp, params.requestId, sessionId);
     return { labels: [], sawJavaScript: false };
   }
   debugRuntime(`paused ${resourceUrl}`);
@@ -188,16 +201,16 @@ async function handleFetchRequestPaused(
   try {
     bodyResult = await cdp.send("Fetch.getResponseBody", {
       requestId: params.requestId,
-    });
+    }, sessionId);
   } catch {
     debugRuntime(`getResponseBody failed ${resourceUrl}`);
-    await continueFetchRequest(cdp, params.requestId);
+    await continueFetchRequest(cdp, params.requestId, sessionId);
     return { labels: [], sawJavaScript: true };
   }
 
   if (typeof bodyResult.body !== "string") {
     debugRuntime(`missing body ${resourceUrl}`);
-    await continueFetchRequest(cdp, params.requestId);
+    await continueFetchRequest(cdp, params.requestId, sessionId);
     return { labels: [], sawJavaScript: true };
   }
 
@@ -213,7 +226,7 @@ async function handleFetchRequestPaused(
     );
   } catch (error) {
     debugRuntime(`patch failed ${resourceUrl}: ${asError(error).message}`);
-    await continueFetchRequest(cdp, params.requestId);
+    await continueFetchRequest(cdp, params.requestId, sessionId);
     return { labels: [], sawJavaScript: true };
   }
   const labels = [
@@ -227,7 +240,7 @@ async function handleFetchRequestPaused(
   }
 
   if (patchResult.content === body) {
-    await continueFetchRequest(cdp, params.requestId);
+    await continueFetchRequest(cdp, params.requestId, sessionId);
     return { labels, sawJavaScript: true };
   }
 
@@ -236,7 +249,7 @@ async function handleFetchRequestPaused(
     responseCode: params.responseStatusCode ?? 200,
     responseHeaders: responseHeadersForFulfill(params.responseHeaders),
     body: Buffer.from(patchResult.content, "utf8").toString("base64"),
-  });
+  }, sessionId);
   return { labels, sawJavaScript: true };
 }
 
@@ -284,16 +297,18 @@ function waitForRuntimeInitialPageLoad(cdp: CdpConnection): Promise<void> {
   });
 }
 
+function missingRuntimePatchRequiredInitialLabels(
+  observedLabels: Set<string>,
+): string[] {
+  return runtimePatchRequiredInitialLabels.filter(
+    (label) => !observedLabels.has(label),
+  );
+}
+
 async function enableRuntimePatchInterception(
   cdp: CdpConnection,
-  options: { waitForInitialLoad: boolean; reload: boolean },
+  options: { sessionId: string; waitForInitialLoad: boolean; reload: boolean },
 ): Promise<void> {
-  await cdp.send("Page.enable");
-  debugRuntime("Page.enable ok");
-  if (options.waitForInitialLoad) {
-    await waitForRuntimeInitialPageLoad(cdp);
-    debugRuntime("initial page load settled");
-  }
   await cdp.send("Fetch.enable", {
     patterns: [
       {
@@ -305,21 +320,40 @@ async function enableRuntimePatchInterception(
         requestStage: "Response",
       },
     ],
-  });
+  }, options.sessionId);
   debugRuntime("Fetch.enable ok");
+  if (options.waitForInitialLoad || options.reload) {
+    await cdp.send("Page.enable", undefined, options.sessionId);
+    debugRuntime("Page.enable ok");
+  }
+  if (options.waitForInitialLoad) {
+    await waitForRuntimeInitialPageLoad(cdp);
+    debugRuntime("initial page load settled");
+  }
   if (options.reload) {
-    await cdp.send("Page.reload", { ignoreCache: true });
+    await cdp.send("Page.reload", { ignoreCache: true }, options.sessionId);
     debugRuntime("Page.reload ok");
   }
+}
+
+async function enableRuntimePatchAutoAttach(cdp: CdpConnection): Promise<void> {
+  await cdp.send("Target.setAutoAttach", {
+    autoAttach: true,
+    waitForDebuggerOnStart: true,
+    flatten: true,
+  });
+  debugRuntime("Target.setAutoAttach ok");
 }
 
 async function startRuntimePatchSession(
   debugPort: number,
   patcherSource: string,
 ): Promise<RuntimePatchSessionHandle> {
-  let cdp = await waitForRuntimePatchConnection(debugPort);
+  let cdp = await waitForRuntimeBrowserConnection(debugPort);
   const observedLabels = new Set<string>();
   const pausedRequestHandlers = new Set<Promise<void>>();
+  const attachedPageSessions = new Set<string>();
+  let activePageSessionId: string | null = null;
   let settleTimer: ReturnType<typeof setTimeout> | null = null;
   let failSession: (error: Error) => void = () => undefined;
   let keepSessionOpen = false;
@@ -376,14 +410,12 @@ async function startRuntimePatchSession(
         `Runtime patch session reconnecting (${attempt}/${runtimePatchReconnectMaxAttempts})...`,
       );
       try {
-        const nextCdp = await waitForRuntimePatchConnection(debugPort);
+        const nextCdp = await waitForRuntimeBrowserConnection(debugPort);
         connectionGeneration += 1;
         cdp = nextCdp;
         registerRuntimeFetchHandler(connectionGeneration);
-        await enableRuntimePatchInterception(cdp, {
-          waitForInitialLoad: false,
-          reload: true,
-        });
+        registerRuntimeTargetHandler(connectionGeneration);
+        await enableRuntimePatchAutoAttach(cdp);
         printLine("Runtime patch session reconnected.");
         reconnecting = false;
         return;
@@ -413,11 +445,12 @@ async function startRuntimePatchSession(
     attachedCdp.onEventError((error) => {
       handleConnectionFailure(generation, error);
     });
-    attachedCdp.on("Fetch.requestPaused", (params: unknown) => {
+    attachedCdp.on("Fetch.requestPaused", (params: unknown, message) => {
       const task = handleFetchRequestPaused(
         attachedCdp,
         patcherSource,
         params as FetchRequestPausedParams,
+        message.sessionId,
       ).then((outcome) => {
         const { labels } = outcome;
         let sawNewLabel = false;
@@ -447,6 +480,60 @@ async function startRuntimePatchSession(
     });
   };
 
+  const registerRuntimeTargetHandler = (generation: number): void => {
+    const attachedCdp = cdp;
+    attachedCdp.on("Target.attachedToTarget", async (params: unknown) => {
+      if (closed || generation !== connectionGeneration) {
+        return;
+      }
+      const attached = params as TargetAttachedToTargetParams;
+      const targetType = attached.targetInfo?.type ?? "";
+      const targetUrl = attached.targetInfo?.url ?? "";
+      if (targetType === "browser") {
+        return;
+      }
+      if (targetType !== "page" && !targetUrl.startsWith("app://")) {
+        if (attached.waitingForDebugger) {
+          await attachedCdp.send(
+            "Runtime.runIfWaitingForDebugger",
+            undefined,
+            attached.sessionId,
+          );
+        }
+        return;
+      }
+
+      activePageSessionId = attached.sessionId;
+      attachedPageSessions.add(attached.sessionId);
+      debugRuntime(
+        `attached target type=${targetType} url=${targetUrl || "<pending>"} session=${attached.sessionId}`,
+      );
+      await enableRuntimePatchInterception(attachedCdp, {
+        sessionId: attached.sessionId,
+        waitForInitialLoad: false,
+        reload: !attached.waitingForDebugger,
+      });
+      if (attached.waitingForDebugger) {
+        await attachedCdp.send(
+          "Runtime.runIfWaitingForDebugger",
+          undefined,
+          attached.sessionId,
+        );
+        debugRuntime("Runtime.runIfWaitingForDebugger ok");
+      }
+    });
+    attachedCdp.on("Target.detachedFromTarget", (params: unknown) => {
+      const detached = params as { sessionId?: string };
+      if (!detached.sessionId) {
+        return;
+      }
+      attachedPageSessions.delete(detached.sessionId);
+      if (activePageSessionId === detached.sessionId) {
+        activePageSessionId = [...attachedPageSessions][0] ?? null;
+      }
+    });
+  };
+
   const startHeartbeat = (): void => {
     heartbeatTimer = setInterval(() => {
       if (closed || reconnecting) {
@@ -459,7 +546,7 @@ async function startRuntimePatchSession(
         return;
       }
       void cdpCommandWithTimeout(
-        cdp.send("Page.getFrameTree"),
+        cdp.send("Browser.getVersion"),
         runtimePatchHeartbeatTimeoutMs,
         "Timed out waiting for CDP heartbeat.",
       ).catch((error: unknown) => {
@@ -474,6 +561,7 @@ async function startRuntimePatchSession(
       let noTargetIdleTimer: ReturnType<typeof setTimeout> | null = null;
       let completed = false;
       let finishStarted = false;
+      let sawInitialJavaScript = false;
 
       const clearSessionTimers = (): void => {
         if (settleTimer) {
@@ -518,10 +606,25 @@ async function startRuntimePatchSession(
           if (completed) {
             return;
           }
-          if (observedLabels.size === 0) {
+          if (!sawInitialJavaScript) {
             fail(
               new Error(
-                "Runtime patch interception completed without required targets.",
+                "Runtime patch interception timed out before JavaScript responses were observed.",
+              ),
+            );
+            return;
+          }
+          const missingRequiredLabels =
+            missingRuntimePatchRequiredInitialLabels(observedLabels);
+          if (missingRequiredLabels.length > 0) {
+            const retryLine =
+              requiredInitialReloadAttempts === 1
+                ? "Retried renderer reload 1 time while waiting for required targets."
+                : `Retried renderer reload ${requiredInitialReloadAttempts} times while waiting for required targets.`;
+            printLine(retryLine);
+            fail(
+              new Error(
+                `Runtime patch interception did not observe required targets: ${missingRequiredLabels.join(", ")}.`,
               ),
             );
             return;
@@ -531,19 +634,65 @@ async function startRuntimePatchSession(
           resolve([...observedLabels]);
         })();
       };
+      let requiredInitialReloadAttempts = 0;
 
-      const markJavaScriptTraffic = (): void => {
-        if (completed || finishStarted || observedLabels.size > 0) {
+      const retryInitialTargetLoad = (): void => {
+        if (
+          completed ||
+          finishStarted ||
+          missingRuntimePatchRequiredInitialLabels(observedLabels).length === 0
+        ) {
           return;
         }
+        if (
+          requiredInitialReloadAttempts >=
+          runtimePatchRequiredInitialReloadMaxAttempts
+        ) {
+          finish();
+          return;
+        }
+        requiredInitialReloadAttempts += 1;
+        debugRuntime(
+          `retrying renderer reload for required runtime targets (${requiredInitialReloadAttempts}/${runtimePatchRequiredInitialReloadMaxAttempts})`,
+        );
+        if (!activePageSessionId) {
+          finish();
+          return;
+        }
+        void cdp
+          .send("Page.reload", { ignoreCache: true }, activePageSessionId)
+          .then(() => {
+            debugRuntime("Page.reload retry for required runtime targets ok");
+          })
+          .catch((error: unknown) => {
+            fail(asError(error));
+          });
+      };
+
+      const markJavaScriptTraffic = (): void => {
+        if (
+          completed ||
+          finishStarted ||
+          missingRuntimePatchRequiredInitialLabels(observedLabels).length === 0
+        ) {
+          return;
+        }
+        sawInitialJavaScript = true;
         if (noTargetIdleTimer) {
           clearTimeout(noTargetIdleTimer);
         }
-        noTargetIdleTimer = setTimeout(finish, runtimePatchNoTargetIdleMs);
+        noTargetIdleTimer = setTimeout(
+          retryInitialTargetLoad,
+          runtimePatchNoTargetIdleMs,
+        );
       };
 
       const markObserved = (): void => {
         if (completed || settleTimer) {
+          return;
+        }
+        if (missingRuntimePatchRequiredInitialLabels(observedLabels).length > 0) {
+          markJavaScriptTraffic();
           return;
         }
         if (noTargetIdleTimer) {
@@ -559,12 +708,10 @@ async function startRuntimePatchSession(
     });
     void initialSession.catch(() => undefined);
     registerRuntimeFetchHandler(connectionGeneration);
+    registerRuntimeTargetHandler(connectionGeneration);
 
     try {
-      await enableRuntimePatchInterception(cdp, {
-        waitForInitialLoad: true,
-        reload: true,
-      });
+      await enableRuntimePatchAutoAttach(cdp);
     } catch (error) {
       failSession(asError(error));
     }
@@ -665,6 +812,16 @@ export async function runRuntimeLaunch(
       return printExitBlock(0).exitCode;
     }
     return printExitCode(0).exitCode;
+  }
+
+  if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_PENDING_TARGETS === "1") {
+    printLine(
+      "Retried renderer reload 1 time while waiting for required targets.",
+    );
+    printLine(
+      "Runtime launch failed: Runtime patch interception did not observe required targets: Plugins access.",
+    );
+    return printExitBlock(1).exitCode;
   }
 
   let child: ChildProcess | null = null;

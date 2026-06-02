@@ -16,17 +16,25 @@ type CdpPendingCommand = {
   reject: (error: Error) => void;
 };
 
-type CdpEventHandler = (params: unknown) => void | Promise<void>;
+type CdpEventHandler = (
+  params: unknown,
+  message: CdpMessage,
+) => void | Promise<void>;
 type CdpEventErrorHandler = (error: Error) => void;
 
 type CdpMessage = {
   id?: number;
   method?: string;
   params?: unknown;
+  sessionId?: string;
   result?: unknown;
   error?: {
     message?: string;
   };
+};
+
+type CdpVersion = {
+  webSocketDebuggerUrl?: string;
 };
 
 const runtimePatchConnectTimeoutMs = 12_000;
@@ -351,13 +359,22 @@ export class CdpConnection {
     });
   }
 
-  send<T = unknown>(method: string, params?: unknown): Promise<T> {
+  send<T = unknown>(
+    method: string,
+    params?: unknown,
+    sessionId?: string,
+  ): Promise<T> {
     if (this.closed || this.socket.destroyed) {
       return Promise.reject(new Error("CDP WebSocket connection closed."));
     }
     const id = this.nextCommandId;
     this.nextCommandId += 1;
-    const payload = params === undefined ? JSON.stringify({ id, method }) : JSON.stringify({ id, method, params });
+    const message =
+      params === undefined ? { id, method, sessionId } : { id, method, params, sessionId };
+    if (sessionId === undefined) {
+      delete message.sessionId;
+    }
+    const payload = JSON.stringify(message);
     return new Promise<T>((resolve, reject) => {
       this.pending.set(id, {
         resolve: (value: unknown) => resolve(value as T),
@@ -428,7 +445,7 @@ export class CdpConnection {
     if (parsed.method) {
       debugRuntime(`event ${parsed.method}`);
       for (const handler of this.eventHandlers.get(parsed.method) ?? []) {
-        Promise.resolve(handler(parsed.params)).catch((error: unknown) => {
+        Promise.resolve(handler(parsed.params, parsed)).catch((error: unknown) => {
           this.emitEventError(asError(error));
         });
       }
@@ -447,6 +464,40 @@ export class CdpConnection {
     }
     this.pending.clear();
   }
+}
+
+export async function waitForRuntimeBrowserConnection(
+  debugPort: number,
+): Promise<CdpConnection> {
+  const deadline = Date.now() + runtimePatchConnectTimeoutMs;
+  let lastError: Error | null = null;
+  let debuggerResponded = false;
+
+  while (Date.now() < deadline) {
+    try {
+      const version = await httpGetJson<CdpVersion>(
+        `http://127.0.0.1:${debugPort}/json/version`,
+      );
+      debuggerResponded = true;
+      if (version.webSocketDebuggerUrl) {
+        debugRuntime("connecting browser target");
+        try {
+          return await CdpConnection.connect(version.webSocketDebuggerUrl);
+        } catch (error) {
+          lastError = asError(error);
+        }
+      }
+    } catch (error) {
+      lastError = asError(error);
+    }
+    await sleep(100);
+  }
+
+  const detail = lastError ? `: ${lastError.message}` : "";
+  const reason = debuggerResponded
+    ? "CDP browser target unavailable"
+    : "CDP browser endpoint unavailable";
+  throw new Error(`${reason} after bounded retries${detail}`);
 }
 
 async function findDebuggableRendererTarget(debugPort: number): Promise<CdpTarget | null> {

@@ -22,9 +22,9 @@ Verified for `Codex.app` `26.527.60818` (`build 3437`), `26.527.31326` (`build 3
 
 `Codex.app` already contains the Fast, `/fast`, Speed, model-list, and Plugins UI paths in its packaged frontend bundle, but some of those paths are hidden or disabled for custom API users by local gate checks. `codexfast` does not add a backend service or call a private OpenAI API.
 
-`codexfast launch` starts Codex with a local Chrome DevTools Protocol endpoint, intercepts matching renderer JavaScript responses for that launched session, and applies narrow patch rules in memory. Keep the `codexfast launch` process running while you use Codex; Settings and Plugins load some feature chunks lazily, so the runtime interceptor must stay attached after the first window appears.
+`codexfast launch` starts Codex with a local Chrome DevTools Protocol endpoint, attaches through the browser-level CDP target before renderer JavaScript runs, intercepts matching renderer JavaScript responses for that launched session, and applies narrow patch rules in memory. Keep the `codexfast launch` process running while you use Codex; Settings and Plugins load some feature chunks lazily, so the runtime interceptor must stay attached after the first window appears.
 
-The launcher sends a lightweight CDP heartbeat, tries up to three bounded reconnects if the runtime patch session drops, and reports `Runtime patch session lost` instead of silently continuing unpatched. If the launch process exits or the runtime patch session disconnects after Codex has started, Codex keeps running. Lazy-loaded features that were not patched before that point may stay unavailable until you fully quit Codex and relaunch with `codexfast`.
+The launcher sends a lightweight browser-level CDP heartbeat, tries up to three bounded reconnects if the runtime patch session drops, and reports `Runtime patch session lost` instead of silently continuing unpatched. If the launch process exits or the runtime patch session disconnects after Codex has started, Codex keeps running. Lazy-loaded features that were not patched before that point may stay unavailable until you fully quit Codex and relaunch with `codexfast`.
 
 If an older codexfast version installed the launchd auto-repair watcher, `launch` removes that legacy watcher before starting Codex.
 

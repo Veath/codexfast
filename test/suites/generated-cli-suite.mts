@@ -7,7 +7,12 @@ export function runGeneratedCliSuite(rootDir: string): void {
   const generatedCli = readFileSync(join(rootDir, "bin", "codexfast"), "utf8");
   assertContains(generatedCli, 'const MIN_NODE_VERSION = "18.12.0";', "expected generated CLI to enforce Node.js 18.12.0 or later");
   assertContains(generatedCli, "runtimePatchReconnectMaxAttempts = 3", "expected generated CLI to bound runtime launch reconnect attempts");
-  assertContains(generatedCli, '"Page.getFrameTree"', "expected generated CLI to heartbeat the CDP runtime patch session");
+  assertContains(generatedCli, '"Browser.getVersion"', "expected generated CLI to heartbeat the browser-level CDP runtime patch session");
+  assertContains(generatedCli, '"Target.setAutoAttach"', "expected generated CLI to auto-attach before renderer JavaScript runs");
+  assertContains(generatedCli, "waitForDebuggerOnStart: true", "expected generated CLI to pause new renderer targets before JavaScript runs");
+  assertContains(generatedCli, '"Runtime.runIfWaitingForDebugger"', "expected generated CLI to resume renderer targets after interception is enabled");
+  assertContains(generatedCli, "message.sessionId", "expected generated CLI to route Fetch events through flattened target sessions");
+  assertContains(generatedCli, "send(method, params, sessionId)", "expected generated CLI to send CDP commands to flattened target sessions");
   assertContains(generatedCli, "Runtime patch session lost after", "expected generated CLI to report exhausted runtime patch reconnects clearly");
   assertContains(generatedCli, "runtimePatchNoTargetIdleMs", "expected generated CLI to wait for quiet JS traffic before failing initial runtime target discovery");
   assertContains(generatedCli, "detached: true", "expected runtime launch to isolate Codex from the launch terminal process group");

@@ -6,6 +6,10 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed runtime launch on supported builds by attaching to renderer targets through browser-level CDP before they run, enabling `Fetch` interception before JavaScript executes, and failing closed if `Plugins access` is not observed before reporting completion.
+
 ## [0.23.0] - 2026-06-02
 
 ### Added
