@@ -38,7 +38,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
    - For runtime launch behavior, inspect `src/cli-runtime-launch.mts`, `src/cli-runtime-patcher.mts`, `src/cli-cdp.mts`, and `src/cli.mts` together because the generated CLI inlines those modules.
    - For app environment or watcher behavior, inspect `src/cli-app-environment.mts`, `src/cli-watcher.mts`, and `src/cli.mts` together.
    - If the change is bundle-specific, identify the exact gated text key, target file shape, and runtime URL shape first.
-   - Do not trust a missing runtime match as proof that a feature target is gone. For every expected feature path, search the extracted bundle by stable needles such as `settings.agent.speed.label`, `composer.speedSlashCommand.title`, `composer.intelligenceDropdown.speed.title`, `sidebarElectron.pluginsDisabledTooltip`, `skills.pluginsAuthBlockedToast.title`, `pluginDeepLinkAuthBlocked`, `plugins.install.connectorUnavailable`, `plugins.installModal.about`, and nearby `serviceTierSettings` / auth-method gates.
+   - Do not trust a missing runtime match as proof that a feature target is gone. For every expected feature path, search the extracted bundle by stable needles such as `settings.agent.speed.label`, `composer.speedSlashCommand.title`, `composer.intelligenceDropdown.speed.title`, `sidebarElectron.pluginsDisabledTooltip`, `skills.pluginsAuthBlockedToast.title`, `pluginDeepLinkAuthBlocked`, `openai-curated-marketplaces-hidden`, `skills.appsPage.pluginsLimitedCatalog`, `plugins.install.connectorUnavailable`, `plugins.installModal.about`, and nearby `serviceTierSettings` / auth-method gates.
    - Distinguish "target absent" from "target present but regex stale". A target is absent only after broad non-locale JS search shows the user-facing needle and adjacent gate are no longer present anywhere in `webview/assets`.
    - For runtime launch work, inspect the real CDP request URLs as well as the extracted archive paths. Current `26.513.20950` serves renderer JavaScript as `app://-/assets/*.js`, while older assumptions used `app://-/webview/assets/*.js`.
    - For runtime launch interception issues, verify the browser-level CDP auto-attach path first: `Target.setAutoAttach` must use `waitForDebuggerOnStart` and flattened sessions, `Fetch.enable` must run in the renderer `sessionId` before `Runtime.runIfWaitingForDebugger`, and the heartbeat should stay browser-level rather than page-level.
@@ -77,7 +77,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 - Composer-side `Speed` menu patch still works for the target bundle:
   - `Add files and more / +` Speed submenu on builds that still expose the add-context path.
   - Composer `Intelligence` dropdown Speed submenu on newer builds where the add-context Speed entry moved.
-- Every Plugins gate required by the target build still works, including sidebar access, page content, plugin detail redirects, install-button availability, and install-modal content where present.
+- Every Plugins gate required by the target build still works, including sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, and install-modal content where present.
 - Unsupported versions are blocked before runtime launch starts Codex.
 - Generated CLI extraction still runs the embedded runtime patch engine.
 - Public help and the interactive menu must not advertise `status`, `apply`, `restore`, `install-watcher`, or `uninstall-watcher`.
@@ -87,6 +87,7 @@ Do not use this skill for release-only work. Use `codexfast-release-flow` for th
 
 - Updating source target regexes without regenerating and inspecting the generated CLI.
 - Treating a missing target as product behavior. First prove whether the bundle still contains the feature needle in a moved file or with a renamed minified hook.
+- Assuming old Plugins sidebar/page/detail gates are required on every new build. Some builds remove those gates but add new catalog or install gates, so required initial targets must stay build-specific.
 - Writing a fixture assertion that passes on both guarded and patched code. For hidden-control fixes, assert both the patched replacement and the removal of the original guard, for example `if(!n)return null;` is gone.
 - Describing a Codex build as supported before adding tests and whitelist coverage.
 - Updating only one README and leaving English/Chinese docs out of sync.

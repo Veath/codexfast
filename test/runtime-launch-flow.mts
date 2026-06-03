@@ -248,6 +248,15 @@ function main(): void {
   assertNoLaunchCalls(nonRunningLaunchOutput);
   assertNoBundleMutationTools(nonRunningLaunchOutput);
 
+  const nonRunningLaunch26601App = join(tmpDir, "NonRunningLaunch26601.app");
+  const nonRunningLaunch26601Output = join(tmpDir, "non-running-launch-26601-output.txt");
+  prepareFakeApp(nonRunningLaunch26601App, "26.601.21317", "3511");
+  runScriptCommand(nonRunningLaunch26601App, ["launch"], nonRunningLaunch26601Output, { CODEXFAST_TEST_ALLOW_NONZERO: "1" });
+  assertContains(readOutput(nonRunningLaunch26601Output), "Compatibility: supported", "expected 26.601 launch gate to be supported", readOutput(nonRunningLaunch26601Output));
+  assertContains(readOutput(nonRunningLaunch26601Output), "Runtime launch failed: Codex executable not found:", "expected supported 26.601 fake app launch to fail closed before app start", readOutput(nonRunningLaunch26601Output));
+  assertNoLaunchCalls(nonRunningLaunch26601Output);
+  assertNoBundleMutationTools(nonRunningLaunch26601Output);
+
   const missingPgrepLaunchApp = join(tmpDir, "MissingPgrepLaunch.app");
   const missingPgrepLaunchOutput = join(tmpDir, "missing-pgrep-launch-output.txt");
   prepareFakeApp(missingPgrepLaunchApp, "26.519.22136", "3003");

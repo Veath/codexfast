@@ -9,7 +9,7 @@ Expected behavior:
 - `npx codexfast launch` is the public runtime path.
 - It starts Codex with a local CDP endpoint and applies runtime patches only to that launched session.
 - Keep the `codexfast launch` process running while you use Codex. Settings and Plugins load some chunks lazily, and those later requests still need the runtime interceptor.
-- During initial startup, the launcher connects to the browser-level CDP target, auto-attaches to renderer targets with `waitForDebuggerOnStart`, enables `Fetch` interception in the renderer session, and then lets the renderer continue. If a required target such as `Plugins access` is still not observed, launch retries one renderer reload and then fails closed instead of repeatedly refreshing the app.
+- During initial startup, the launcher connects to the browser-level CDP target, auto-attaches to renderer targets with `waitForDebuggerOnStart`, enables `Fetch` interception in the renderer session, and then lets the renderer continue. If a required target for the current build is still not observed, launch retries one renderer reload and then fails closed instead of repeatedly refreshing the app. Older builds require `Plugins access`; `26.601.21317` does not require that legacy target because the old sidebar/page/detail gates are absent.
 - The launcher sends a lightweight browser-level CDP heartbeat. If the runtime patch session drops, it reconnects at most three times, re-enables browser auto-attach, and then reports `Runtime patch session lost` if reconnects are exhausted.
 - It does not modify `app.asar`, `Info.plist`, the app bundle, the app signature, backups, or macOS privacy permissions.
 - It removes the legacy launchd auto-repair watcher if an older codexfast version installed one.
@@ -53,12 +53,13 @@ Current public `launch` removes those files before starting Codex. The old watch
 
 Expected boundary:
 
-- `codexfast` removes the known custom-API Plugins gates for supported builds. On newer builds this can include sidebar access, page content, plugin detail redirects, install-button availability, and install-modal content.
+- `codexfast` removes the known custom-API Plugins gates for supported builds. On newer builds this can include sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, and install-modal content.
 - It does not guarantee that every plugin, connector runtime, or app integration is available after those gates are patched.
 
 Check:
 
 - The launch process is still running.
+- If Plugins opens but shows only the limited-catalog placeholder, such as `More plugins coming soon`, inspect the build-specific curated catalog gate. On `26.601.21317`, the stable needles are `openai-curated-marketplaces-hidden` and `skills.appsPage.pluginsLimitedCatalog` in `use-plugins-*.js`.
 - Connector/app integration availability.
 - Plugin package state.
 - Admin-side or upstream restrictions.

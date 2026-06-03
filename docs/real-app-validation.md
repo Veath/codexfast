@@ -10,7 +10,7 @@ Use these checks when validating `launch` behavior. Do not mark a build as real-
 
 - `npx codexfast launch` starts Codex when Codex is not already running
 - The launched session opens with runtime patches active
-- The launch output reports the required initial target labels for the current build, including `Plugins access`, before it reports `Runtime launch completed`
+- The launch output reports the required initial target labels for the current build before it reports `Runtime launch completed`; older builds include `Plugins access`, while `26.601.21317` does not require that legacy target because the old sidebar/page/detail gates are absent
 - The `codexfast launch` process remains running while the launched Codex session is open
 - The runtime patch session heartbeat stays quiet during normal use, and no `Runtime patch session lost` message appears
 - If the launch process exits or the runtime patch session is lost after Codex has started, Codex keeps running without further runtime patching
@@ -43,6 +43,7 @@ Use these checks when validating `launch` behavior. Do not mark a build as real-
 - The `Plugins` sidebar entry is visible for custom API users
 - Opening `Plugins` does not fail only because of the auth-method gate
 - On builds with separate Plugins page/detail gates, plugin cards and plugin detail views show plugin-related content instead of falling back to skills-only or redirecting to `/skills`
+- On builds with curated catalog gates, the full curated OpenAI plugin catalog remains visible for custom API users instead of showing only the limited-catalog placeholder such as `More plugins coming soon`
 - On builds with install-flow gates, at least one plugin install button is not blocked solely by aggregate connector-unavailable state
 - On builds with install-modal content gates, the install modal shows basic plugin details such as About, Includes, or Capabilities instead of an empty information card
 - At least one plugin install or connect path is not blocked solely by `authMethod === "apikey"` or another patched custom-API gate

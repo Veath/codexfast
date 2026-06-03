@@ -9,6 +9,10 @@ const GUARDED_SIGNATURE_WITH_OPTION_COUNT =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|xe|je)\(\),)(\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(!\1\|\|\4\.availableOptions\.length<=1\)return null;/;
 const PATCHED_SIGNATURE_WITH_OPTION_COUNT =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|xe|je)\(\),)(\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(\4\.availableOptions\.length<=1\)return null;/;
+const GUARDED_SIGNATURE_WITH_DESTRUCTURED_ALLOWED_OPTION_COUNT =
+  /(\{isServiceTierAllowed:([A-Za-z_$][\w$]*)\}=[A-Za-z_$][\w$]*\(\),\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=[A-Za-z_$][\w$]*\(\);)if\(!\2\|\|\3\.availableOptions\.length<=1\)return null;/;
+const PATCHED_SIGNATURE_WITH_DESTRUCTURED_ALLOWED_OPTION_COUNT =
+  /(\{isServiceTierAllowed:([A-Za-z_$][\w$]*)\}=[A-Za-z_$][\w$]*\(\),\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=[A-Za-z_$][\w$]*\(\);)if\(\3\.availableOptions\.length<=1\)return null;/;
 const GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|je)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
@@ -51,6 +55,10 @@ const INTELLIGENCE_SPEED_GUARDED_SIGNATURE_OPTIONS_TERNARY =
   /([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*&&([A-Za-z_$][\w$]*)\.availableOptions\.length>1\?(\(0,[A-Za-z_$][\w$]*\.jsx\)\([A-Za-z_$][\w$]*,\{options:\2\.availableOptions,selectedServiceTier:[^}]+,isLoading:\2\.isLoading,setServiceTier:[^}]+,onSelectComplete:[^}]+\}\)):null,/;
 const INTELLIGENCE_SPEED_PATCHED_SIGNATURE_OPTIONS_TERNARY =
   /([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.availableOptions\.length>1\?(\(0,[A-Za-z_$][\w$]*\.jsx\)\([A-Za-z_$][\w$]*,\{options:\2\.availableOptions,selectedServiceTier:[^}]+,isLoading:\2\.isLoading,setServiceTier:[^}]+,onSelectComplete:[^}]+\}\)):null,/;
+const INTELLIGENCE_SPEED_GUARDED_SIGNATURE_OPTIONS_BOOLEAN =
+  /([,;])([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)&&([A-Za-z_$][\w$]*)\.availableOptions\.length>1,/;
+const INTELLIGENCE_SPEED_PATCHED_SIGNATURE_OPTIONS_BOOLEAN =
+  /([,;])([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.availableOptions\.length>1,/;
 const INTELLIGENCE_SPEED_GUARDED_SIGNATURE_TERNARY =
   /([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*\?(\(0,[A-Za-z_$][\w$]*\.jsx\)\([A-Za-z_$][\w$]*,\{selectedServiceTier:[^}]+,isLoading:[^}]+,setServiceTier:[^}]+,onSelectComplete:[^}]+\}\)):null,/;
 const INTELLIGENCE_SPEED_PATCHED_SIGNATURE_TERNARY =
@@ -91,6 +99,14 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: GUARDED_SIGNATURE_WITH_OPTION_COUNT,
     patchedSignature: PATCHED_SIGNATURE_WITH_OPTION_COUNT,
     applyReplacement: "$1=$2$3if($4.availableOptions.length<=1)return null;",
+  },
+  {
+    id: "speed-setting-destructured-option-count",
+    label: "Speed setting",
+    needle: SPEED_LABEL_NEEDLE,
+    guardedSignature: GUARDED_SIGNATURE_WITH_DESTRUCTURED_ALLOWED_OPTION_COUNT,
+    patchedSignature: PATCHED_SIGNATURE_WITH_DESTRUCTURED_ALLOWED_OPTION_COUNT,
+    applyReplacement: "$1if($3.availableOptions.length<=1)return null;",
   },
   {
     id: "speed-setting",
@@ -149,6 +165,14 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_OPTIONS_TERNARY,
     patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_OPTIONS_TERNARY,
     applyReplacement: "$1=$2.availableOptions.length>1?$3:null,",
+  },
+  {
+    id: "intelligence-speed-menu-options-boolean",
+    label: "Composer Intelligence Speed menu",
+    needle: INTELLIGENCE_SPEED_NEEDLE,
+    guardedSignature: INTELLIGENCE_SPEED_GUARDED_SIGNATURE_OPTIONS_BOOLEAN,
+    patchedSignature: INTELLIGENCE_SPEED_PATCHED_SIGNATURE_OPTIONS_BOOLEAN,
+    applyReplacement: "$1$2=$4.availableOptions.length>1,",
   },
   {
     id: "intelligence-speed-menu-ternary",

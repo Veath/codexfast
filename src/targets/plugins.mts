@@ -6,6 +6,7 @@ const PLUGIN_DETAIL_AUTH_NEEDLE = "pluginDeepLinkAuthBlocked";
 const PLUGIN_INSTALL_AVAILABILITY_NEEDLE = "plugins.install.connectorUnavailable";
 const PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE = "plugins.installModal.about";
 const COMPOSER_PLUGIN_MENTIONS_NEEDLE = "composer.atMentionList.pluginsLoading";
+const PLUGINS_CATALOG_VISIBILITY_NEEDLE = "openai-curated-marketplaces-hidden";
 const PLUGINS_SIDEBAR_GUARDED_SIGNATURE_OLD =
   /(\{authMethod:([A-Za-z_$][\w$]*)\}=[^,]+,[^]*?cf\(`533078438`\),)([A-Za-z_$][\w$]*)=\2===`apikey`,/;
 const PLUGINS_SIDEBAR_PATCHED_SIGNATURE_OLD =
@@ -68,6 +69,10 @@ const PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE =
   /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)=\(([A-Za-z_$][\w$]*)\?\.apps\.length\?\?0\)>0&&\5\?\.summary\.authPolicy===`ON_INSTALL`,([A-Za-z_$][\w$]*);/;
 const PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE =
   /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)=\(([A-Za-z_$][\w$]*)\?\.apps\.length\?\?0\)>0&&!1,([A-Za-z_$][\w$]*);/;
+const PLUGIN_INSTALL_MODAL_CONTENT_PROP_GUARDED_SIGNATURE =
+  /(disclosureData:([A-Za-z_$][\w$]*)\?[A-Za-z_$][\w$]*:void 0,[^]*?shouldShowInstallDisclosure:)\2(,showLockedComputerUseInstall:)/;
+const PLUGIN_INSTALL_MODAL_CONTENT_PROP_PATCHED_SIGNATURE =
+  /(disclosureData:([A-Za-z_$][\w$]*)\?[A-Za-z_$][\w$]*:void 0,[^]*?shouldShowInstallDisclosure:)!1(,showLockedComputerUseInstall:)/;
 const COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE =
   /(additionalMarketplaceKinds:)\[`shared-with-me`\]/;
 const COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE =
@@ -76,6 +81,14 @@ const COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE_FLAGGED =
   /(additionalMarketplaceKinds:)([A-Za-z_$][\w$]*)\?\[`shared-with-me`\]:\[\]/;
 const COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE_FLAGGED =
   /(additionalMarketplaceKinds:)([A-Za-z_$][\w$]*)\?\[\]:\[\]/;
+const SHARED_PLUGIN_PREFETCH_GUARDED_SIGNATURE =
+  /(\{enabled:)([A-Za-z_$][\w$]*)(,additionalMarketplaceKinds:)\[`shared-with-me`\](\}\),[A-Za-z_$][\w$]*\(\{enabled:)\2(,hostId:[A-Za-z_$][\w$]*,marketplaceKind:`shared-with-me`\}\),)/;
+const SHARED_PLUGIN_PREFETCH_PATCHED_SIGNATURE =
+  /(\{enabled:)([A-Za-z_$][\w$]*)(,additionalMarketplaceKinds:)\[\](\}\),[A-Za-z_$][\w$]*\(\{enabled:)!1(,hostId:[A-Za-z_$][\w$]*,marketplaceKind:`shared-with-me`\}\),)/;
+const PLUGINS_CATALOG_VISIBILITY_GUARDED_SIGNATURE =
+  /function ([A-Za-z_$][\w$]*)\(([A-Za-z_$][\w$]*)\)\{return \2!==`chatgpt`\}/;
+const PLUGINS_CATALOG_VISIBILITY_PATCHED_SIGNATURE =
+  /function ([A-Za-z_$][\w$]*)\(([A-Za-z_$][\w$]*)\)\{return !1\}/;
 function patchPluginsSidebar26513(
   _match: string,
   prefix: string,
@@ -222,6 +235,14 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     applyReplacement: "$1$2=$3,$4=($5?.apps.length??0)>0&&!1,$6;",
   },
   {
+    id: "plugin-install-modal-content-prop-26601",
+    label: "Plugin install modal content",
+    needle: PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE,
+    guardedSignature: PLUGIN_INSTALL_MODAL_CONTENT_PROP_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_INSTALL_MODAL_CONTENT_PROP_PATCHED_SIGNATURE,
+    applyReplacement: "$1!1$3",
+  },
+  {
     id: "composer-plugin-mentions-26513",
     label: "Composer plugin mentions",
     needle: COMPOSER_PLUGIN_MENTIONS_NEEDLE,
@@ -236,5 +257,21 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE_FLAGGED,
     patchedSignature: COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE_FLAGGED,
     applyReplacement: "$1$2?[]:[]",
+  },
+  {
+    id: "shared-plugin-marketplace-prefetch-26601",
+    label: "Composer plugin mentions",
+    needle: "additionalMarketplaceKinds",
+    guardedSignature: SHARED_PLUGIN_PREFETCH_GUARDED_SIGNATURE,
+    patchedSignature: SHARED_PLUGIN_PREFETCH_PATCHED_SIGNATURE,
+    applyReplacement: "$1$2$3[]$4!1$5",
+  },
+  {
+    id: "plugins-catalog-visibility-26601",
+    label: "Plugins catalog visibility",
+    needle: PLUGINS_CATALOG_VISIBILITY_NEEDLE,
+    guardedSignature: PLUGINS_CATALOG_VISIBILITY_GUARDED_SIGNATURE,
+    patchedSignature: PLUGINS_CATALOG_VISIBILITY_PATCHED_SIGNATURE,
+    applyReplacement: "function $1($2){return !1}",
   },
 );

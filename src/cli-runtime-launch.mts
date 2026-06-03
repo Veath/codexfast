@@ -80,7 +80,10 @@ const runtimePatchHeartbeatIntervalMs = 5_000;
 const runtimePatchHeartbeatTimeoutMs = 2_000;
 const runtimePatchReconnectMaxAttempts = 3;
 const runtimePatchReconnectDelayMs = 1_000;
-const runtimePatchRequiredInitialLabels = ["Plugins access"];
+const runtimePatchDefaultRequiredInitialLabels = ["Plugins access"];
+const runtimePatchNoPluginsAccessRequiredVersionKeys = new Set([
+  "26.601.21317+3511",
+]);
 const runtimePatchRequiredInitialReloadMaxAttempts = 1;
 
 function checkCodexRunning(): CodexRunningCheck {
@@ -299,10 +302,20 @@ function waitForRuntimeInitialPageLoad(cdp: CdpConnection): Promise<void> {
 
 function missingRuntimePatchRequiredInitialLabels(
   observedLabels: Set<string>,
+  requiredLabels: string[],
 ): string[] {
-  return runtimePatchRequiredInitialLabels.filter(
+  return requiredLabels.filter(
     (label) => !observedLabels.has(label),
   );
+}
+
+function runtimePatchRequiredInitialLabelsForVersion(
+  versionKey: string,
+): string[] {
+  if (runtimePatchNoPluginsAccessRequiredVersionKeys.has(versionKey)) {
+    return [];
+  }
+  return runtimePatchDefaultRequiredInitialLabels;
 }
 
 async function enableRuntimePatchInterception(
@@ -348,6 +361,7 @@ async function enableRuntimePatchAutoAttach(cdp: CdpConnection): Promise<void> {
 async function startRuntimePatchSession(
   debugPort: number,
   patcherSource: string,
+  requiredInitialLabels: string[],
 ): Promise<RuntimePatchSessionHandle> {
   let cdp = await waitForRuntimeBrowserConnection(debugPort);
   const observedLabels = new Set<string>();
@@ -615,7 +629,10 @@ async function startRuntimePatchSession(
             return;
           }
           const missingRequiredLabels =
-            missingRuntimePatchRequiredInitialLabels(observedLabels);
+            missingRuntimePatchRequiredInitialLabels(
+              observedLabels,
+              requiredInitialLabels,
+            );
           if (missingRequiredLabels.length > 0) {
             const retryLine =
               requiredInitialReloadAttempts === 1
@@ -640,7 +657,10 @@ async function startRuntimePatchSession(
         if (
           completed ||
           finishStarted ||
-          missingRuntimePatchRequiredInitialLabels(observedLabels).length === 0
+          missingRuntimePatchRequiredInitialLabels(
+            observedLabels,
+            requiredInitialLabels,
+          ).length === 0
         ) {
           return;
         }
@@ -670,14 +690,21 @@ async function startRuntimePatchSession(
       };
 
       const markJavaScriptTraffic = (): void => {
-        if (
-          completed ||
-          finishStarted ||
-          missingRuntimePatchRequiredInitialLabels(observedLabels).length === 0
-        ) {
+        if (completed || finishStarted) {
           return;
         }
         sawInitialJavaScript = true;
+        if (
+          missingRuntimePatchRequiredInitialLabels(
+            observedLabels,
+            requiredInitialLabels,
+          ).length === 0
+        ) {
+          if (!settleTimer) {
+            settleTimer = setTimeout(finish, runtimePatchSettleMs);
+          }
+          return;
+        }
         if (noTargetIdleTimer) {
           clearTimeout(noTargetIdleTimer);
         }
@@ -691,7 +718,13 @@ async function startRuntimePatchSession(
         if (completed || settleTimer) {
           return;
         }
-        if (missingRuntimePatchRequiredInitialLabels(observedLabels).length > 0) {
+        sawInitialJavaScript = true;
+        if (
+          missingRuntimePatchRequiredInitialLabels(
+            observedLabels,
+            requiredInitialLabels,
+          ).length > 0
+        ) {
           markJavaScriptTraffic();
           return;
         }
@@ -740,8 +773,13 @@ async function startRuntimePatchSession(
 function waitForRuntimePatchSession(
   debugPort: number,
   patcherSource: string,
+  requiredInitialLabels: string[],
 ): Promise<RuntimePatchSessionHandle> {
-  return startRuntimePatchSession(debugPort, patcherSource);
+  return startRuntimePatchSession(
+    debugPort,
+    patcherSource,
+    requiredInitialLabels,
+  );
 }
 
 function waitForRuntimeLaunchProcessExit(child: ChildProcess): Promise<number> {
@@ -815,11 +853,17 @@ export async function runRuntimeLaunch(
   }
 
   if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_PENDING_TARGETS === "1") {
+    const requiredInitialLabels = runtimePatchRequiredInitialLabelsForVersion(
+      context.metadata.versionKey,
+    );
+    const missingRequiredTargets = requiredInitialLabels.length > 0
+      ? requiredInitialLabels.join(", ")
+      : "none";
     printLine(
       "Retried renderer reload 1 time while waiting for required targets.",
     );
     printLine(
-      "Runtime launch failed: Runtime patch interception did not observe required targets: Plugins access.",
+      `Runtime launch failed: Runtime patch interception did not observe required targets: ${missingRequiredTargets}.`,
     );
     return printExitBlock(1).exitCode;
   }
@@ -830,7 +874,11 @@ export async function runRuntimeLaunch(
     const debugPort = randomDebugPort();
     child = launchCodexProcess(context, debugPort);
     const childExit = waitForRuntimeLaunchProcessExit(child);
-    session = await waitForRuntimePatchSession(debugPort, patcherSource);
+    session = await waitForRuntimePatchSession(
+      debugPort,
+      patcherSource,
+      runtimePatchRequiredInitialLabelsForVersion(context.metadata.versionKey),
+    );
     printRuntimeLaunchReady(session.patchedLabels);
     const outcome = await Promise.race([
       childExit.then((exitCode) => ({ type: "child-exit" as const, exitCode })),
