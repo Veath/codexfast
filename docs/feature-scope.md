@@ -35,7 +35,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - Exposes the `Plugins` sidebar/page access path for custom API users on supported builds.
 - This removes the relevant auth-method gates for API-key users. On newer builds this includes the sidebar entry, the `/skills` Plugins page content gate, plugin detail deep-link redirects, the aggregate connector-unavailable install block, and the install-modal disclosure-only content gate when present.
 - On `26.513.20950` and `26.513.31313`, this also keeps the composer `@` plugin mention list from requesting the remote `shared-with-me` plugin catalog, so local and already available plugin mentions can load under API-key auth.
-- On `26.601.21317`, the old sidebar/page/detail custom-API gates are not present in the inspected bundle; `codexfast` keeps the curated OpenAI plugin catalog visible, disables the remote `shared-with-me` plugin prefetch, and keeps basic plugin install-modal content visible for custom API users.
+- On `26.601.21317`, the old sidebar/page/detail custom-API gates are not present in the inspected bundle; `codexfast` keeps the curated OpenAI plugin catalog visible, disables the remote `shared-with-me` plugin prefetch, keeps plugin detail app-connect content and basic plugin install-modal content visible, and keeps the post-install app connection flow open for `ON_USE` plugins with pending app auth.
 - This does not guarantee that every plugin or connector flow is available. Plugin state, connector runtime behavior, or admin-side restrictions may still block a specific plugin.
 - This does not unlock the remote ChatGPT shared plugin marketplace; that catalog still requires ChatGPT authentication.
 

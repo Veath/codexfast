@@ -68,6 +68,24 @@ export function runRuntimePatchSuite(): void {
   assertContains(pluginInstallModal26601Result.content, "shouldShowInstallDisclosure:!1,showLockedComputerUseInstall:Y", "expected 26.601 plugin install modal patch to keep basic modal content visible");
   assertContains(pluginInstallModal26601Result.patchedLabels.join("\n"), "Plugin install modal content", "expected 26.601 plugin install modal patch to report modal content target");
 
+  const pluginDetailAppConnect26601Body = "directoryApps;function l({directoryApps:e,pluginApps:t}){let n=new Map(e.map(e=>[e.id,e]));return t.map(e=>n.get(e.id)).filter(e=>e!=null)}";
+  const pluginDetailAppConnect26601Result = applyRuntimePatchesToBody("webview/assets/check-plugin-availability-26601.js", pluginDetailAppConnect26601Body);
+  assertContains(pluginDetailAppConnect26601Result.content, "n.get(e.id)??{appMetadata:null,branding:null,description:e.description??null", "expected 26.601 plugin detail app connect patch to keep plugin app rows when the directory app list is empty");
+  assertContains(pluginDetailAppConnect26601Result.content, "isAccessible:!1,isEnabled:!1", "expected 26.601 plugin detail app connect fallback apps to render as connectable");
+  assertContains(pluginDetailAppConnect26601Result.content, "name:e.name??e.displayName??e.id", "expected 26.601 plugin detail app connect fallback apps to preserve a usable app name");
+  assertNotContains(pluginDetailAppConnect26601Result.content, "t.map(e=>n.get(e.id)).filter(e=>e!=null)", "expected 26.601 plugin detail app connect patch to stop dropping plugin apps missing from the directory list");
+  assertContains(pluginDetailAppConnect26601Result.patchedLabels.join("\n"), "Plugin detail app connect", "expected 26.601 plugin detail app connect patch to report app connect target");
+
+  const pluginPostInstallAppConnect26601Body = "appsNeedingAuth;await Promise.all([p(je),p(tt)]);let y=await kt({authPolicy:_.authPolicy,codexHome:l,hostId:t,plugin:h,queryClient:a,windowType:`electron`});if(Me(h),_.authPolicy===`ON_USE`||_.appsNeedingAuth.length===0&&y.length===0){let e=s.postInstallComposerPrefill?.trim();e&&m({text:e}),E();return}F({apps:_.appsNeedingAuth,browserExtensions:y,connectingAppId:_.authPolicy===`ON_INSTALL`&&_.appsNeedingAuth.length===1&&y.length===0?_.appsNeedingAuth[0].id:void 0,options:s,plugin:h})";
+  const pluginPostInstallAppConnect26601Result = applyRuntimePatchesToBody("webview/assets/use-plugin-install-flow-26601.js", pluginPostInstallAppConnect26601Body);
+  assertContains(pluginPostInstallAppConnect26601Result.content, "codexfastAppsNeedingAuth=_.appsNeedingAuth.length>0?_.appsNeedingAuth:(h.plugin.apps??[]).map", "expected 26.601 post-install app connect patch to fall back to plugin-declared apps when the install response omits app auth rows");
+  assertContains(pluginPostInstallAppConnect26601Result.content, "if(Me(h),codexfastAppsNeedingAuth.length===0&&y.length===0)", "expected 26.601 post-install app connect patch not to close ON_USE plugins that still need app auth");
+  assertContains(pluginPostInstallAppConnect26601Result.content, "F({apps:codexfastAppsNeedingAuth,browserExtensions:y", "expected 26.601 post-install app connect patch to pass fallback apps into the install session");
+  assertContains(pluginPostInstallAppConnect26601Result.content, "connectingAppId:(_.authPolicy===`ON_INSTALL`||_.authPolicy===`ON_USE`)&&codexfastAppsNeedingAuth.length===1&&y.length===0?codexfastAppsNeedingAuth[0].id:void 0", "expected 26.601 post-install app connect patch to open the single-app connect modal for ON_USE plugins");
+  assertNotContains(pluginPostInstallAppConnect26601Result.content, "_.authPolicy===`ON_USE`||_.appsNeedingAuth.length===0", "expected 26.601 post-install app connect patch to remove the ON_USE close shortcut");
+  assertNotContains(pluginPostInstallAppConnect26601Result.content, "F({apps:_.appsNeedingAuth", "expected 26.601 post-install app connect patch not to pass an empty backend app auth list into the install session");
+  assertContains(pluginPostInstallAppConnect26601Result.patchedLabels.join("\n"), "Plugin post-install app connect", "expected 26.601 post-install app connect patch to report app connect target");
+
   const sharedMarketplacePrefetch26601Body = "additionalMarketplaceKinds;return D(e,I,{enabled:z,additionalMarketplaceKinds:[`shared-with-me`]}),E({enabled:z,hostId:e,marketplaceKind:`shared-with-me`}),E({enabled:z,hostId:e,marketplaceKind:`workspace-directory`}),null";
   const sharedMarketplacePrefetch26601Result = applyRuntimePatchesToBody("webview/assets/app-prefetch-impl-26601.js", sharedMarketplacePrefetch26601Body);
   assertContains(sharedMarketplacePrefetch26601Result.content, "additionalMarketplaceKinds:[]}),E({enabled:!1,hostId:e,marketplaceKind:`shared-with-me`})", "expected 26.601 shared marketplace prefetch patch to skip the remote shared plugin catalog");

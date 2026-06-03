@@ -62,7 +62,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - the Settings-side Fast control
   - the composer `/fast` slash command
   - the composer-side `Speed` menu, whether exposed through add-context or Intelligence UI
-  - every Plugins gate required by the target build, including sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, and install-modal content where present
+  - every Plugins gate required by the target build, including sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, install-modal content, plugin detail app-connect content, and post-install app connect where present
   - the GPT-5.5 model-list bridge and model query selector injection targets
   - unsupported-version blocking before runtime launch
   - generated CLI behavior for runtime patch extraction

@@ -8,12 +8,14 @@ This project follows a simple release-oriented changelog format.
 
 ### Added
 
-- Added support for `Codex.app` `26.601.21317` (`build 3511`) after direct installed-bundle inspection confirmed updated Settings Fast, composer `Intelligence` Speed, plugin install modal, and shared plugin marketplace prefetch signatures.
+- Added support for `Codex.app` `26.601.21317` (`build 3511`) after direct installed-bundle inspection confirmed updated Settings Fast, composer `Intelligence` Speed, plugin install modal, plugin app-connect, and shared plugin marketplace prefetch signatures.
 
 ### Changed
 
 - Runtime launch no longer requires the legacy `Plugins access` initial target for `26.601.21317` because the inspected bundle no longer contains the old sidebar/page/detail custom-API gates.
 - `26.601.21317` now keeps the curated OpenAI plugin catalog visible for custom API users instead of showing only the limited catalog placeholder.
+- `26.601.21317` now keeps plugin-declared app rows visible on plugin detail pages even when the directory app list is unavailable, so installed plugins can still show the app connect area.
+- `26.601.21317` now keeps the post-install app connection flow open for `ON_USE` plugins with pending app auth, so a single required app can show its `Connect <App>` permission modal after plugin install.
 
 ## [0.23.1] - 2026-06-02
 

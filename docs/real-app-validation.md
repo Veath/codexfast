@@ -45,7 +45,9 @@ Use these checks when validating `launch` behavior. Do not mark a build as real-
 - On builds with separate Plugins page/detail gates, plugin cards and plugin detail views show plugin-related content instead of falling back to skills-only or redirecting to `/skills`
 - On builds with curated catalog gates, the full curated OpenAI plugin catalog remains visible for custom API users instead of showing only the limited-catalog placeholder such as `More plugins coming soon`
 - On builds with install-flow gates, at least one plugin install button is not blocked solely by aggregate connector-unavailable state
+- On builds with plugin detail app-connect gates, an installed plugin that declares an app shows the app connect area on the plugin detail page even if the directory app list is unavailable
 - On builds with install-modal content gates, the install modal shows basic plugin details such as About, Includes, or Capabilities instead of an empty information card
+- On builds with post-install app connect gates, installing a plugin that has one pending required app opens the app's `Connect <App>` permission modal instead of closing the install flow after only a success toast
 - At least one plugin install or connect path is not blocked solely by `authMethod === "apikey"` or another patched custom-API gate
 
 ## Model List

@@ -73,6 +73,26 @@ const PLUGIN_INSTALL_MODAL_CONTENT_PROP_GUARDED_SIGNATURE =
   /(disclosureData:([A-Za-z_$][\w$]*)\?[A-Za-z_$][\w$]*:void 0,[^]*?shouldShowInstallDisclosure:)\2(,showLockedComputerUseInstall:)/;
 const PLUGIN_INSTALL_MODAL_CONTENT_PROP_PATCHED_SIGNATURE =
   /(disclosureData:([A-Za-z_$][\w$]*)\?[A-Za-z_$][\w$]*:void 0,[^]*?shouldShowInstallDisclosure:)!1(,showLockedComputerUseInstall:)/;
+const PLUGIN_DETAIL_APP_CONNECT_FALLBACK_GUARDED_SIGNATURE =
+  /function ([A-Za-z_$][\w$]*)\(\{directoryApps:([A-Za-z_$][\w$]*),pluginApps:([A-Za-z_$][\w$]*)\}\)\{let ([A-Za-z_$][\w$]*)=new Map\(\2\.map\(([A-Za-z_$][\w$]*)=>\[\5\.id,\5\]\)\);return \3\.map\(([A-Za-z_$][\w$]*)=>\4\.get\(\6\.id\)\)\.filter\(\6=>\6!=null\)\}/;
+const PLUGIN_DETAIL_APP_CONNECT_FALLBACK_PATCHED_SIGNATURE =
+  /function ([A-Za-z_$][\w$]*)\(\{directoryApps:([A-Za-z_$][\w$]*),pluginApps:([A-Za-z_$][\w$]*)\}\)\{let ([A-Za-z_$][\w$]*)=new Map\(\2\.map\(([A-Za-z_$][\w$]*)=>\[\5\.id,\5\]\)\);return \3\.map\(([A-Za-z_$][\w$]*)=>\4\.get\(\6\.id\)\?\?\{appMetadata:null,branding:null,description:\6\.description\?\?null,distributionChannel:null,id:\6\.id,installUrl:\6\.installUrl\?\?null,isAccessible:!1,isEnabled:!1,labels:null,logoUrl:\6\.logoUrl\?\?null,logoUrlDark:\6\.logoUrlDark\?\?null,name:\6\.name\?\?\6\.displayName\?\?\6\.id,pluginDisplayNames:\[\]\}\)\.filter\(\6=>\6\.id!=null\)\}/;
+const PLUGIN_POST_INSTALL_APP_CONNECT_FALLBACK_GUARDED_SIGNATURE =
+  /(let )([A-Za-z_$][\w$]*)=await ([A-Za-z_$][\w$]*)\(\{authPolicy:([A-Za-z_$][\w$]*)\.authPolicy,codexHome:([A-Za-z_$][\w$]*),hostId:([A-Za-z_$][\w$]*),plugin:([A-Za-z_$][\w$]*),queryClient:([A-Za-z_$][\w$]*),windowType:`electron`\}\);if\(/;
+const PLUGIN_POST_INSTALL_APP_CONNECT_FALLBACK_PATCHED_SIGNATURE =
+  /(let )([A-Za-z_$][\w$]*)=await ([A-Za-z_$][\w$]*)\(\{authPolicy:([A-Za-z_$][\w$]*)\.authPolicy,codexHome:([A-Za-z_$][\w$]*),hostId:([A-Za-z_$][\w$]*),plugin:([A-Za-z_$][\w$]*),queryClient:([A-Za-z_$][\w$]*),windowType:`electron`\}\),codexfastAppsNeedingAuth=\4\.appsNeedingAuth\.length>0\?\4\.appsNeedingAuth:\(\7\.plugin\.apps\?\?\[\]\)\.map\([A-Za-z_$][\w$]*=>\(\{appMetadata:null,branding:null,description:[A-Za-z_$][\w$]*\.description\?\?null,distributionChannel:null,id:[A-Za-z_$][\w$]*\.id,installUrl:[A-Za-z_$][\w$]*\.installUrl\?\?null,isAccessible:!1,isEnabled:!1,labels:null,logoUrl:[A-Za-z_$][\w$]*\.logoUrl\?\?null,logoUrlDark:[A-Za-z_$][\w$]*\.logoUrlDark\?\?null,name:[A-Za-z_$][\w$]*\.name\?\?[A-Za-z_$][\w$]*\.displayName\?\?[A-Za-z_$][\w$]*\.id,pluginDisplayNames:\[\]\}\)\);if\(/;
+const PLUGIN_POST_INSTALL_APP_CONNECT_FLOW_GUARDED_SIGNATURE =
+  /(if\([A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*\),)([A-Za-z_$][\w$]*)\.authPolicy===`ON_USE`\|\|\2\.appsNeedingAuth\.length===0&&([A-Za-z_$][\w$]*)\.length===0(\)\{)/;
+const PLUGIN_POST_INSTALL_APP_CONNECT_FLOW_PATCHED_SIGNATURE =
+  /(if\([A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*\),)codexfastAppsNeedingAuth\.length===0&&([A-Za-z_$][\w$]*)\.length===0(\)\{)/;
+const PLUGIN_POST_INSTALL_APP_CONNECT_APPS_GUARDED_SIGNATURE =
+  /(F\(\{apps:)([A-Za-z_$][\w$]*)\.appsNeedingAuth(,browserExtensions:)/;
+const PLUGIN_POST_INSTALL_APP_CONNECT_APPS_PATCHED_SIGNATURE =
+  /(F\(\{apps:)codexfastAppsNeedingAuth(,browserExtensions:)/;
+const PLUGIN_POST_INSTALL_APP_CONNECT_AUTO_OPEN_GUARDED_SIGNATURE =
+  /(connectingAppId:)([A-Za-z_$][\w$]*)\.authPolicy===`ON_INSTALL`&&\2\.appsNeedingAuth\.length===1&&([A-Za-z_$][\w$]*)\.length===0\?\2\.appsNeedingAuth\[0\]\.id:void 0/;
+const PLUGIN_POST_INSTALL_APP_CONNECT_AUTO_OPEN_PATCHED_SIGNATURE =
+  /(connectingAppId:)\(([A-Za-z_$][\w$]*)\.authPolicy===`ON_INSTALL`\|\|\2\.authPolicy===`ON_USE`\)&&codexfastAppsNeedingAuth\.length===1&&([A-Za-z_$][\w$]*)\.length===0\?codexfastAppsNeedingAuth\[0\]\.id:void 0/;
 const COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE =
   /(additionalMarketplaceKinds:)\[`shared-with-me`\]/;
 const COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE =
@@ -241,6 +261,49 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGIN_INSTALL_MODAL_CONTENT_PROP_GUARDED_SIGNATURE,
     patchedSignature: PLUGIN_INSTALL_MODAL_CONTENT_PROP_PATCHED_SIGNATURE,
     applyReplacement: "$1!1$3",
+  },
+  {
+    id: "plugin-detail-app-connect-fallback-26601",
+    label: "Plugin detail app connect",
+    needle: "directoryApps",
+    guardedSignature: PLUGIN_DETAIL_APP_CONNECT_FALLBACK_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_DETAIL_APP_CONNECT_FALLBACK_PATCHED_SIGNATURE,
+    applyReplacement:
+      "function $1({directoryApps:$2,pluginApps:$3}){let $4=new Map($2.map($5=>[$5.id,$5]));return $3.map($6=>$4.get($6.id)??{appMetadata:null,branding:null,description:$6.description??null,distributionChannel:null,id:$6.id,installUrl:$6.installUrl??null,isAccessible:!1,isEnabled:!1,labels:null,logoUrl:$6.logoUrl??null,logoUrlDark:$6.logoUrlDark??null,name:$6.name??$6.displayName??$6.id,pluginDisplayNames:[]}).filter($6=>$6.id!=null)}",
+  },
+  {
+    id: "plugin-post-install-app-connect-fallback-26601",
+    label: "Plugin post-install app connect",
+    needle: "appsNeedingAuth",
+    guardedSignature: PLUGIN_POST_INSTALL_APP_CONNECT_FALLBACK_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_POST_INSTALL_APP_CONNECT_FALLBACK_PATCHED_SIGNATURE,
+    applyReplacement:
+      "$1$2=await $3({authPolicy:$4.authPolicy,codexHome:$5,hostId:$6,plugin:$7,queryClient:$8,windowType:`electron`}),codexfastAppsNeedingAuth=$4.appsNeedingAuth.length>0?$4.appsNeedingAuth:($7.plugin.apps??[]).map(e=>({appMetadata:null,branding:null,description:e.description??null,distributionChannel:null,id:e.id,installUrl:e.installUrl??null,isAccessible:!1,isEnabled:!1,labels:null,logoUrl:e.logoUrl??null,logoUrlDark:e.logoUrlDark??null,name:e.name??e.displayName??e.id,pluginDisplayNames:[]}));if(",
+  },
+  {
+    id: "plugin-post-install-app-connect-flow-26601",
+    label: "Plugin post-install app connect",
+    needle: "appsNeedingAuth",
+    guardedSignature: PLUGIN_POST_INSTALL_APP_CONNECT_FLOW_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_POST_INSTALL_APP_CONNECT_FLOW_PATCHED_SIGNATURE,
+    applyReplacement: "$1codexfastAppsNeedingAuth.length===0&&$3.length===0$4",
+  },
+  {
+    id: "plugin-post-install-app-connect-apps-26601",
+    label: "Plugin post-install app connect",
+    needle: "appsNeedingAuth",
+    guardedSignature: PLUGIN_POST_INSTALL_APP_CONNECT_APPS_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_POST_INSTALL_APP_CONNECT_APPS_PATCHED_SIGNATURE,
+    applyReplacement: "$1codexfastAppsNeedingAuth$3",
+  },
+  {
+    id: "plugin-post-install-app-connect-auto-open-26601",
+    label: "Plugin post-install app connect",
+    needle: "appsNeedingAuth",
+    guardedSignature: PLUGIN_POST_INSTALL_APP_CONNECT_AUTO_OPEN_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_POST_INSTALL_APP_CONNECT_AUTO_OPEN_PATCHED_SIGNATURE,
+    applyReplacement:
+      "$1($2.authPolicy===`ON_INSTALL`||$2.authPolicy===`ON_USE`)&&codexfastAppsNeedingAuth.length===1&&$3.length===0?codexfastAppsNeedingAuth[0].id:void 0",
   },
   {
     id: "composer-plugin-mentions-26513",

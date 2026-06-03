@@ -53,13 +53,15 @@ Current public `launch` removes those files before starting Codex. The old watch
 
 Expected boundary:
 
-- `codexfast` removes the known custom-API Plugins gates for supported builds. On newer builds this can include sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, and install-modal content.
+- `codexfast` removes the known custom-API Plugins gates for supported builds. On newer builds this can include sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, plugin detail app-connect content, install-modal content, and post-install app connect behavior.
 - It does not guarantee that every plugin, connector runtime, or app integration is available after those gates are patched.
 
 Check:
 
 - The launch process is still running.
 - If Plugins opens but shows only the limited-catalog placeholder, such as `More plugins coming soon`, inspect the build-specific curated catalog gate. On `26.601.21317`, the stable needles are `openai-curated-marketplaces-hidden` and `skills.appsPage.pluginsLimitedCatalog` in `use-plugins-*.js`.
+- If an installed plugin detail page does not show the app connect area, inspect the detail app-connect fallback gate. On `26.601.21317`, the stable needle is `directoryApps` in `check-plugin-availability-*.js`.
+- If plugin install succeeds but does not open the expected `Connect <App>` permission modal for a plugin with one pending required app, inspect the post-install app connect gate. On `26.601.21317`, the stable needle is `appsNeedingAuth` in `use-plugin-install-flow-*.js`.
 - Connector/app integration availability.
 - Plugin package state.
 - Admin-side or upstream restrictions.
