@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-06-03
+
 ### Added
 
 - Added support for `Codex.app` `26.601.21317` (`build 3511`) after direct installed-bundle inspection confirmed updated Settings Fast, composer `Intelligence` Speed, plugin install modal, plugin app-connect, and shared plugin marketplace prefetch signatures.
