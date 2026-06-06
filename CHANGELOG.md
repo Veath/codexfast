@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-06-06
+
+### Added
+
+- Added support for `Codex.app` `26.602.40724` (`build 3593`) after direct installed-bundle inspection confirmed the `26.602.30954` target mapping still matches, with only the shared plugin marketplace prefetch asset renamed.
+
 ## [0.25.0] - 2026-06-05
 
 ### Added
