@@ -17,6 +17,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 - Exposes the Fast-related control in Codex Settings on supported builds.
 - This is the Settings/UI path for the Fast feature set.
+- On newer service-tier bundles, `codexfast` also patches the shared service-tier allowance hook so custom API users can actually persist and send the selected Fast tier instead of only seeing the UI entry.
 
 ### Composer `/fast` slash command
 

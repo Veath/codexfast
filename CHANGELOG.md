@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-06-08
+
+### Fixed
+
+- Fixed Fast mode switching for custom API users on `26.601`/`26.602`-style bundles by patching the shared service-tier allowance hook, not only the Settings, `/fast`, and composer menu consumers.
+
 ## [0.26.0] - 2026-06-06
 
 ### Added

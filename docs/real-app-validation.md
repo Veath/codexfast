@@ -37,6 +37,7 @@ Use these checks when validating `launch` behavior. Do not mark a build as real-
 - Selecting `Standard` or `Fast` from the build-specific composer-side menu does not break the UI
 - Typing `/fast` in the composer shows the slash command item
 - Selecting `/fast` can enable and disable Fast mode without breaking the UI
+- On service-tier bundles, the selected Fast tier persists and is used by the composer request/config path for custom API users; it must not be normalized back to `null` or standard by the shared service-tier allowance hook
 
 ## Plugins
 

@@ -25,6 +25,12 @@ export function runRuntimePatchSuite(): void {
   assertNotContains(speedSetting26601Result.content, "!n||", "expected 26.601 Speed settings patch to remove the Fast availability guard");
   assertContains(speedSetting26601Result.patchedLabels.join("\n"), "Speed setting", "expected 26.601 Speed settings patch to report Speed setting target");
 
+  const serviceTierAllowance26602Body = "featureRequirements?.fast_mode;function A(e){let t=(0,k.c)(6),n=m(d),r=e?.hostId??n,i=S(r),a=i?.authMethod===`chatgpt`,o=i?.authMethod??null,s;t[0]!==r||t[1]!==o?(s={authMethod:o,hostId:r},t[0]=r,t[1]=o,t[2]=s):s=t[2];let{data:c,isPending:l}=h(x,s),u=!!i?.isLoading||a&&l,f=a&&!u&&c!=null&&c?.requirements?.featureRequirements?.fast_mode!==!1,p;return t[3]!==u||t[4]!==f?(p={isServiceTierAllowed:f,isLoading:u},t[3]=u,t[4]=f,t[5]=p):p=t[5],p}";
+  const serviceTierAllowance26602Result = applyRuntimePatchesToBody("webview/assets/use-service-tier-settings-26602.js", serviceTierAllowance26602Body);
+  assertContains(serviceTierAllowance26602Result.content, "f=!u&&(a?c!=null&&c?.requirements?.featureRequirements?.fast_mode!==!1:o!=null)", "expected service tier allowance patch to keep ChatGPT gating and allow non-ChatGPT auth methods");
+  assertNotContains(serviceTierAllowance26602Result.content, "f=a&&!u&&c!=null", "expected service tier allowance patch to stop blocking custom API users at the source hook");
+  assertContains(serviceTierAllowance26602Result.patchedLabels.join("\n"), "Speed service tier allowance", "expected service tier allowance patch to report its target");
+
   const serviceTierSlashCommandBody = "composer.speedSlashCommand.disableDescription;let g={id:l,title:u,description:d,requiresEmptyComposer:!1,enabled:n,Icon:c,onSelect:m,dependencies:h};";
   const serviceTierSlashCommandResult = applyRuntimePatchesToBody("webview/assets/composer-26519.js", serviceTierSlashCommandBody);
   assertContains(serviceTierSlashCommandResult.content, "requiresEmptyComposer:!1,enabled:!0,Icon:c", "expected 26.519 service-tier slash command patch to force-enable the command entry");

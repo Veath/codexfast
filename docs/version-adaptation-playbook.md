@@ -23,6 +23,7 @@ Determine whether the new build can be supported, update patch logic if needed, 
    - Read `docs/patch-targets.md`
    - Read the closest prior note under `docs/bundle-notes/`
    - Identify changed filenames, needles, or gated shapes in the new bundle
+   - For Fast support, inspect both visible consumers and the source of service-tier state. Settings, `/fast`, and composer Speed targets are incomplete if the shared service-tier hook still blocks custom API users from computing or sending the selected Fast tier.
    - For runtime launch changes, confirm the actual CDP request URLs for renderer JavaScript, not only the archive paths inside `app.asar`
 
 4. Update the script narrowly.

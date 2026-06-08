@@ -60,6 +60,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
 - Confirm the runtime patch mapping still matches [`docs/patch-targets.md`](./docs/patch-targets.md).
 - Confirm `pnpm test` still covers:
   - the Settings-side Fast control
+  - the shared Fast service-tier allowance/source hook, so custom API users can actually compute, persist, and send the selected Fast tier
   - the composer `/fast` slash command
   - the composer-side `Speed` menu, whether exposed through add-context or Intelligence UI
   - every Plugins gate required by the target build, including sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, install-modal content, plugin detail app-connect content, and post-install app connect where present

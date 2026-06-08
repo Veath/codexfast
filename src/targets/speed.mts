@@ -5,6 +5,7 @@ const SPEED_SLASH_COMMAND_NEEDLE = "composer.speedSlashCommand.title";
 const SPEED_SLASH_COMMAND_DISABLE_NEEDLE = "composer.speedSlashCommand.disableDescription";
 const ADD_CONTEXT_SPEED_NEEDLE = "composer.addContext.speed.option.fast.description";
 const INTELLIGENCE_SPEED_NEEDLE = "composer.intelligenceDropdown.speed.title";
+const SERVICE_TIER_ALLOWANCE_NEEDLE = "featureRequirements?.fast_mode";
 const GUARDED_SIGNATURE_WITH_OPTION_COUNT =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|xe|je)\(\),)(\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(!\1\|\|\4\.availableOptions\.length<=1\)return null;/;
 const PATCHED_SIGNATURE_WITH_OPTION_COUNT =
@@ -13,6 +14,10 @@ const GUARDED_SIGNATURE_WITH_DESTRUCTURED_ALLOWED_OPTION_COUNT =
   /(\{isServiceTierAllowed:([A-Za-z_$][\w$]*)\}=[A-Za-z_$][\w$]*\(\),\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=[A-Za-z_$][\w$]*\(\);)if\(!\2\|\|\3\.availableOptions\.length<=1\)return null;/;
 const PATCHED_SIGNATURE_WITH_DESTRUCTURED_ALLOWED_OPTION_COUNT =
   /(\{isServiceTierAllowed:([A-Za-z_$][\w$]*)\}=[A-Za-z_$][\w$]*\(\),\{serviceTierSettings:([A-Za-z_$][\w$]*),setServiceTier:[^}]+\}=[A-Za-z_$][\w$]*\(\);)if\(\3\.availableOptions\.length<=1\)return null;/;
+const SERVICE_TIER_ALLOWANCE_GUARDED_SIGNATURE =
+  /(([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*\?\.authMethod\?\?null,[A-Za-z_$][\w$]*;[^]*?let\{data:([A-Za-z_$][\w$]*),isPending:([A-Za-z_$][\w$]*)\}=[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*\),([A-Za-z_$][\w$]*)=!![A-Za-z_$][\w$]*\?\.isLoading\|\|([A-Za-z_$][\w$]*)&&\4,([A-Za-z_$][\w$]*)=)\6&&!\5&&\3!=null&&\3\?\.requirements\?\.featureRequirements\?\.fast_mode!==!1(,)/;
+const SERVICE_TIER_ALLOWANCE_PATCHED_SIGNATURE =
+  /(([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*\?\.authMethod\?\?null,[A-Za-z_$][\w$]*;[^]*?let\{data:([A-Za-z_$][\w$]*),isPending:([A-Za-z_$][\w$]*)\}=[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*\),([A-Za-z_$][\w$]*)=!![A-Za-z_$][\w$]*\?\.isLoading\|\|([A-Za-z_$][\w$]*)&&\4,([A-Za-z_$][\w$]*)=)!\5&&\(\6\?\3!=null&&\3\?\.requirements\?\.featureRequirements\?\.fast_mode!==!1:\2!=null\)(,)/;
 const GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|je)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
@@ -107,6 +112,15 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: GUARDED_SIGNATURE_WITH_DESTRUCTURED_ALLOWED_OPTION_COUNT,
     patchedSignature: PATCHED_SIGNATURE_WITH_DESTRUCTURED_ALLOWED_OPTION_COUNT,
     applyReplacement: "$1if($3.availableOptions.length<=1)return null;",
+  },
+  {
+    id: "speed-service-tier-allowance-26601",
+    label: "Speed service tier allowance",
+    needle: SERVICE_TIER_ALLOWANCE_NEEDLE,
+    guardedSignature: SERVICE_TIER_ALLOWANCE_GUARDED_SIGNATURE,
+    patchedSignature: SERVICE_TIER_ALLOWANCE_PATCHED_SIGNATURE,
+    applyReplacement:
+      "$1!$5&&($6?$3!=null&&$3?.requirements?.featureRequirements?.fast_mode!==!1:$2!=null)$8",
   },
   {
     id: "speed-setting",
