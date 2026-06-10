@@ -10,7 +10,7 @@ Use these checks when validating `launch` behavior. Do not mark a build as real-
 
 - `npx codexfast launch` starts Codex when Codex is not already running
 - The launched session opens with runtime patches active
-- The launch output reports the required initial target labels for the current build before it reports `Runtime launch completed`; older builds include `Plugins access`, while `26.601.21317`, `26.602.30954`, `26.602.40724`, and `26.602.71036` do not require that legacy target because the old sidebar/page/detail gates are absent
+- The launch output reports the required initial target labels for the current build before it reports `Runtime launch completed`; older builds include `Plugins access`, while `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, and `26.608.12217` do not require that legacy target because the old sidebar/page/detail gates are absent
 - The `codexfast launch` process remains running while the launched Codex session is open
 - The runtime patch session heartbeat stays quiet during normal use, and no `Runtime patch session lost` message appears
 - If the launch process exits or the runtime patch session is lost after Codex has started, Codex keeps running without further runtime patching

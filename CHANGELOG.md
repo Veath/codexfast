@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-06-10
+
+### Added
+
+- Added support for `Codex.app` `26.608.12217` (`build 3722`) after direct installed-bundle inspection confirmed the `26.602.71036` target mapping still matches with renamed assets.
+
 ## [0.27.0] - 2026-06-09
 
 ### Added
