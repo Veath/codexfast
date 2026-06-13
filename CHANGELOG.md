@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.30.0] - 2026-06-13
+
+### Added
+
+- Added support for `Codex.app` `26.609.41114` (`build 3888`) after direct installed-bundle inspection confirmed the `26.609.30741` target mapping still matches with renamed assets.
+
 ### Fixed
 
 - Fixed `26.601`/`26.602`/`26.608`/`26.609`-style Fast service-tier reloads so reopened conversations fall back to the configured Settings Fast tier instead of letting stale conversation-level Standard state override the Settings value.
