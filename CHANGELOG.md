@@ -4,6 +4,12 @@ All notable changes to `codexfast` will be documented in this file.
 
 This project follows a simple release-oriented changelog format.
 
+## [Unreleased]
+
+### Fixed
+
+- Fixed `26.601`/`26.602`/`26.608`/`26.609`-style Fast service-tier reloads so reopened conversations fall back to the configured Settings Fast tier instead of letting stale conversation-level Standard state override the Settings value.
+
 ## [0.29.0] - 2026-06-12
 
 ### Added

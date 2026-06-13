@@ -18,6 +18,10 @@ const SERVICE_TIER_ALLOWANCE_GUARDED_SIGNATURE =
   /(([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*\?\.authMethod\?\?null,[A-Za-z_$][\w$]*;[^]*?let\{data:([A-Za-z_$][\w$]*),isPending:([A-Za-z_$][\w$]*)\}=[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*\),([A-Za-z_$][\w$]*)=!![A-Za-z_$][\w$]*\?\.isLoading\|\|([A-Za-z_$][\w$]*)&&\4,([A-Za-z_$][\w$]*)=)\6&&!\5&&\3!=null&&\3\?\.requirements\?\.featureRequirements\?\.fast_mode!==!1(,)/;
 const SERVICE_TIER_ALLOWANCE_PATCHED_SIGNATURE =
   /(([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*\?\.authMethod\?\?null,[A-Za-z_$][\w$]*;[^]*?let\{data:([A-Za-z_$][\w$]*),isPending:([A-Za-z_$][\w$]*)\}=[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*\),([A-Za-z_$][\w$]*)=!![A-Za-z_$][\w$]*\?\.isLoading\|\|([A-Za-z_$][\w$]*)&&\4,([A-Za-z_$][\w$]*)=)!\5&&\(\6\?\3!=null&&\3\?\.requirements\?\.featureRequirements\?\.fast_mode!==!1:\2!=null\)(,)/;
+const SERVICE_TIER_CONVERSATION_FALLBACK_GUARDED_SIGNATURE =
+  /(let [^;]+,[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*!=null&&[A-Za-z_$][\w$]*\?\.serviceTier!==void 0\?[^;]+;[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*!=null&&\([A-Za-z_$][\w$]*\?\.serviceTier!==void 0\|\|[A-Za-z_$][\w$]*\?\.params\.serviceTier!==void 0\)\?[^,]+:[A-Za-z_$][\w$]*\([^,]+,[A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*\),)/;
+const SERVICE_TIER_CONVERSATION_FALLBACK_PATCHED_SIGNATURE =
+  /(let [^;]+,[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*!=null&&[A-Za-z_$][\w$]*\?\.params\.serviceTier!==void 0\?[^;]+;[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*!=null&&[A-Za-z_$][\w$]*\?\.params\.serviceTier!==void 0\?[^,]+:[A-Za-z_$][\w$]*\([^,]+,[A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*\),)/;
 const GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|je)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
@@ -96,6 +100,18 @@ function normalizeLegacySpeedSetting(
   return `${enabledVariable}=${resolveSpeedAvailabilityCall(serviceTierFactory)}(),${serviceTierSetup}let `;
 }
 
+function patchConversationServiceTierFallback(match: string): string {
+  return match
+    .replace(
+      /[A-Za-z_$][\w$]*!=null&&([A-Za-z_$][\w$]*)\?\.serviceTier(?:!==void 0|!=null)\?\1\.serviceTier:/,
+      "",
+    )
+    .replace(
+      /\([A-Za-z_$][\w$]*\?\.serviceTier(?:!==void 0|!=null)\|\|([A-Za-z_$][\w$]*\?\.params\.serviceTier!==void 0)\)/,
+      "$1",
+    );
+}
+
 export const SPEED_TARGET_SPECS = defineTargetSpecs(
   {
     id: "speed-setting-option-count",
@@ -121,6 +137,14 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     patchedSignature: SERVICE_TIER_ALLOWANCE_PATCHED_SIGNATURE,
     applyReplacement:
       "$1!$5&&($6?$3!=null&&$3?.requirements?.featureRequirements?.fast_mode!==!1:$2!=null)$8",
+  },
+  {
+    id: "speed-service-tier-conversation-fallback-26601",
+    label: "Speed service tier conversation fallback",
+    needle: "serviceTierForRequest",
+    guardedSignature: SERVICE_TIER_CONVERSATION_FALLBACK_GUARDED_SIGNATURE,
+    patchedSignature: SERVICE_TIER_CONVERSATION_FALLBACK_PATCHED_SIGNATURE,
+    applyReplacement: patchConversationServiceTierFallback,
   },
   {
     id: "speed-setting",
