@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.31.0] - 2026-06-16
+
+### Added
+
+- Added support for `Codex.app` `26.609.71450` (`build 3965`) after direct installed-bundle inspection confirmed the `26.609.41114` target mapping still matches.
+
 ## [0.30.0] - 2026-06-13
 
 ### Added
