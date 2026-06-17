@@ -65,6 +65,10 @@ const PLUGIN_INSTALL_AVAILABILITY_GUARDED_SIGNATURE =
   /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.length>0&&([A-Za-z_$][\w$]*)===\3\.length\?([A-Za-z_$][\w$]*)\?`disabled-by-admin`:`connector-unavailable`:null,([A-Za-z_$][\w$]*);/;
 const PLUGIN_INSTALL_AVAILABILITY_PATCHED_SIGNATURE =
   /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\.length>0&&([A-Za-z_$][\w$]*)===\3\.length&&([A-Za-z_$][\w$]*)\?`disabled-by-admin`:null,([A-Za-z_$][\w$]*);/;
+const PLUGIN_INSTALL_AVAILABILITY_AGGREGATE_GUARDED_SIGNATURE =
+  /(let )([A-Za-z_$][\w$]*)=null;(return [A-Za-z_$][\w$]*&&[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*\)\?\2=`disabled-by-admin`:![A-Za-z_$][\w$]*&&[A-Za-z_$][\w$]*\.length>0&&[A-Za-z_$][\w$]*===[A-Za-z_$][\w$]*\.length&&\(\2=[A-Za-z_$][\w$]*\?`disabled-by-admin`:)(`connector-unavailable`)(\),\{blockedReasonsByConnectorId:)/;
+const PLUGIN_INSTALL_AVAILABILITY_AGGREGATE_PATCHED_SIGNATURE =
+  /(let )([A-Za-z_$][\w$]*)=null;(return [A-Za-z_$][\w$]*&&[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*\)\?\2=`disabled-by-admin`:![A-Za-z_$][\w$]*&&[A-Za-z_$][\w$]*\.length>0&&[A-Za-z_$][\w$]*===[A-Za-z_$][\w$]*\.length&&\(\2=[A-Za-z_$][\w$]*\?`disabled-by-admin`:)(null)(\),\{blockedReasonsByConnectorId:)/;
 const PLUGIN_INSTALL_MODAL_CONTENT_GUARDED_SIGNATURE =
   /(let )([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)=\(([A-Za-z_$][\w$]*)\?\.apps\.length\?\?0\)>0&&\5\?\.summary\.authPolicy===`ON_INSTALL`,([A-Za-z_$][\w$]*);/;
 const PLUGIN_INSTALL_MODAL_CONTENT_PATCHED_SIGNATURE =
@@ -77,6 +81,10 @@ const PLUGIN_DETAIL_APP_CONNECT_FALLBACK_GUARDED_SIGNATURE =
   /function ([A-Za-z_$][\w$]*)\(\{directoryApps:([A-Za-z_$][\w$]*),pluginApps:([A-Za-z_$][\w$]*)\}\)\{let ([A-Za-z_$][\w$]*)=new Map\(\2\.map\(([A-Za-z_$][\w$]*)=>\[\5\.id,\5\]\)\);return \3\.map\(([A-Za-z_$][\w$]*)=>\4\.get\(\6\.id\)\)\.filter\(\6=>\6!=null\)\}/;
 const PLUGIN_DETAIL_APP_CONNECT_FALLBACK_PATCHED_SIGNATURE =
   /function ([A-Za-z_$][\w$]*)\(\{directoryApps:([A-Za-z_$][\w$]*),pluginApps:([A-Za-z_$][\w$]*)\}\)\{let ([A-Za-z_$][\w$]*)=new Map\(\2\.map\(([A-Za-z_$][\w$]*)=>\[\5\.id,\5\]\)\);return \3\.map\(([A-Za-z_$][\w$]*)=>\4\.get\(\6\.id\)\?\?\{appMetadata:null,branding:null,description:\6\.description\?\?null,distributionChannel:null,id:\6\.id,installUrl:\6\.installUrl\?\?null,isAccessible:!1,isEnabled:!1,labels:null,logoUrl:\6\.logoUrl\?\?null,logoUrlDark:\6\.logoUrlDark\?\?null,name:\6\.name\?\?\6\.displayName\?\?\6\.id,pluginDisplayNames:\[\]\}\)\.filter\(\6=>\6\.id!=null\)\}/;
+const PLUGIN_DETAIL_APP_CONNECT_ENRICHED_GUARDED_SIGNATURE =
+  /(return [A-Za-z_$][\w$]*\.map\(([A-Za-z_$][\w$]*)=>\{let ([A-Za-z_$][\w$]*)=[^;]+;if\(\3==null\|\|\3\.name===\3\.id\)return )null(;let )/;
+const PLUGIN_DETAIL_APP_CONNECT_ENRICHED_PATCHED_SIGNATURE =
+  /(return [A-Za-z_$][\w$]*\.map\(([A-Za-z_$][\w$]*)=>\{let ([A-Za-z_$][\w$]*)=[^;]+;if\(\3==null\|\|\3\.name===\3\.id\)return )\{appMetadata:null,branding:null,description:\2\.description\?\?null,distributionChannel:null,id:\2\.id,installUrl:\2\.installUrl\?\?null,isAccessible:!1,isEnabled:!1,labels:null,logoUrl:\2\.logoUrl\?\?null,logoUrlDark:\2\.logoUrlDark\?\?null,name:\2\.name\?\?\2\.displayName\?\?\2\.id,pluginDisplayNames:\[\]\}(;let )/;
 const PLUGIN_POST_INSTALL_APP_CONNECT_FALLBACK_GUARDED_SIGNATURE =
   /(let )([A-Za-z_$][\w$]*)=await ([A-Za-z_$][\w$]*)\(\{authPolicy:([A-Za-z_$][\w$]*)\.authPolicy,codexHome:([A-Za-z_$][\w$]*),hostId:([A-Za-z_$][\w$]*),plugin:([A-Za-z_$][\w$]*),queryClient:([A-Za-z_$][\w$]*),windowType:`electron`\}\);if\(/;
 const PLUGIN_POST_INSTALL_APP_CONNECT_FALLBACK_PATCHED_SIGNATURE =
@@ -251,6 +259,14 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     applyReplacement: "$1$2=$3.length>0&&$4===$3.length&&$5?`disabled-by-admin`:null,$6;",
   },
   {
+    id: "plugin-install-availability-aggregate-26611",
+    label: "Plugin install availability",
+    needle: "connector-unavailable",
+    guardedSignature: PLUGIN_INSTALL_AVAILABILITY_AGGREGATE_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_INSTALL_AVAILABILITY_AGGREGATE_PATCHED_SIGNATURE,
+    applyReplacement: "$1$2=null;$3null$5",
+  },
+  {
     id: "plugin-install-modal-content-26429",
     label: "Plugin install modal content",
     needle: PLUGIN_INSTALL_MODAL_CONTENT_NEEDLE,
@@ -274,6 +290,15 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     patchedSignature: PLUGIN_DETAIL_APP_CONNECT_FALLBACK_PATCHED_SIGNATURE,
     applyReplacement:
       "function $1({directoryApps:$2,pluginApps:$3}){let $4=new Map($2.map($5=>[$5.id,$5]));return $3.map($6=>$4.get($6.id)??{appMetadata:null,branding:null,description:$6.description??null,distributionChannel:null,id:$6.id,installUrl:$6.installUrl??null,isAccessible:!1,isEnabled:!1,labels:null,logoUrl:$6.logoUrl??null,logoUrlDark:$6.logoUrlDark??null,name:$6.name??$6.displayName??$6.id,pluginDisplayNames:[]}).filter($6=>$6.id!=null)}",
+  },
+  {
+    id: "plugin-detail-app-connect-enriched-26611",
+    label: "Plugin detail app connect",
+    needle: "directoryApps",
+    guardedSignature: PLUGIN_DETAIL_APP_CONNECT_ENRICHED_GUARDED_SIGNATURE,
+    patchedSignature: PLUGIN_DETAIL_APP_CONNECT_ENRICHED_PATCHED_SIGNATURE,
+    applyReplacement:
+      "$1{appMetadata:null,branding:null,description:$2.description??null,distributionChannel:null,id:$2.id,installUrl:$2.installUrl??null,isAccessible:!1,isEnabled:!1,labels:null,logoUrl:$2.logoUrl??null,logoUrlDark:$2.logoUrlDark??null,name:$2.name??$2.displayName??$2.id,pluginDisplayNames:[]}$4",
   },
   {
     id: "plugin-post-install-app-connect-fallback-26601",

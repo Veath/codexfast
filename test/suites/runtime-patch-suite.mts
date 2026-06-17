@@ -82,6 +82,12 @@ export function runRuntimePatchSuite(): void {
   assertContains(pluginInstallModal26601Result.content, "shouldShowInstallDisclosure:!1,showLockedComputerUseInstall:Y", "expected 26.601 plugin install modal patch to keep basic modal content visible");
   assertContains(pluginInstallModal26601Result.patchedLabels.join("\n"), "Plugin install modal content", "expected 26.601 plugin install modal patch to report modal content target");
 
+  const pluginInstallAvailability26611Body = "connector-unavailable;let L=I,R=!0,z=0,B={};for(let[e,t]of O.entries()){let n=F[e],r=!M&&N==null&&!P.some(e=>e.id===t),i=null;n?.data?.status===y?i=`disabled-by-admin`:(r||n!=null&&!n.isPending&&n.error==null&&n.data==null)&&(i=`connector-unavailable`),B[t]=i,i!=null&&(z+=1),i!==`disabled-by-admin`&&(R=!1)}let V=null;return C&&S(x)?V=`disabled-by-admin`:!C&&O.length>0&&z===O.length&&(V=R?`disabled-by-admin`:`connector-unavailable`),{blockedReasonsByConnectorId:B,isConnectorAvailabilityLoading:L,isLoading:!C&&L,blockedReason:V}}";
+  const pluginInstallAvailability26611Result = applyRuntimePatchesToBody("webview/assets/check-plugin-availability-26611.js", pluginInstallAvailability26611Body);
+  assertContains(pluginInstallAvailability26611Result.content, "V=R?`disabled-by-admin`:null", "expected 26.611 plugin install availability patch to preserve only the all-admin aggregate block");
+  assertNotContains(pluginInstallAvailability26611Result.content, "V=R?`disabled-by-admin`:`connector-unavailable`", "expected 26.611 plugin install availability patch to stop the aggregate connector-unavailable block");
+  assertContains(pluginInstallAvailability26611Result.patchedLabels.join("\n"), "Plugin install availability", "expected 26.611 plugin install availability patch to report install availability target");
+
   const pluginDetailAppConnect26601Body = "directoryApps;function l({directoryApps:e,pluginApps:t}){let n=new Map(e.map(e=>[e.id,e]));return t.map(e=>n.get(e.id)).filter(e=>e!=null)}";
   const pluginDetailAppConnect26601Result = applyRuntimePatchesToBody("webview/assets/check-plugin-availability-26601.js", pluginDetailAppConnect26601Body);
   assertContains(pluginDetailAppConnect26601Result.content, "n.get(e.id)??{appMetadata:null,branding:null,description:e.description??null", "expected 26.601 plugin detail app connect patch to keep plugin app rows when the directory app list is empty");
@@ -89,6 +95,13 @@ export function runRuntimePatchSuite(): void {
   assertContains(pluginDetailAppConnect26601Result.content, "name:e.name??e.displayName??e.id", "expected 26.601 plugin detail app connect fallback apps to preserve a usable app name");
   assertNotContains(pluginDetailAppConnect26601Result.content, "t.map(e=>n.get(e.id)).filter(e=>e!=null)", "expected 26.601 plugin detail app connect patch to stop dropping plugin apps missing from the directory list");
   assertContains(pluginDetailAppConnect26601Result.patchedLabels.join("\n"), "Plugin detail app connect", "expected 26.601 plugin detail app connect patch to report app connect target");
+
+  const pluginDetailAppConnect26611Body = "directoryApps;function l({directoryApps:e,pluginApps:t}){let n=new Map(e.map(e=>[e.id,e]));return t.map(e=>{let t=n.get(e.id);if(t==null||t.name===t.id)return null;let r=e.category?.trim()||d(t);if(!r)return t;let i=t.branding??{category:null,developer:null,website:null,privacyPolicy:null,termsOfService:null,isDiscoverableApp:!1};return{...t,branding:{...i,category:r}}}).filter(e=>e!=null)}";
+  const pluginDetailAppConnect26611Result = applyRuntimePatchesToBody("webview/assets/check-plugin-availability-26611.js", pluginDetailAppConnect26611Body);
+  assertContains(pluginDetailAppConnect26611Result.content, "return {appMetadata:null,branding:null,description:e.description??null", "expected 26.611 plugin detail app connect patch to fall back to plugin-declared apps");
+  assertContains(pluginDetailAppConnect26611Result.content, "name:e.name??e.displayName??e.id", "expected 26.611 plugin detail app connect fallback apps to preserve a usable app name");
+  assertNotContains(pluginDetailAppConnect26611Result.content, "if(t==null||t.name===t.id)return null", "expected 26.611 plugin detail app connect patch to stop dropping app rows missing from the directory list");
+  assertContains(pluginDetailAppConnect26611Result.patchedLabels.join("\n"), "Plugin detail app connect", "expected 26.611 plugin detail app connect patch to report app connect target");
 
   const pluginPostInstallAppConnect26601Body = "appsNeedingAuth;await Promise.all([p(je),p(tt)]);let y=await kt({authPolicy:_.authPolicy,codexHome:l,hostId:t,plugin:h,queryClient:a,windowType:`electron`});if(Me(h),_.authPolicy===`ON_USE`||_.appsNeedingAuth.length===0&&y.length===0){let e=s.postInstallComposerPrefill?.trim();e&&m({text:e}),E();return}F({apps:_.appsNeedingAuth,browserExtensions:y,connectingAppId:_.authPolicy===`ON_INSTALL`&&_.appsNeedingAuth.length===1&&y.length===0?_.appsNeedingAuth[0].id:void 0,options:s,plugin:h})";
   const pluginPostInstallAppConnect26601Result = applyRuntimePatchesToBody("webview/assets/use-plugin-install-flow-26601.js", pluginPostInstallAppConnect26601Body);

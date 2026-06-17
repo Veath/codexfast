@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-06-17
+
+### Added
+
+- Added support for `Codex.app` `26.611.61049` (`build 3996`) after direct installed-bundle inspection confirmed the current Fast, `/fast`, Speed, and Plugins catalog target family still applies with two updated Plugins signatures.
+
 ## [0.31.0] - 2026-06-16
 
 ### Added
