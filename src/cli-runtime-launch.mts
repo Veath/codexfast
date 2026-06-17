@@ -91,6 +91,7 @@ const runtimePatchNoPluginsAccessRequiredVersionKeys = new Set([
   "26.609.41114+3888",
   "26.609.71450+3965",
   "26.611.61049+3996",
+  "26.611.61753+4008",
 ]);
 const runtimePatchRequiredInitialReloadMaxAttempts = 1;
 
