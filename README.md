@@ -87,6 +87,8 @@ The script matches code signatures in frontend build output, so it can break aft
 
 **Plugins visible but a specific plugin is still unusable** - codexfast only removes known local custom-API gates. Remaining failures usually come from plugin state, connector runtime behavior, or admin-side restrictions.
 
+**Plugins visible but app-connect plugins such as Gmail are missing** - on newer Codex builds, the default API catalog can be smaller than the full local curated catalog. Use the latest codexfast release and relaunch through `codexfast launch` so the local full plugin cache can be included in the catalog query.
+
 **GPT-5.5 visible but requests fail** - the UI entry is present, but your custom API provider still needs to accept `model: "gpt-5.5"`.
 
 **An older auto-repair watcher was installed** - run `npx codexfast launch` once. The launcher removes `~/Library/LaunchAgents/com.codexfast.watcher.plist` and the old local watcher runtime before starting Codex.

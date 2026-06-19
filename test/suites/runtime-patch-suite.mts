@@ -144,6 +144,13 @@ export function runRuntimePatchSuite(): void {
   assertNotContains(pluginCatalogMarketplaceFilter26609Result.content, "m?h=xe:p&&(h=be)", "expected 26.609 plugin catalog patch to remove marketplace exclusion from the visible catalog path");
   assertContains(pluginCatalogMarketplaceFilter26609Result.patchedLabels.join("\n"), "Plugins catalog visibility", "expected 26.609 plugin catalog marketplace filter patch to report catalog visibility target");
 
+  const pluginCatalogLocalCache26616Body = "openai-curated-marketplaces-hidden;var R=[`plugins`],z=`openai-curated-marketplaces-hidden`,U=`.tmp/marketplaces/openai-internal-testing`;function qe({codexHome:e,hostId:t,rootsOverrideCwd:n,workspaceRoots:r}){let i=t===`local`&&e!=null?b(e,U):null;return Je([...typeof n==`string`?[n]:n??r??[],...i==null?[]:[i]],e)}";
+  const pluginCatalogLocalCache26616Result = applyRuntimePatchesToBody("webview/assets/use-plugins-26616.js", pluginCatalogLocalCache26616Body);
+  assertContains(pluginCatalogLocalCache26616Result.content, "codexfastPluginCacheRoot=t===`local`&&e!=null?b(e,`.tmp/plugins`):null", "expected 26.616 plugin catalog patch to add the local full plugin cache as a marketplace root");
+  assertContains(pluginCatalogLocalCache26616Result.content, "...codexfastPluginCacheRoot==null?[]:[codexfastPluginCacheRoot]", "expected 26.616 plugin catalog query cwds to include the full plugin cache root");
+  assertNotContains(pluginCatalogLocalCache26616Result.content, "return Je([...typeof n==`string`?[n]:n??r??[],...i==null?[]:[i]],e)", "expected 26.616 plugin catalog patch to stop querying only workspace and internal-testing roots");
+  assertContains(pluginCatalogLocalCache26616Result.patchedLabels.join("\n"), "Plugins catalog local cache", "expected 26.616 plugin catalog local cache patch to report its target");
+
   const nativePipeBody = "function dP(){return lP().info(`browser-use native pipe peer authorization enabled`,{safe:{mode:a?`dev`:`packaged`},sensitive:{}}),e=>{let t=fP(e);return t==null?{authorized:!1,reason:`missing-socket-file-descriptor`}:s.authorizeSocketPeer(t,a)}}";
   const nativePipeResult = applyRuntimePatchesToBody("webview/assets/browser-use-native-pipe-Demo.js", nativePipeBody);
   if (nativePipeResult.content !== nativePipeBody) {

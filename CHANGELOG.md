@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.35.1] - 2026-06-19
+
+### Fixed
+
+- Fixed the `26.616.31447` Plugins catalog query so custom API sessions also include the local full plugin cache root, restoring app-connect plugins such as Gmail when the default API catalog only returns `openai-api-curated`.
+
 ## [0.35.0] - 2026-06-19
 
 ### Added

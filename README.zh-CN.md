@@ -87,6 +87,8 @@ q) Quit
 
 **Plugins 可见但某个具体 plugin 仍不可用** - codexfast 只移除已知本地 custom API gate。剩余失败通常来自 plugin 状态、connector runtime 或管理员限制。
 
+**Plugins 可见但 Gmail 等 app-connect plugin 缺失** - 新版 Codex 的默认 API catalog 可能比本地完整 curated catalog 更少。请使用最新版 codexfast，并通过 `codexfast launch` 重新启动，让脚本把本地完整 plugin cache 加入 catalog 查询。
+
 **GPT-5.5 可见但请求失败** - UI entry 已存在，但你的 custom API provider 仍需要接受 `model: "gpt-5.5"`。
 
 **以前安装过 auto-repair watcher** - 执行一次 `npx codexfast launch`。launcher 会在启动 Codex 前移除 `~/Library/LaunchAgents/com.codexfast.watcher.plist` 和旧的本地 watcher runtime。

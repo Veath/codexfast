@@ -121,6 +121,10 @@ const PLUGINS_CATALOG_MARKETPLACE_FILTER_GUARDED_SIGNATURE =
   /(,)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*);([A-Za-z_$][\w$]*)\?\2=([A-Za-z_$][\w$]*):([A-Za-z_$][\w$]*)&&\(\2=([A-Za-z_$][\w$]*)\);(let [A-Za-z_$][\w$]*=Ae\()/;
 const PLUGINS_CATALOG_MARKETPLACE_FILTER_PATCHED_SIGNATURE =
   /(,)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*);([A-Za-z_$][\w$]*)\?\2=\3:([A-Za-z_$][\w$]*)&&\(\2=\3\);(let [A-Za-z_$][\w$]*=Ae\()/;
+const PLUGINS_CATALOG_LOCAL_CACHE_GUARDED_SIGNATURE =
+  /function ([A-Za-z_$][\w$]*)\(\{codexHome:([A-Za-z_$][\w$]*),hostId:([A-Za-z_$][\w$]*),rootsOverrideCwd:([A-Za-z_$][\w$]*),workspaceRoots:([A-Za-z_$][\w$]*)\}\)\{let ([A-Za-z_$][\w$]*)=\3===`local`&&\2!=null\?([A-Za-z_$][\w$]*)\(\2,([A-Za-z_$][\w$]*)\):null;return ([A-Za-z_$][\w$]*)\(\[\.\.\.typeof \4==`string`\?\[\4\]:\4\?\?\5\?\?\[\],\.\.\.\6==null\?\[\]:\[\6\]\],\2\)\}/;
+const PLUGINS_CATALOG_LOCAL_CACHE_PATCHED_SIGNATURE =
+  /function ([A-Za-z_$][\w$]*)\(\{codexHome:([A-Za-z_$][\w$]*),hostId:([A-Za-z_$][\w$]*),rootsOverrideCwd:([A-Za-z_$][\w$]*),workspaceRoots:([A-Za-z_$][\w$]*)\}\)\{let ([A-Za-z_$][\w$]*)=\3===`local`&&\2!=null\?([A-Za-z_$][\w$]*)\(\2,([A-Za-z_$][\w$]*)\):null,codexfastPluginCacheRoot=\3===`local`&&\2!=null\?\7\(\2,`\.tmp\/plugins`\):null;return ([A-Za-z_$][\w$]*)\(\[\.\.\.typeof \4==`string`\?\[\4\]:\4\?\?\5\?\?\[\],\.\.\.\6==null\?\[\]:\[\6\],\.\.\.codexfastPluginCacheRoot==null\?\[\]:\[codexfastPluginCacheRoot\]\],\2\)\}/;
 function patchPluginsSidebar26513(
   _match: string,
   prefix: string,
@@ -373,5 +377,14 @@ export const PLUGIN_TARGET_SPECS = defineTargetSpecs(
     guardedSignature: PLUGINS_CATALOG_MARKETPLACE_FILTER_GUARDED_SIGNATURE,
     patchedSignature: PLUGINS_CATALOG_MARKETPLACE_FILTER_PATCHED_SIGNATURE,
     applyReplacement: "$1$2=$3;$4?$2=$3:$6&&($2=$3);$8",
+  },
+  {
+    id: "plugins-catalog-local-cache-26616",
+    label: "Plugins catalog local cache",
+    needle: ".tmp/marketplaces/openai-internal-testing",
+    guardedSignature: PLUGINS_CATALOG_LOCAL_CACHE_GUARDED_SIGNATURE,
+    patchedSignature: PLUGINS_CATALOG_LOCAL_CACHE_PATCHED_SIGNATURE,
+    applyReplacement:
+      "function $1({codexHome:$2,hostId:$3,rootsOverrideCwd:$4,workspaceRoots:$5}){let $6=$3===`local`&&$2!=null?$7($2,$8):null,codexfastPluginCacheRoot=$3===`local`&&$2!=null?$7($2,`.tmp/plugins`):null;return $9([...typeof $4==`string`?[$4]:$4??$5??[],...$6==null?[]:[$6],...codexfastPluginCacheRoot==null?[]:[codexfastPluginCacheRoot]],$2)}",
   },
 );
