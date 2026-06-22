@@ -41,6 +41,14 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - This does not guarantee that every plugin or connector flow is available. Plugin state, connector runtime behavior, or admin-side restrictions may still block a specific plugin.
 - This does not unlock the remote ChatGPT shared plugin marketplace; that catalog still requires ChatGPT authentication.
 
+### Disable automatic updates setting
+
+- Adds a `Disable automatic updates` switch to Settings > General.
+- When enabled before `codexfast launch`, the launcher injects a process-local main-process hook that skips the Sparkle background update check loop and startup background check for that launched session.
+- Manual `Check for Updates` and update install actions remain available because the updater is still initialized.
+- The switch takes effect on the next launch. Changing it after Codex has already started cannot undo an updater lifecycle that already ran.
+- This does not modify `app.asar`, `Info.plist`, the app bundle, the app signature, or macOS update metadata.
+
 ### GPT-5.5 model-list entry for custom API users
 
 - Exposes `GPT-5.5` in the app model list on supported builds when the bundled model catalog does not include it.
@@ -54,4 +62,5 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - `Settings-side Fast control`, composer `/fast`, and the composer-side `Speed` menu should be treated as one combined Fast feature set.
 - `Plugins` support should not be described as available unless the sidebar/page gates still work cleanly on the target build.
 - `GPT-5.5` model-list support should not be described as provider support. It is only a UI catalog entry.
+- `Disable automatic updates` should be described as background-check suppression only, not as a global updater removal.
 - Compatibility claims must also match `docs/compatibility-matrix.md` and the strict whitelist in `src/supported-app-versions.mts`.

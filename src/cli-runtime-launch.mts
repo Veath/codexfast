@@ -14,6 +14,7 @@ import {
   isRuntimeJavaScriptResource,
   type RuntimePatchResult,
 } from "./cli-runtime-patcher.mts";
+import { childEnvWithAutomaticUpdateSetting } from "./cli-update-settings.mts";
 import {
   asError,
   debugRuntime,
@@ -151,7 +152,7 @@ function launchCodexProcess(
     {
       detached: true,
       stdio: "ignore",
-      env: process.env,
+      env: childEnvWithAutomaticUpdateSetting(),
     },
   );
   child.on("error", () => undefined);
@@ -342,6 +343,10 @@ async function enableRuntimePatchInterception(
       },
       {
         urlPattern: "app://*/webview/assets/*.js",
+        requestStage: "Response",
+      },
+      {
+        urlPattern: "app://*/.vite/build/*.js",
         requestStage: "Response",
       },
     ],

@@ -11,6 +11,7 @@
 - **Speed submenu** in the composer
 - **GPT-5.5** model-list compatibility for custom-API users where the supported build still needs it
 - **Plugins access** for custom-API users
+- **Disable automatic updates** switch in Settings > General
 
 ```bash
 npx codexfast launch
@@ -20,9 +21,11 @@ Verified for `Codex.app` `26.616.51431` (`build 4212`), `26.616.31447` (`build 4
 
 ## How It Works
 
-`Codex.app` already contains the Fast, `/fast`, Speed, model-list, and Plugins UI paths in its packaged frontend bundle, but some of those paths are hidden or disabled for custom API users by local gate checks. `codexfast` does not add a backend service or call a private OpenAI API.
+`Codex.app` already contains the Fast, `/fast`, Speed, model-list, Plugins, and updater UI paths in its packaged frontend bundle, but some of those paths are hidden or disabled for custom API users by local gate checks. `codexfast` does not add a backend service or call a private OpenAI API.
 
 `codexfast launch` starts Codex with a local Chrome DevTools Protocol endpoint, attaches through the browser-level CDP target before renderer JavaScript runs, intercepts matching renderer JavaScript responses for that launched session, and applies narrow patch rules in memory. Keep the `codexfast launch` process running while you use Codex; Settings and Plugins load some feature chunks lazily, so the runtime interceptor must stay attached after the first window appears.
+
+The Settings > General `Disable automatic updates` switch is stored in Codex configuration. When it is enabled before launch, `codexfast` injects a process-local main-process hook that skips Sparkle background update checks for that launched session. Manual `Check for Updates` and update install actions remain available.
 
 The launcher sends a lightweight browser-level CDP heartbeat, tries up to three bounded reconnects if the runtime patch session drops, and reports `Runtime patch session lost` instead of silently continuing unpatched. If the launch process exits or the runtime patch session disconnects after Codex has started, Codex keeps running. Lazy-loaded features that were not patched before that point may stay unavailable until you fully quit Codex and relaunch with `codexfast`.
 
@@ -74,6 +77,7 @@ The script matches code signatures in frontend build output, so it can break aft
 - Runtime launch does not rewrite `app.asar`, `Info.plist`, the app bundle, backups, the app signature, or macOS privacy permissions
 - The GPT-5.5 model-list patch only injects the UI catalog entry on supported builds that still need it. Your configured provider must still support `gpt-5.5`
 - For Plugins, the script removes the custom-API gates needed to open the Plugins sidebar/page path on supported builds. Actual plugin behavior can still depend on plugin state, connector runtime behavior, or admin restrictions
+- The automatic-update switch disables background update checks only after the next `codexfast launch`; manual update checks remain available
 
 ## Troubleshooting
 
@@ -82,6 +86,8 @@ The script matches code signatures in frontend build output, so it can break aft
 **Runtime launch shows `Codex failed to start` / `ERR_FAILED`** - fully quit Codex and rerun the latest `npx codexfast launch`. A failed runtime launch should not modify `app.asar`, `Info.plist`, the app bundle, backups, the app signature, or macOS privacy permissions.
 
 **Settings Fast or Plugins content is still missing after `launch`** - confirm the `codexfast launch` terminal process is still running. Closing it ends CDP interception, so lazy-loaded Settings and Plugins chunks cannot be patched later in the session.
+
+**Automatic updates still checked once after changing the setting** - fully quit Codex and relaunch with `codexfast launch`. The updater lifecycle starts before the Settings page is opened, so the switch takes effect on the next launch.
 
 **Runtime patch session lost after reconnect attempts** - Codex keeps running, but no further lazy-loaded chunks can be patched by that launch process. Fully quit Codex and rerun `npx codexfast launch` when you need a fresh patched session.
 

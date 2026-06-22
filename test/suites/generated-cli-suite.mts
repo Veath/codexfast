@@ -15,6 +15,9 @@ export function runGeneratedCliSuite(rootDir: string): void {
   assertContains(generatedCli, "send(method, params, sessionId)", "expected generated CLI to send CDP commands to flattened target sessions");
   assertContains(generatedCli, "Runtime patch session lost after", "expected generated CLI to report exhausted runtime patch reconnects clearly");
   assertContains(generatedCli, "runtimePatchNoTargetIdleMs", "expected generated CLI to wait for quiet JS traffic before failing initial runtime target discovery");
+  assertContains(generatedCli, "app://*/.vite/build/*.js", "expected generated CLI to intercept main-process build assets if Electron serves them through app://");
+  assertContains(generatedCli, "CODEXFAST_DISABLE_AUTOMATIC_UPDATES", "expected generated CLI to include the automatic update main-process hook");
+  assertContains(generatedCli, "disableAutomaticUpdates", "expected generated CLI to include the automatic update setting patches");
   assertContains(generatedCli, "detached: true", "expected runtime launch to isolate Codex from the launch terminal process group");
   assertContains(generatedCli, "child.unref();", "expected runtime launch to let Codex survive when the launcher exits");
   assertNotContains(generatedCli, "tccutil", "expected generated CLI not to reset macOS ScreenCapture permissions");
@@ -28,6 +31,8 @@ export function runGeneratedCliSuite(rootDir: string): void {
 
   const targetIds = TARGET_SPECS.map((spec) => spec.id).join("\n");
   assertContains(targetIds, "speed-setting", "expected patcher target specs to be importable at runtime");
+  assertContains(targetIds, "disable-automatic-updates-schema", "expected automatic update setting schema target to be importable at runtime");
+  assertContains(targetIds, "disable-automatic-updates-setting", "expected automatic update General setting target to be importable at runtime");
   assertNotContains(
     targetIds,
     "browser-use-native-pipe-peer-auth",

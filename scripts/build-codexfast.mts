@@ -13,7 +13,7 @@ const compilerOptions = {
   module: ts.ModuleKind.CommonJS,
   target: ts.ScriptTarget.ES2022,
 };
-const cliModulePattern = String.raw`\.\/cli-(?:app-environment|cdp|command-policy|context|output|runtime-launch|runtime-patcher|utils|watcher)\.mts`;
+const cliModulePattern = String.raw`\.\/cli-(?:app-environment|cdp|command-policy|context|output|runtime-launch|runtime-patcher|update-settings|utils|watcher)\.mts`;
 
 function inlineLocalModuleSource(source: string): string {
   return source.replace(/^export /gm, "");
@@ -56,6 +56,7 @@ function insertAfterImports(source: string, insertedSource: string): string {
 const patcherTargetsSource = [
   "targets/builders.mts",
   "targets/speed.mts",
+  "targets/updates.mts",
   "targets/plugins.mts",
   "targets/models.mts",
   "patcher-targets.mts",
@@ -74,6 +75,7 @@ const cliModuleSource = [
   "cli-output.mts",
   "cli-runtime-launch.mts",
   "cli-runtime-patcher.mts",
+  "cli-update-settings.mts",
   "cli-utils.mts",
   "cli-watcher.mts",
 ].map((fileName) => inlineCliModuleSource(readFileSync(join(sourceDir, fileName), "utf8"))).join("\n");

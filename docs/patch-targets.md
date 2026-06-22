@@ -8,16 +8,18 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 
 `launch` uses these target definitions for the public runtime path. Runtime launch applies matching replacements in memory through the local CDP session and leaves the app bundle untouched. Legacy file-patch, archive rewrite, re-sign, and restore flows have been removed.
 
-The same renderer assets may be requested with different `app://` URL shapes. Current `26.513.20950` uses `app://-/assets/*.js`; older assumptions used `app://-/webview/assets/*.js`. Runtime matchers must account for both when CDP Fetch interception changes.
+The same renderer assets may be requested with different `app://` URL shapes. Current `26.513.20950` uses `app://-/assets/*.js`; older assumptions used `app://-/webview/assets/*.js`. Runtime matchers must account for both when CDP Fetch interception changes. Newer Electron build assets can also appear as `app://-/.vite/build/*.js` when served through the app protocol.
 
 Source layout:
 
 - `src/targets/speed.mts` owns Settings Fast, `/fast`, and composer Speed target definitions.
+- `src/targets/updates.mts` owns the automatic-update Settings and schema targets.
 - `src/targets/plugins.mts` owns Plugins sidebar, page, detail, install, modal, and composer mention target definitions.
 - `src/targets/models.mts` owns GPT-5.5 model-list bridge targets.
 - `src/targets/builders.mts` owns shared target-spec builders.
 - `src/patcher-targets.mts` aggregates the feature target modules for runtime launch.
 - `src/patch-engine.mts` applies target specs to intercepted JavaScript bodies.
+- `src/cli-update-settings.mts` owns the launcher-side config reader and process-local main-process hook used to skip Sparkle background checks without disabling manual updater actions.
 
 | Feature | Target label | Current file | Needle | Patch intent |
 | --- | --- | --- | --- | --- |
@@ -38,6 +40,9 @@ Source layout:
 | Shared plugin marketplace prefetch on `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, `26.608.12217`, `26.609.30741`, `26.609.41114`, `26.609.71450`, `26.611.61049`, `26.611.61753`, `26.611.62324`, `26.616.31447`, and `26.616.51431` | `Composer plugin mentions` | `app-prefetch-impl-*.js` | `additionalMarketplaceKinds` | Remove the startup `shared-with-me` remote marketplace prefetch while preserving workspace-directory plugin prefetch. |
 | Curated OpenAI plugin catalog on `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, `26.608.12217`, `26.609.30741`, `26.609.41114`, `26.609.71450`, `26.611.61049`, `26.611.61753`, `26.611.62324`, `26.616.31447`, and `26.616.51431` | `Plugins catalog visibility` | `use-plugins-*.js` | `openai-curated-marketplaces-hidden` | Keep the curated OpenAI plugin catalog visible for custom API users instead of showing the limited-catalog placeholder or filtering `openai-curated` out of the visible marketplace list. |
 | Local full plugin cache on `26.616.31447` and `26.616.51431` | `Plugins catalog local cache` | `use-plugins-*.js` | `.tmp/marketplaces/openai-internal-testing` | Add `~/.codex/.tmp/plugins` to the local marketplace roots so the app-server can return the full `openai-curated` catalog, including app-connect plugins such as Gmail, when the default API catalog only returns `openai-api-curated`. |
+| Automatic-update setting schema | `Disable automatic updates schema` | `src-*.js` | `preventSleepWhileRunning` | Add a read-write `disableAutomaticUpdates` boolean setting to the shared settings schema so the General switch can persist to Codex configuration. |
+| Automatic-update General row | `Disable automatic updates setting` | `general-settings-*.js` | `settings.general.power.preventSleepWhileRunning.description` | Add a Settings > General switch that stores `disableAutomaticUpdates` while preserving the existing Prevent Sleep row. |
+| Sparkle background update checks | launcher main-process hook | `.vite/build/workspace-root-drop-handler-*.js` | `let f=JB();f>0&&setInterval(d,f).unref(),d()` | When `disableAutomaticUpdates = true` is present before launch, skip the background Sparkle interval and immediate background check while preserving updater initialization, manual `checkForUpdates`, and manual install actions. |
 | GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model list` | `index-*.js` | `"list-models-for-host"` | Wrap the app bridge model-list handler so it appends a Codex-shaped `gpt-5.5` entry when the returned list does not already include it. |
 | GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model query selector` | `font-settings-*.js` | `modelsByType` | Append the same Codex-shaped `gpt-5.5` entry after the model query selector filters raw models into `modelsByType.models`. |
 
@@ -71,7 +76,7 @@ Source layout:
 - On `26.611.61753`, the `26.611.61049` target mapping still applies with the same inspected target files: `general-settings-BrSCFSM1.js`, `composer-DWFAaSck.js`, `use-service-tier-settings-COAzInwV.js`, `check-plugin-availability-Dt8gcp_v.js`, `use-plugin-install-flow-CNEV_P5X.js`, `use-plugins-DCH1nRSg.js`, and `app-prefetch-impl-CEgE9TWt.js`.
 - On `26.611.62324`, the `26.611.61753` target mapping still applies with renamed assets: `general-settings-IMuz9tUl.js`, `composer-_Sq5SNWs.js`, `use-service-tier-settings-C5mC2768.js`, `check-plugin-availability-Ddzzxdl0.js`, `use-plugin-install-flow-4i8rVI1e.js`, `use-plugins-D38FFcwl.js`, and `app-prefetch-impl-CORPetQR.js`.
 - On `26.616.31447`, the `26.611.62324` target family still applies with renamed assets: `general-settings-w5rHBc1G.js`, `composer-DPGDuJAT.js`, `use-service-tier-settings-DdUlOJCi.js`, `check-plugin-availability-B7Jyfq8B.js`, `use-plugin-install-flow-SRPoE-G1.js`, `use-plugins-h49NfL4I.js`, and `app-prefetch-impl-DN5qPrHb.js`. The composer `Intelligence` Speed menu code moved away from the locale message id in the composer asset, so the runtime target also accepts the code-level `composer.openModelPicker` needle while preserving the `availableOptions.length>1` guard. The default API-key plugin catalog can return only `openai-api-curated`, so the Plugins catalog local-cache target adds `~/.codex/.tmp/plugins` to the query roots to recover the full local `openai-curated` catalog.
-- On `26.616.51431`, the `26.616.31447` target mapping still applies with renamed assets: `general-settings-Bit-KX17.js`, `composer-CCuv6v-2.js`, `use-service-tier-settings-B3OdnJtr.js`, `check-plugin-availability-C-NsZk73.js`, `use-plugin-install-flow-C4PrQmDj.js`, `use-plugins-DBJZMsOL.js`, and `app-prefetch-impl-C8D_N7IT.js`.
+- On `26.616.51431`, the `26.616.31447` target mapping still applies with renamed assets: `general-settings-Bit-KX17.js`, `composer-CCuv6v-2.js`, `use-service-tier-settings-B3OdnJtr.js`, `check-plugin-availability-C-NsZk73.js`, `use-plugin-install-flow-C4PrQmDj.js`, `use-plugins-DBJZMsOL.js`, and `app-prefetch-impl-C8D_N7IT.js`. The automatic-update setting schema matches `webview/assets/src-C7fSIbpz.js` and `.vite/build/src-UHYOvFd-.js`; the General row target matches `general-settings-Bit-KX17.js`; and the launcher-side main-process hook targets `.vite/build/workspace-root-drop-handler-CAzIvt6a.js`.
 
 ## Update Rules
 

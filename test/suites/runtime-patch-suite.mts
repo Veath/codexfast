@@ -1,7 +1,135 @@
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { assertContains, assertNotContains, fail } from "../helpers/assertions.mts";
 import { applyRuntimePatchesToBody } from "../../src/patch-engine.mts";
+import { isRuntimeJavaScriptResource } from "../../src/cli-runtime-patcher.mts";
+import {
+  childEnvWithAutomaticUpdateSetting,
+  createMainProcessAutomaticUpdateHookSource,
+  isAutomaticUpdatesDisabledInConfigContent,
+  patchMainProcessAutomaticUpdateSource,
+  patchMainProcessSettingsSchemaSource,
+} from "../../src/cli-update-settings.mts";
 
 export function runRuntimePatchSuite(): void {
+  if (!isRuntimeJavaScriptResource("app://-/.vite/build/bootstrap.js")) {
+    fail("expected runtime JavaScript URL matcher to accept main-process build assets served through app://");
+  }
+
+  const enabledConfig = "model = \"gpt-5.5\"\ndisableAutomaticUpdates = true\n";
+  if (!isAutomaticUpdatesDisabledInConfigContent(enabledConfig)) {
+    fail("expected automatic update setting reader to recognize disableAutomaticUpdates = true");
+  }
+  const defaultConfig = "disableAutomaticUpdates = false\n";
+  if (isAutomaticUpdatesDisabledInConfigContent(defaultConfig)) {
+    fail("expected automatic update setting reader to preserve automatic updates by default");
+  }
+
+  const codexHomeWithAutomaticUpdatesAllowed = mkdtempSync(join(tmpdir(), "codexfast updates allowed "));
+  try {
+    writeFileSync(join(codexHomeWithAutomaticUpdatesAllowed, "config.toml"), defaultConfig, "utf8");
+    const childEnv = childEnvWithAutomaticUpdateSetting({
+      CODEX_HOME: codexHomeWithAutomaticUpdatesAllowed,
+    });
+    assertContains(
+      childEnv.NODE_OPTIONS ?? "",
+      `--require="${codexHomeWithAutomaticUpdatesAllowed}/.tmp/codexfast/main-process-hook.cjs"`,
+      "expected automatic update main-process hook to be present even before the setting is enabled so the first click can persist",
+    );
+  } finally {
+    rmSync(codexHomeWithAutomaticUpdatesAllowed, { force: true, recursive: true });
+  }
+
+  const codexHomeWithSpace = mkdtempSync(join(tmpdir(), "codexfast updates "));
+  try {
+    writeFileSync(join(codexHomeWithSpace, "config.toml"), enabledConfig, "utf8");
+    const childEnv = childEnvWithAutomaticUpdateSetting({
+      CODEX_HOME: codexHomeWithSpace,
+    });
+    assertContains(
+      childEnv.NODE_OPTIONS ?? "",
+      `--require="${codexHomeWithSpace}/.tmp/codexfast/main-process-hook.cjs"`,
+      "expected automatic update main-process hook path to remain intact when CODEX_HOME contains spaces",
+    );
+  } finally {
+    rmSync(codexHomeWithSpace, { force: true, recursive: true });
+  }
+
+  assertContains(
+    createMainProcessAutomaticUpdateHookSource(),
+    "disableAutomaticUpdates",
+    "expected automatic update main-process hook to patch the backend settings schema used when saving the switch",
+  );
+
+  const mainProcessSettingsSchemaBody =
+    "localeOverride:K({agentAccess:`read-write`,default:null,description:`Explicit locale override`,key:`localeOverride`,schema:BS}),preventSleepWhileRunning:K({agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:RS}),keepRemoteControlAwakeWhilePluggedIn:K({agentAccess:`read-write`,default:!1,description:`Whether remote control keeps this computer awake while plugged in`,key:`keepRemoteControlAwakeWhilePluggedIn`,schema:RS})";
+  assertContains(
+    patchMainProcessSettingsSchemaSource(mainProcessSettingsSchemaBody),
+    "disableAutomaticUpdates:K({agentAccess:`read-write`,default:!1,description:`Whether background automatic update checks are disabled`,key:`disableAutomaticUpdates`,schema:RS})",
+    "expected main-process settings schema patch to let the backend persist disableAutomaticUpdates",
+  );
+
+  const mainProcessUpdaterBody =
+    "this.updater={checkForUpdates:async()=>{c.checkForUpdates()},installUpdatesIfAvailable:async()=>{c.installUpdatesIfAvailable()}};let f=JB();f>0&&setInterval(d,f).unref(),d()}resolveMacSparkleFeedUrl(){return n.o(`codexSparkleFeedUrl`)}";
+  const patchedMainProcessUpdater = patchMainProcessAutomaticUpdateSource(
+    mainProcessUpdaterBody,
+  );
+  assertContains(
+    patchedMainProcessUpdater,
+    "process.env.CODEXFAST_DISABLE_AUTOMATIC_UPDATES!==`1`&&(f>0&&setInterval(d,f).unref(),d())",
+    "expected main-process hook to skip only background automatic update checks when the codexfast setting is enabled",
+  );
+  assertContains(
+    patchedMainProcessUpdater,
+    "checkForUpdates:async()=>{c.checkForUpdates()}",
+    "expected main-process hook to preserve manual update checks",
+  );
+  assertContains(
+    patchedMainProcessUpdater,
+    "installUpdatesIfAvailable:async()=>{c.installUpdatesIfAvailable()}",
+    "expected main-process hook to preserve manual update installs",
+  );
+
+  const settingsSchemaBody =
+    "localeOverride:K({agentAccess:`read-write`,default:null,description:`Explicit locale override`,key:`localeOverride`,schema:BS}),preventSleepWhileRunning:K({agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:RS}),keepRemoteControlAwakeWhilePluggedIn:K({agentAccess:`read-write`,default:!1,description:`Whether remote control keeps this computer awake while plugged in`,key:`keepRemoteControlAwakeWhilePluggedIn`,schema:RS})";
+  const settingsSchemaResult = applyRuntimePatchesToBody(
+    ".vite/build/src-UHYOvFd-.js",
+    settingsSchemaBody,
+  );
+  assertContains(
+    settingsSchemaResult.content,
+    "disableAutomaticUpdates:K({agentAccess:`read-write`,default:!1,description:`Whether background automatic update checks are disabled`,key:`disableAutomaticUpdates`,schema:RS})",
+    "expected settings schema patch to add the disable automatic updates setting",
+  );
+  assertContains(
+    settingsSchemaResult.patchedLabels.join("\n"),
+    "Disable automatic updates schema",
+    "expected settings schema patch to report its target",
+  );
+
+  const generalSettingsBody =
+    "function Kr(){let e=(0,$.c)(10),t=a(s),{platform:n}=Ee(),r=n!==`windows`,i=N(),o=z(j.preventSleepWhileRunning);if(!r)return null;let c,l;e[0]===Symbol.for(`react.memo_cache_sentinel`)?(c=(0,Z.jsx)(P,{...G.preventSleepWhileRunning}),l=(0,Z.jsx)(P,{id:`settings.general.power.preventSleepWhileRunning.description`,defaultMessage:`Keep your computer awake while Codex is running a chat`,description:`Description for preventing sleep while a chat runs`}),e[0]=c,e[1]=l):(c=e[0],l=e[1]);let u=o??!1,d;e[2]===t?d=e[3]:(d=e=>{B(t,j.preventSleepWhileRunning,e)},e[2]=t,e[3]=d);let f;e[4]===i?f=e[5]:(f=i.formatMessage(G.preventSleepWhileRunning),e[4]=i,e[5]=f);let p;return e[6]!==u||e[7]!==d||e[8]!==f?(p=(0,Z.jsx)(J,{label:c,description:l,control:(0,Z.jsx)(q,{checked:u,onChange:d,ariaLabel:f})}),e[6]=u,e[7]=d,e[8]=f,e[9]=p):p=e[9],p}";
+  const generalSettingsResult = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-26616.js",
+    generalSettingsBody,
+  );
+  assertContains(
+    generalSettingsResult.content,
+    "defaultMessage:`Disable automatic updates`",
+    "expected General settings patch to add the disable automatic updates label",
+  );
+  assertContains(
+    generalSettingsResult.content,
+    "B(t,j.disableAutomaticUpdates,e)",
+    "expected General settings patch to persist the disable automatic updates setting",
+  );
+  assertContains(
+    generalSettingsResult.patchedLabels.join("\n"),
+    "Disable automatic updates setting",
+    "expected General settings patch to report its target",
+  );
+
   const speedBody = "settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;";
   const speedResult = applyRuntimePatchesToBody("webview/assets/general-settings-demo.js", speedBody);
   assertContains(speedResult.content, "{serviceTierSettings:r,setServiceTier:i}=fe();let o;", "expected runtime patch engine to keep patching matching Speed settings bodies");

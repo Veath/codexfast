@@ -6,6 +6,10 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added a Settings > General `Disable automatic updates` switch. When enabled before `codexfast launch`, the launcher skips Sparkle background update checks for that session while preserving manual `Check for Updates` and update install actions.
+
 ## [0.36.0] - 2026-06-22
 
 ### Added

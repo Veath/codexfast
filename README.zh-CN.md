@@ -11,6 +11,7 @@
 - composer 里的 **Speed** 菜单
 - 仍需要兼容补丁的版本上的 **GPT-5.5** 模型列表显示
 - custom API 用户的 **Plugins** 入口
+- Settings > General 里的 **Disable automatic updates** 开关
 
 ```bash
 npx codexfast launch
@@ -20,9 +21,11 @@ npx codexfast launch
 
 ## 工作方式
 
-`Codex.app` 的前端 bundle 里已经包含 Fast、`/fast`、Speed、模型列表和 Plugins 相关 UI 路径，但 custom API 用户会被本地 gate 隐藏或禁用。`codexfast` 不新增后端服务，也不调用 OpenAI 私有 API。
+`Codex.app` 的前端 bundle 里已经包含 Fast、`/fast`、Speed、模型列表、Plugins 和 updater 相关 UI 路径，但 custom API 用户会被本地 gate 隐藏或禁用。`codexfast` 不新增后端服务，也不调用 OpenAI 私有 API。
 
 `codexfast launch` 会用本地 Chrome DevTools Protocol endpoint 启动 Codex，通过 browser-level CDP target 在 renderer JavaScript 执行前挂载拦截，拦截当前会话里匹配的 renderer JavaScript 响应，并在内存里应用窄范围 patch。使用 Codex 时需要保持 `codexfast launch` 进程运行；Settings 和 Plugins 的部分 chunk 是懒加载的，首次窗口打开后仍然需要 runtime interceptor。
+
+Settings > General 里的 `Disable automatic updates` 开关会写入 Codex 配置。开关在启动前已启用时，`codexfast` 会给当前进程注入 main-process hook，跳过 Sparkle 后台更新检查；手动 `Check for Updates` 和安装更新动作仍然可用。
 
 launcher 会发送轻量 browser-level CDP heartbeat。runtime patch session 断开时最多做三次 bounded reconnect，仍失败则打印 `Runtime patch session lost`，不会静默继续跑一个未 patch 的会话。如果 launch 进程退出，或者 Codex 启动后 runtime patch session 断开，Codex 会继续运行；但断开后才懒加载的功能 chunk 可能不会再被 patch，需要完全退出 Codex 并重新用 `codexfast` 启动。
 
@@ -74,6 +77,7 @@ q) Quit
 - Runtime launch 不会改写 `app.asar`、`Info.plist`、app bundle、备份、app 签名或 macOS 隐私权限
 - GPT-5.5 模型列表补丁只在仍需要兼容补丁的受支持版本上注入 UI catalog 项；你的 custom API provider 仍然必须支持 `gpt-5.5`
 - Plugins patch 只移除已知的 custom API 本地 gate；具体 plugin 行为仍可能受 plugin 状态、connector runtime 或管理员限制影响
+- 自动更新开关只会在下一次 `codexfast launch` 后禁用后台更新检查；手动更新检查仍然可用
 
 ## 排查
 
@@ -82,6 +86,8 @@ q) Quit
 **Runtime launch 显示 `Codex failed to start` / `ERR_FAILED`** - 完全退出 Codex，然后重新运行最新的 `npx codexfast launch`。失败的 runtime launch 不应该修改 `app.asar`、`Info.plist`、app bundle、备份、app 签名或 macOS 隐私权限。
 
 **`launch` 后 Settings Fast 或 Plugins 内容仍然缺失** - 确认 `codexfast launch` 终端进程仍在运行。关闭它会结束 CDP interception，后续懒加载的 Settings 和 Plugins chunk 就无法继续被 patch。
+
+**修改开关后仍出现一次自动更新检查** - 完全退出 Codex，然后重新运行 `codexfast launch`。updater lifecycle 在打开 Settings 页面之前就已经启动，所以这个开关从下一次 launch 开始生效。
 
 **出现 `Runtime patch session lost after reconnect attempts`** - Codex 会继续运行，但该 launch 进程无法继续 patch 后续懒加载 chunk。需要新的 patched session 时，完全退出 Codex，然后重新运行 `npx codexfast launch`。
 

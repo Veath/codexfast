@@ -1,7 +1,7 @@
 {
   "name": "codexfast",
   "version": "0.36.0",
-  "description": "Enable Fast mode, GPT-5.5, /fast, Speed menu, and Plugins in OpenAI Codex.app for custom API users on macOS.",
+  "description": "Enable Fast mode, GPT-5.5, /fast, Speed menu, Plugins, and update controls in OpenAI Codex.app for custom API users on macOS.",
   "scripts": {
     "build": "tsx scripts/build-codexfast.mts",
     "build:check": "tsx scripts/build-codexfast.mts --check",

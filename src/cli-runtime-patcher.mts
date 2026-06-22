@@ -33,7 +33,7 @@ export function applyRuntimePatchesToResponseBodyWithSource(
 }
 
 export function isRuntimeJavaScriptResource(resourceUrl: string): boolean {
-  return /^app:\/\/[^?#]+\/(?:webview\/)?assets\/[^/?#]+\.js(?:[?#].*)?$/.test(
+  return /^app:\/\/[^?#]+\/(?:(?:webview\/)?assets|\.vite\/build)\/[^/?#]+\.js(?:[?#].*)?$/.test(
     resourceUrl,
   );
 }
@@ -44,6 +44,8 @@ export function runRuntimeUrlSelfTest(): number {
     "app://-/assets/index-DxnGmFpS.js?v=1",
     "app://-/webview/assets/index.js",
     "app://codex.local/webview/assets/chunk.js#hash",
+    "app://-/.vite/build/bootstrap.js",
+    "app://-/.vite/build/src-UHYOvFd-.js",
   ];
   const rejectedUrls = [
     "app://-/index.html",
