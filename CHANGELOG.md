@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-06-22
+
+### Added
+
+- Added support for `Codex.app` `26.616.51431` (`build 4212`) after direct installed-bundle inspection confirmed the `26.616.31447` Fast, `/fast`, and Plugins catalog target mapping still applies with renamed assets.
+
 ## [0.35.1] - 2026-06-19
 
 ### Fixed
