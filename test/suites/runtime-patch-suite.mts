@@ -37,6 +37,9 @@ export function runRuntimePatchSuite(): void {
       `--require="${codexHomeWithAutomaticUpdatesAllowed}/.tmp/codexfast/main-process-hook.cjs"`,
       "expected automatic update main-process hook to be present even before the setting is enabled so the first click can persist",
     );
+    if (childEnv.CODEXFAST_DISABLE_AUTOMATIC_UPDATES != null) {
+      fail("expected automatic update main-process hook to avoid disabling checks when the setting is currently false");
+    }
   } finally {
     rmSync(codexHomeWithAutomaticUpdatesAllowed, { force: true, recursive: true });
   }
@@ -52,6 +55,9 @@ export function runRuntimePatchSuite(): void {
       `--require="${codexHomeWithSpace}/.tmp/codexfast/main-process-hook.cjs"`,
       "expected automatic update main-process hook path to remain intact when CODEX_HOME contains spaces",
     );
+    if (childEnv.CODEXFAST_DISABLE_AUTOMATIC_UPDATES != null) {
+      fail("expected automatic update main-process hook to read config dynamically instead of setting a startup-only environment variable");
+    }
   } finally {
     rmSync(codexHomeWithSpace, { force: true, recursive: true });
   }
@@ -77,8 +83,18 @@ export function runRuntimePatchSuite(): void {
   );
   assertContains(
     patchedMainProcessUpdater,
-    "process.env.CODEXFAST_DISABLE_AUTOMATIC_UPDATES!==`1`&&(f>0&&setInterval(d,f).unref(),d())",
-    "expected main-process hook to skip only background automatic update checks when the codexfast setting is enabled",
+    "codexfastAutomaticUpdateCheck",
+    "expected main-process hook to wrap background automatic update checks in a dynamic config check",
+  );
+  assertContains(
+    patchedMainProcessUpdater,
+    "readFileSync",
+    "expected main-process hook to read the latest config before background automatic update checks",
+  );
+  assertNotContains(
+    patchedMainProcessUpdater,
+    "CODEXFAST_DISABLE_AUTOMATIC_UPDATES",
+    "expected background automatic update checks to be gated by live config instead of startup-only environment",
   );
   assertContains(
     patchedMainProcessUpdater,

@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.37.1] - 2026-06-22
+
+### Fixed
+
+- Updated the `Disable automatic updates` launcher hook so toggling the setting during a `codexfast launch` session suppresses later Sparkle background checks without requiring a full Codex relaunch.
+
 ## [0.37.0] - 2026-06-22
 
 ### Added

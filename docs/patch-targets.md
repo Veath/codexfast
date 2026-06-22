@@ -19,7 +19,7 @@ Source layout:
 - `src/targets/builders.mts` owns shared target-spec builders.
 - `src/patcher-targets.mts` aggregates the feature target modules for runtime launch.
 - `src/patch-engine.mts` applies target specs to intercepted JavaScript bodies.
-- `src/cli-update-settings.mts` owns the launcher-side config reader and process-local main-process hook used to skip Sparkle background checks without disabling manual updater actions.
+- `src/cli-update-settings.mts` owns the launcher-side config reader and process-local main-process hook used to read `config.toml` dynamically before Sparkle background checks without disabling manual updater actions.
 
 | Feature | Target label | Current file | Needle | Patch intent |
 | --- | --- | --- | --- | --- |
@@ -42,7 +42,7 @@ Source layout:
 | Local full plugin cache on `26.616.31447` and `26.616.51431` | `Plugins catalog local cache` | `use-plugins-*.js` | `.tmp/marketplaces/openai-internal-testing` | Add `~/.codex/.tmp/plugins` to the local marketplace roots so the app-server can return the full `openai-curated` catalog, including app-connect plugins such as Gmail, when the default API catalog only returns `openai-api-curated`. |
 | Automatic-update setting schema | `Disable automatic updates schema` | `src-*.js` | `preventSleepWhileRunning` | Add a read-write `disableAutomaticUpdates` boolean setting to the shared settings schema so the General switch can persist to Codex configuration. |
 | Automatic-update General row | `Disable automatic updates setting` | `general-settings-*.js` | `settings.general.power.preventSleepWhileRunning.description` | Add a Settings > General switch that stores `disableAutomaticUpdates` while preserving the existing Prevent Sleep row. |
-| Sparkle background update checks | launcher main-process hook | `.vite/build/workspace-root-drop-handler-*.js` | `let f=JB();f>0&&setInterval(d,f).unref(),d()` | When `disableAutomaticUpdates = true` is present before launch, skip the background Sparkle interval and immediate background check while preserving updater initialization, manual `checkForUpdates`, and manual install actions. |
+| Sparkle background update checks | launcher main-process hook | `.vite/build/workspace-root-drop-handler-*.js` | `let f=JB();f>0&&setInterval(d,f).unref(),d()` | Wrap the background Sparkle interval and immediate background check so each trigger reads the latest `disableAutomaticUpdates` value from `config.toml`, while preserving updater initialization, manual `checkForUpdates`, and manual install actions. |
 | GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model list` | `index-*.js` | `"list-models-for-host"` | Wrap the app bridge model-list handler so it appends a Codex-shaped `gpt-5.5` entry when the returned list does not already include it. |
 | GPT-5.5 model-list entry on `26.422.21637` | `GPT-5.5 model query selector` | `font-settings-*.js` | `modelsByType` | Append the same Codex-shaped `gpt-5.5` entry after the model query selector filters raw models into `modelsByType.models`. |
 

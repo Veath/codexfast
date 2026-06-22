@@ -25,7 +25,7 @@ Verified for `Codex.app` `26.616.51431` (`build 4212`), `26.616.31447` (`build 4
 
 `codexfast launch` starts Codex with a local Chrome DevTools Protocol endpoint, attaches through the browser-level CDP target before renderer JavaScript runs, intercepts matching renderer JavaScript responses for that launched session, and applies narrow patch rules in memory. Keep the `codexfast launch` process running while you use Codex; Settings and Plugins load some feature chunks lazily, so the runtime interceptor must stay attached after the first window appears.
 
-The Settings > General `Disable automatic updates` switch is stored in Codex configuration. When it is enabled before launch, `codexfast` injects a process-local main-process hook that skips Sparkle background update checks for that launched session. Manual `Check for Updates` and update install actions remain available.
+The Settings > General `Disable automatic updates` switch is stored in Codex configuration. `codexfast` injects a process-local main-process hook that reads the latest configuration before each Sparkle background update check, so enabling the switch during a `codexfast launch` session suppresses later background checks in that same session. Manual `Check for Updates` and update install actions remain available.
 
 The launcher sends a lightweight browser-level CDP heartbeat, tries up to three bounded reconnects if the runtime patch session drops, and reports `Runtime patch session lost` instead of silently continuing unpatched. If the launch process exits or the runtime patch session disconnects after Codex has started, Codex keeps running. Lazy-loaded features that were not patched before that point may stay unavailable until you fully quit Codex and relaunch with `codexfast`.
 
@@ -77,7 +77,7 @@ The script matches code signatures in frontend build output, so it can break aft
 - Runtime launch does not rewrite `app.asar`, `Info.plist`, the app bundle, backups, the app signature, or macOS privacy permissions
 - The GPT-5.5 model-list patch only injects the UI catalog entry on supported builds that still need it. Your configured provider must still support `gpt-5.5`
 - For Plugins, the script removes the custom-API gates needed to open the Plugins sidebar/page path on supported builds. Actual plugin behavior can still depend on plugin state, connector runtime behavior, or admin restrictions
-- The automatic-update switch disables background update checks only after the next `codexfast launch`; manual update checks remain available
+- The automatic-update switch disables later background update checks during the current `codexfast launch` session; manual update checks remain available
 
 ## Troubleshooting
 
@@ -87,7 +87,7 @@ The script matches code signatures in frontend build output, so it can break aft
 
 **Settings Fast or Plugins content is still missing after `launch`** - confirm the `codexfast launch` terminal process is still running. Closing it ends CDP interception, so lazy-loaded Settings and Plugins chunks cannot be patched later in the session.
 
-**Automatic updates still checked once after changing the setting** - fully quit Codex and relaunch with `codexfast launch`. The updater lifecycle starts before the Settings page is opened, so the switch takes effect on the next launch.
+**Automatic updates still checked once after changing the setting** - the updater can run a startup/background check before the Settings page is opened, and a check that already started cannot be undone. After the switch is enabled, later background checks in the same `codexfast launch` session are skipped.
 
 **Runtime patch session lost after reconnect attempts** - Codex keeps running, but no further lazy-loaded chunks can be patched by that launch process. Fully quit Codex and rerun `npx codexfast launch` when you need a fresh patched session.
 

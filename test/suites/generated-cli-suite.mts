@@ -16,7 +16,8 @@ export function runGeneratedCliSuite(rootDir: string): void {
   assertContains(generatedCli, "Runtime patch session lost after", "expected generated CLI to report exhausted runtime patch reconnects clearly");
   assertContains(generatedCli, "runtimePatchNoTargetIdleMs", "expected generated CLI to wait for quiet JS traffic before failing initial runtime target discovery");
   assertContains(generatedCli, "app://*/.vite/build/*.js", "expected generated CLI to intercept main-process build assets if Electron serves them through app://");
-  assertContains(generatedCli, "CODEXFAST_DISABLE_AUTOMATIC_UPDATES", "expected generated CLI to include the automatic update main-process hook");
+  assertContains(generatedCli, "codexfastAutomaticUpdateCheck", "expected generated CLI to include the dynamic automatic update main-process hook");
+  assertNotContains(generatedCli, "CODEXFAST_DISABLE_AUTOMATIC_UPDATES", "expected generated CLI not to rely on startup-only automatic update environment state");
   assertContains(generatedCli, "disableAutomaticUpdates", "expected generated CLI to include the automatic update setting patches");
   assertContains(generatedCli, "detached: true", "expected runtime launch to isolate Codex from the launch terminal process group");
   assertContains(generatedCli, "child.unref();", "expected runtime launch to let Codex survive when the launcher exits");

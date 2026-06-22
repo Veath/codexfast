@@ -73,7 +73,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - requires Codex to be fully quit before launch
   - reports patched target labels on supported builds
   - removes legacy auto-repair watcher files if they are present
-  - injects the automatic-update main-process hook only when `disableAutomaticUpdates = true` is present before launch
+  - injects the automatic-update main-process hook so background checks read `disableAutomaticUpdates` dynamically
   - leaves `app.asar`, `Info.plist`, and the app signature unchanged
   - fails closed without modifying the app when interception does not complete
 - Do not ship a change that enables only part of the combined Fast feature set.

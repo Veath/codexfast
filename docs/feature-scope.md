@@ -44,9 +44,9 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 ### Disable automatic updates setting
 
 - Adds a `Disable automatic updates` switch to Settings > General.
-- When enabled before `codexfast launch`, the launcher injects a process-local main-process hook that skips the Sparkle background update check loop and startup background check for that launched session.
+- The launcher injects a process-local main-process hook that reads the latest `config.toml` before each Sparkle background update check and skips that check when `disableAutomaticUpdates = true`.
 - Manual `Check for Updates` and update install actions remain available because the updater is still initialized.
-- The switch takes effect on the next launch. Changing it after Codex has already started cannot undo an updater lifecycle that already ran.
+- The switch affects later background checks in the same `codexfast launch` session. It cannot undo a startup/background check that already began before the setting changed.
 - This does not modify `app.asar`, `Info.plist`, the app bundle, the app signature, or macOS update metadata.
 
 ### GPT-5.5 model-list entry for custom API users
