@@ -107,6 +107,20 @@ export function runRuntimePatchSuite(): void {
     "installUpdatesIfAvailable:async()=>{c.installUpdatesIfAvailable()}",
     "expected main-process hook to preserve manual update installs",
   );
+  const mainProcessUpdaterBodyWithRenamedIntervalHelper =
+    "this.updater={checkForUpdates:async()=>{u&&!this.isUpdateReady&&this.updateLifecycleState===`idle`&&this.setUpdateLifecycleState(`checking`),c.checkForUpdates()},installUpdatesIfAvailable:async()=>{if(typeof c.installLatestUpdate==`function`){c.installLatestUpdate();return}this.isUpdateReady&&this.options.onInstallUpdatesRequested?.(),c.installUpdatesIfAvailable()}};let f=XB();f>0&&setInterval(d,f).unref(),d()}resolveMacSparkleFeedUrl(){return n.o(`codexSparkleFeedUrl`)}";
+  const patchedMainProcessUpdaterWithRenamedIntervalHelper =
+    patchMainProcessAutomaticUpdateSource(mainProcessUpdaterBodyWithRenamedIntervalHelper);
+  assertContains(
+    patchedMainProcessUpdaterWithRenamedIntervalHelper,
+    "let f=XB(),codexfastAutomaticUpdateCheck",
+    "expected main-process hook to preserve renamed automatic-update interval helper",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithRenamedIntervalHelper,
+    "checkForUpdates:async()=>{u&&!this.isUpdateReady",
+    "expected main-process hook to preserve current manual update checks with lifecycle state",
+  );
 
   const settingsSchemaBody =
     "localeOverride:K({agentAccess:`read-write`,default:null,description:`Explicit locale override`,key:`localeOverride`,schema:BS}),preventSleepWhileRunning:K({agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:RS}),keepRemoteControlAwakeWhilePluggedIn:K({agentAccess:`read-write`,default:!1,description:`Whether remote control keeps this computer awake while plugged in`,key:`keepRemoteControlAwakeWhilePluggedIn`,schema:RS})";
@@ -197,6 +211,23 @@ export function runRuntimePatchSuite(): void {
     generalSettings26623Result.patchedLabels.join("\n"),
     "Disable automatic updates setting",
     "expected 26.623 General settings patch to report its target",
+  );
+
+  const generalSettings26623RenamedBody =
+    "function La(){let e=(0,Q.c)(10),t=b(F),{platform:n}=De(),r=n!==`windows`,i=B(),a=C(L.preventSleepWhileRunning);if(!r)return null;let o,s;e[0]===Symbol.for(`react.memo_cache_sentinel`)?(o=(0,$.jsx)(H,{...W.preventSleepWhileRunning}),s=(0,$.jsx)(H,{id:`settings.general.power.preventSleepWhileRunning.description`,defaultMessage:`Keep your computer awake while Codex is running a chat`,description:`Description for preventing sleep while a chat runs`}),e[0]=o,e[1]=s):(o=e[0],s=e[1]);let c=a??!1,l;e[2]===t?l=e[3]:(l=e=>{R(t,L.preventSleepWhileRunning,e)},e[2]=t,e[3]=l);let u;e[4]===i?u=e[5]:(u=i.formatMessage(W.preventSleepWhileRunning),e[4]=i,e[5]=u);let d;return e[6]!==c||e[7]!==l||e[8]!==u?(d=(0,$.jsx)(U,{label:o,description:s,control:(0,$.jsx)(I,{checked:c,onChange:l,ariaLabel:u})}),e[6]=c,e[7]=l,e[8]=u,e[9]=d):d=e[9],d}settings.general.power.preventSleepWhileRunning.description";
+  const generalSettings26623RenamedResult = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-26623-renamed.js",
+    generalSettings26623RenamedBody,
+  );
+  assertContains(
+    generalSettings26623RenamedResult.content,
+    "R(t,L.disableAutomaticUpdates,e)",
+    "expected 26.623 General settings patch to tolerate renamed settings helpers",
+  );
+  assertContains(
+    generalSettings26623RenamedResult.patchedLabels.join("\n"),
+    "Disable automatic updates setting",
+    "expected renamed 26.623 General settings patch to report its target",
   );
 
   const speedBody = "settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;";
@@ -436,6 +467,63 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
     versionFilteredResult.patchedLabels.join("\n"),
     "Speed setting",
     "expected 26.623 runtime launch to report patched non-Plugins targets",
+  );
+
+  const versionFilteredPatcherSource4452 = runtimePatcherSourceForVersion(`
+const TARGET_SPECS = [
+  {id: "plugins-catalog-visibility-26601", label: "Plugins catalog visibility", needle: "plugin-needle", guardedSignature: /PLUGIN_DISABLED/, patchedSignature: /PLUGIN_ENABLED/, legacyPatchedSignature: null, applyReplacement: "PLUGIN_ENABLED"},
+  {id: "speed-setting", label: "Speed setting", needle: "speed-needle", guardedSignature: /SPEED_DISABLED/, patchedSignature: /SPEED_ENABLED/, legacyPatchedSignature: null, applyReplacement: "SPEED_ENABLED"}
+];
+function replaceContent(content, signature, replacement) {
+  return content.replace(signature, replacement);
+}
+function replaceContentOrThrow(content, signature, replacement) {
+  return replaceContent(content, signature, replacement);
+}
+function inspectSpec(content, spec) {
+  if (!content.includes(spec.needle)) return null;
+  const guarded = spec.guardedSignature.test(content);
+  const patched = spec.patchedSignature.test(content);
+  const legacyPatched = spec.legacyPatchedSignature?.test(content) ?? false;
+  if (!guarded && !patched && !legacyPatched) return null;
+  return {spec, guarded, patched, legacyPatched};
+}
+function applyRuntimePatchesToBody(_resourcePath, body) {
+  let content = body;
+  const matchedLabels = [];
+  const patchedLabels = [];
+  const alreadyPatchedLabels = [];
+  for (const spec of TARGET_SPECS) {
+    const match = inspectSpec(content, spec);
+    if (!match) continue;
+    matchedLabels.push(spec.label);
+    if (match.guarded) {
+      content = replaceContent(content, spec.guardedSignature, spec.applyReplacement);
+      patchedLabels.push(spec.label);
+    } else if (match.patched) {
+      alreadyPatchedLabels.push(spec.label);
+    }
+  }
+  return {content, matchedLabels, patchedLabels, alreadyPatchedLabels};
+}
+`, "26.623.31921+4452");
+  const versionFilteredPatch4452 = new Function(`${versionFilteredPatcherSource4452}\nreturn applyRuntimePatchesToBody;`)() as (resourcePath: string, body: string) => {
+    content: string;
+    patchedLabels: string[];
+  };
+  const versionFilteredResult4452 = versionFilteredPatch4452(
+    "app://-/assets/demo.js",
+    "plugin-needle PLUGIN_DISABLED speed-needle SPEED_DISABLED",
+  );
+  assertContains(
+    versionFilteredResult4452.content,
+    "PLUGIN_DISABLED",
+    "expected 26.623.31921 runtime launch to skip Plugins targets because the official app supports Plugins",
+  );
+  assertContains(
+    versionFilteredResult4452.content,
+    "SPEED_ENABLED",
+    "expected 26.623.31921 runtime launch to keep non-Plugins runtime targets active",
   );
 
   const nativePipeBody = "function dP(){return lP().info(`browser-use native pipe peer authorization enabled`,{safe:{mode:a?`dev`:`packaged`},sensitive:{}}),e=>{let t=fP(e);return t==null?{authorized:!1,reason:`missing-socket-file-descriptor`}:s.authorizeSocketPeer(t,a)}}";

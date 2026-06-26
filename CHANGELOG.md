@@ -6,6 +6,19 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added support for `Codex.app` `26.623.31921` (`build 4452`) after direct installed-bundle inspection confirmed the `26.623.31443` Fast, `/fast`, Speed, and official Plugins support scope still applies.
+
+### Changed
+
+- Skipped Plugins runtime targets for `26.623.31921` (`build 4452`) because Plugins remains supported through the official app path.
+
+### Fixed
+
+- Made the `26.623` Settings > General automatic-update row target tolerate renamed minified settings helpers while still injecting the `Disable automatic updates` switch.
+- Made the launcher-side automatic-update hook tolerate renamed minified Sparkle interval helpers, restoring background-check suppression on newer supported Codex builds while preserving manual update actions.
+
 ## [0.40.0] - 2026-06-26
 
 ### Added

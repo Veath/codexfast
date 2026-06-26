@@ -3,9 +3,7 @@ import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 
 const MAIN_PROCESS_AUTOMATIC_UPDATE_SIGNATURE =
-  "let f=JB();f>0&&setInterval(d,f).unref(),d()";
-const MAIN_PROCESS_AUTOMATIC_UPDATE_REPLACEMENT =
-  "let f=JB(),codexfastAutomaticUpdateCheck=()=>{try{let e=require(`node:path`),t=require(`node:fs`).readFileSync(e.join(process.env.CODEX_HOME||e.join(require(`node:os`).homedir(),`.codex`),`config.toml`),`utf8`);if(/^\\s*disableAutomaticUpdates\\s*=\\s*true\\s*(?:#.*)?$/m.test(t))return}catch{}d()};f>0&&setInterval(codexfastAutomaticUpdateCheck,f).unref(),codexfastAutomaticUpdateCheck()";
+  /let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(\);\1>0&&setInterval\(d,\1\)\.unref\(\),d\(\)/;
 const MAIN_PROCESS_SETTINGS_SCHEMA_SIGNATURE =
   /(preventSleepWhileRunning:([A-Za-z_$][\w$]*)\(\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\w$]*)\}\),)/;
 const MAIN_PROCESS_SETTINGS_SCHEMA_REPLACEMENT =
@@ -74,7 +72,8 @@ export function isAutomaticUpdatesDisabledInConfig(env: NodeJS.ProcessEnv = proc
 export function patchMainProcessAutomaticUpdateSource(source: string): string {
   return source.replace(
     MAIN_PROCESS_AUTOMATIC_UPDATE_SIGNATURE,
-    MAIN_PROCESS_AUTOMATIC_UPDATE_REPLACEMENT,
+    (_match, intervalVar: string, readIntervalVar: string) =>
+      `let ${intervalVar}=${readIntervalVar}(),codexfastAutomaticUpdateCheck=()=>{try{let e=require(\`node:path\`),t=require(\`node:fs\`).readFileSync(e.join(process.env.CODEX_HOME||e.join(require(\`node:os\`).homedir(),\`.codex\`),\`config.toml\`),\`utf8\`);if(/^\\s*disableAutomaticUpdates\\s*=\\s*true\\s*(?:#.*)?$/m.test(t))return}catch{}d()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`,
   );
 }
 
@@ -91,8 +90,10 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "const Module = require(\"node:module\");",
     "const fs = require(\"node:fs\");",
     "const originalJsLoader = Module._extensions[\".js\"];",
-    `const automaticUpdateSignature = ${JSON.stringify(MAIN_PROCESS_AUTOMATIC_UPDATE_SIGNATURE)};`,
-    `const automaticUpdateReplacement = ${JSON.stringify(MAIN_PROCESS_AUTOMATIC_UPDATE_REPLACEMENT)};`,
+    "const automaticUpdateSignature = /let ([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\(\\);\\1>0&&setInterval\\(d,\\1\\)\\.unref\\(\\),d\\(\\)/;",
+    "function automaticUpdateReplacement(_match, intervalVar, readIntervalVar) {",
+    "  return `let ${intervalVar}=${readIntervalVar}(),codexfastAutomaticUpdateCheck=()=>{try{let e=require(\\`node:path\\`),t=require(\\`node:fs\\`).readFileSync(e.join(process.env.CODEX_HOME||e.join(require(\\`node:os\\`).homedir(),\\`.codex\\`),\\`config.toml\\`),\\`utf8\\`);if(/^\\\\s*disableAutomaticUpdates\\\\s*=\\\\s*true\\\\s*(?:#.*)?$/m.test(t))return}catch{}d()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`;",
+    "}",
     "const settingsSchemaSignature = /(preventSleepWhileRunning:([A-Za-z_$][\\w$]*)\\(\\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\\w$]*)\\}\\),)/;",
     "const settingsSchemaReplacement = \"$1disableAutomaticUpdates:$2({agentAccess:`read-write`,default:!1,description:`Whether background automatic update checks are disabled`,key:`disableAutomaticUpdates`,schema:$3}),\";",
     "const settingsSchemaFilePattern = /[\\\\/]\\.vite[\\\\/]build[\\\\/]src-[^\\\\/]+\\.js$/;",
