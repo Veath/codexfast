@@ -8,6 +8,8 @@ const MAIN_PROCESS_SETTINGS_SCHEMA_SIGNATURE =
   /(preventSleepWhileRunning:([A-Za-z_$][\w$]*)\(\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\w$]*)\}\),)/;
 const MAIN_PROCESS_SETTINGS_SCHEMA_REPLACEMENT =
   "$1disableAutomaticUpdates:$2({agentAccess:`read-write`,default:!1,description:`Whether background automatic update checks are disabled`,key:`disableAutomaticUpdates`,schema:$3}),";
+const MAIN_PROCESS_AUTOMATIC_UPDATE_READER =
+  "codexfastReadDisableAutomaticUpdates=t=>{let n=null,r=null,i=``;for(let a of t.split(/\\r?\\n/)){let t=a,o=null,s=!1,c=!1;for(let n=0;n<t.length;n++){let r=t[n];if(c){c=!1;continue}if(r===`\\\\`&&o!=null){c=!0;continue}if((r===`\\\"`||r===`'`)&&(o==null||o===r)){o=o==null?r:null;continue}if(r===`#`&&o==null){t=t.slice(0,n);break}}let l=t.trim();if(!l)continue;let u=/^\\[([^\\[\\]]+)\\]$/.exec(l);if(u){i=u[1].trim();continue}let d=/^disableAutomaticUpdates\\s*=\\s*(true|false)\\s*$/.exec(l);if(!d)continue;i===`desktop`?n=d[1]===`true`:i===``&&r==null&&(r=d[1]===`true`)}return n??r??!1}";
 
 function stripTomlComment(line: string): string {
   let quote: string | null = null;
@@ -34,14 +36,33 @@ function stripTomlComment(line: string): string {
 }
 
 export function isAutomaticUpdatesDisabledInConfigContent(content: string): boolean {
+  let currentTable = "";
+  let legacyValue: boolean | null = null;
+  let desktopValue: boolean | null = null;
+
   for (const rawLine of content.split(/\r?\n/u)) {
     const line = stripTomlComment(rawLine).trim();
+    if (!line) {
+      continue;
+    }
+
+    const tableMatch = /^\[([^\[\]]+)\]$/u.exec(line);
+    if (tableMatch) {
+      currentTable = tableMatch[1].trim();
+      continue;
+    }
+
     const match = /^disableAutomaticUpdates\s*=\s*(true|false)\s*$/u.exec(line);
     if (match) {
-      return match[1] === "true";
+      const value = match[1] === "true";
+      if (currentTable === "desktop") {
+        desktopValue = value;
+      } else if (currentTable === "" && legacyValue === null) {
+        legacyValue = value;
+      }
     }
   }
-  return false;
+  return desktopValue ?? legacyValue ?? false;
 }
 
 export function resolveCodexHome(env: NodeJS.ProcessEnv = process.env): string | null {
@@ -73,7 +94,7 @@ export function patchMainProcessAutomaticUpdateSource(source: string): string {
   return source.replace(
     MAIN_PROCESS_AUTOMATIC_UPDATE_SIGNATURE,
     (_match, intervalVar: string, readIntervalVar: string) =>
-      `let ${intervalVar}=${readIntervalVar}(),codexfastAutomaticUpdateCheck=()=>{try{let e=require(\`node:path\`),t=require(\`node:fs\`).readFileSync(e.join(process.env.CODEX_HOME||e.join(require(\`node:os\`).homedir(),\`.codex\`),\`config.toml\`),\`utf8\`);if(/^\\s*disableAutomaticUpdates\\s*=\\s*true\\s*(?:#.*)?$/m.test(t))return}catch{}d()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`,
+      `let ${intervalVar}=${readIntervalVar}(),${MAIN_PROCESS_AUTOMATIC_UPDATE_READER},codexfastAutomaticUpdateCheck=()=>{try{let e=require(\`node:path\`),t=require(\`node:fs\`).readFileSync(e.join(process.env.CODEX_HOME||e.join(require(\`node:os\`).homedir(),\`.codex\`),\`config.toml\`),\`utf8\`);if(codexfastReadDisableAutomaticUpdates(t))return}catch{}d()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`,
   );
 }
 
@@ -91,8 +112,9 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "const fs = require(\"node:fs\");",
     "const originalJsLoader = Module._extensions[\".js\"];",
     "const automaticUpdateSignature = /let ([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\(\\);\\1>0&&setInterval\\(d,\\1\\)\\.unref\\(\\),d\\(\\)/;",
+    `const automaticUpdateReader = ${JSON.stringify(MAIN_PROCESS_AUTOMATIC_UPDATE_READER)};`,
     "function automaticUpdateReplacement(_match, intervalVar, readIntervalVar) {",
-    "  return `let ${intervalVar}=${readIntervalVar}(),codexfastAutomaticUpdateCheck=()=>{try{let e=require(\\`node:path\\`),t=require(\\`node:fs\\`).readFileSync(e.join(process.env.CODEX_HOME||e.join(require(\\`node:os\\`).homedir(),\\`.codex\\`),\\`config.toml\\`),\\`utf8\\`);if(/^\\\\s*disableAutomaticUpdates\\\\s*=\\\\s*true\\\\s*(?:#.*)?$/m.test(t))return}catch{}d()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`;",
+    "  return `let ${intervalVar}=${readIntervalVar}(),${automaticUpdateReader},codexfastAutomaticUpdateCheck=()=>{try{let e=require(\\`node:path\\`),t=require(\\`node:fs\\`).readFileSync(e.join(process.env.CODEX_HOME||e.join(require(\\`node:os\\`).homedir(),\\`.codex\\`),\\`config.toml\\`),\\`utf8\\`);if(codexfastReadDisableAutomaticUpdates(t))return}catch{}d()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`;",
     "}",
     "const settingsSchemaSignature = /(preventSleepWhileRunning:([A-Za-z_$][\\w$]*)\\(\\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\\w$]*)\\}\\),)/;",
     "const settingsSchemaReplacement = \"$1disableAutomaticUpdates:$2({agentAccess:`read-write`,default:!1,description:`Whether background automatic update checks are disabled`,key:`disableAutomaticUpdates`,schema:$3}),\";",

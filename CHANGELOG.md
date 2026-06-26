@@ -18,6 +18,7 @@ This project follows a simple release-oriented changelog format.
 
 - Made the `26.623` Settings > General automatic-update row target tolerate renamed minified settings helpers while still injecting the `Disable automatic updates` switch.
 - Made the launcher-side automatic-update hook tolerate renamed minified Sparkle interval helpers, restoring background-check suppression on newer supported Codex builds while preserving manual update actions.
+- Fixed the launcher-side automatic-update config reader to honor Codex desktop settings from `[desktop].disableAutomaticUpdates` before legacy top-level values and ignore unrelated TOML tables.
 
 ## [0.40.0] - 2026-06-26
 

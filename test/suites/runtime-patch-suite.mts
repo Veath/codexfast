@@ -22,6 +22,16 @@ export function runRuntimePatchSuite(): void {
   if (!isAutomaticUpdatesDisabledInConfigContent(enabledConfig)) {
     fail("expected automatic update setting reader to recognize disableAutomaticUpdates = true");
   }
+  const desktopEnabledConfig =
+    "disableAutomaticUpdates = false\n[desktop]\ndisableAutomaticUpdates = true\n";
+  if (!isAutomaticUpdatesDisabledInConfigContent(desktopEnabledConfig)) {
+    fail("expected desktop automatic update setting to take precedence over a legacy top-level value");
+  }
+  const unrelatedTableConfig =
+    "[projects.\"/tmp/demo\"]\ndisableAutomaticUpdates = true\n";
+  if (isAutomaticUpdatesDisabledInConfigContent(unrelatedTableConfig)) {
+    fail("expected automatic update setting reader to ignore unrelated TOML table values");
+  }
   const defaultConfig = "disableAutomaticUpdates = false\n";
   if (isAutomaticUpdatesDisabledInConfigContent(defaultConfig)) {
     fail("expected automatic update setting reader to preserve automatic updates by default");
@@ -92,6 +102,16 @@ export function runRuntimePatchSuite(): void {
     "readFileSync",
     "expected main-process hook to read the latest config before background automatic update checks",
   );
+  assertContains(
+    patchedMainProcessUpdater,
+    "codexfastReadDisableAutomaticUpdates",
+    "expected main-process hook to parse the desktop automatic update setting instead of using a table-blind line regex",
+  );
+  assertNotContains(
+    patchedMainProcessUpdater,
+    "/^\\s*disableAutomaticUpdates\\s*=\\s*true",
+    "expected main-process hook not to use a table-blind automatic update setting regex",
+  );
   assertNotContains(
     patchedMainProcessUpdater,
     "CODEXFAST_DISABLE_AUTOMATIC_UPDATES",
@@ -113,8 +133,13 @@ export function runRuntimePatchSuite(): void {
     patchMainProcessAutomaticUpdateSource(mainProcessUpdaterBodyWithRenamedIntervalHelper);
   assertContains(
     patchedMainProcessUpdaterWithRenamedIntervalHelper,
-    "let f=XB(),codexfastAutomaticUpdateCheck",
-    "expected main-process hook to preserve renamed automatic-update interval helper",
+    "let f=XB(),codexfastReadDisableAutomaticUpdates",
+    "expected main-process hook to preserve renamed automatic-update interval helper before reading config",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithRenamedIntervalHelper,
+    "codexfastAutomaticUpdateCheck",
+    "expected main-process hook to wrap renamed automatic-update checks",
   );
   assertContains(
     patchedMainProcessUpdaterWithRenamedIntervalHelper,

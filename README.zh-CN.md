@@ -23,7 +23,7 @@ npx codexfast launch
 
 `codexfast launch` 会用本地 Chrome DevTools Protocol endpoint 启动 Codex，通过 browser-level CDP target 在 renderer JavaScript 执行前挂载拦截，拦截当前会话里匹配的 renderer JavaScript 响应，并在内存里应用窄范围 patch。使用 Codex 时需要保持 `codexfast launch` 进程运行；Settings 和被 patch 的功能 chunk 都可能懒加载，首次窗口打开后仍然需要 runtime interceptor。
 
-Settings > General 里的 `Disable automatic updates` 开关会写入 Codex 配置。`codexfast` 会给当前进程注入 main-process hook，并在每次 Sparkle 后台更新检查前读取最新配置，所以在一次 `codexfast launch` 会话中打开开关后，后续后台检查会被跳过；手动 `Check for Updates` 和安装更新动作仍然可用。注入到 Settings 的这一行会按常见 Codex app 语言显示对应文案。
+Settings > General 里的 `Disable automatic updates` 开关会写入 Codex desktop 配置 `[desktop].disableAutomaticUpdates`。`codexfast` 会给当前进程注入 main-process hook，并在每次 Sparkle 后台更新检查前读取最新配置，所以在一次 `codexfast launch` 会话中打开开关后，后续后台检查会被跳过；手动 `Check for Updates` 和安装更新动作仍然可用。注入到 Settings 的这一行会按常见 Codex app 语言显示对应文案。
 
 launcher 会发送轻量 browser-level CDP heartbeat。runtime patch session 断开时最多做三次 bounded reconnect，仍失败则打印 `Runtime patch session lost`，不会静默继续跑一个未 patch 的会话。如果 launch 进程退出，或者 Codex 启动后 runtime patch session 断开，Codex 会继续运行；但断开后才懒加载的功能 chunk 可能不会再被 patch，需要完全退出 Codex 并重新用 `codexfast` 启动。
 
