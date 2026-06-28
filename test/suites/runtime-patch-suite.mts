@@ -146,6 +146,25 @@ export function runRuntimePatchSuite(): void {
     "checkForUpdates:async()=>{u&&!this.isUpdateReady",
     "expected main-process hook to preserve current manual update checks with lifecycle state",
   );
+  const mainProcessUpdaterBodyWithAutodownloadGate =
+    "this.setAutomaticBackgroundDownloadsEnabledForMac=e=>{c.setAutomaticBackgroundDownloadsEnabled(e),e&&d()},this.updater={checkForUpdates:async()=>{u&&!this.isUpdateReady&&this.updateLifecycleState===`idle`&&this.setUpdateLifecycleState(`checking`),c.checkForUpdates()},installUpdatesIfAvailable:async()=>{if(typeof c.installLatestUpdate==`function`){c.installLatestUpdate();return}this.isUpdateReady&&this.options.onInstallUpdatesRequested?.(),c.installUpdatesIfAvailable()}};let f=XB();f>0&&setInterval(d,f).unref(),d()}resolveMacSparkleFeedUrl(){return n.o(`codexSparkleFeedUrl`)}";
+  const patchedMainProcessUpdaterWithAutodownloadGate =
+    patchMainProcessAutomaticUpdateSource(mainProcessUpdaterBodyWithAutodownloadGate);
+  assertContains(
+    patchedMainProcessUpdaterWithAutodownloadGate,
+    "e&&codexfastAutomaticUpdateCheck()",
+    "expected automatic background download gate changes to reuse the dynamic config check instead of bypassing disableAutomaticUpdates",
+  );
+  assertNotContains(
+    patchedMainProcessUpdaterWithAutodownloadGate,
+    "e&&d()",
+    "expected automatic background download gate changes not to call the raw background update check",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithAutodownloadGate,
+    "checkForUpdates:async()=>{u&&!this.isUpdateReady",
+    "expected automatic background download gate patch to preserve manual update checks",
+  );
 
   const settingsSchemaBody =
     "localeOverride:K({agentAccess:`read-write`,default:null,description:`Explicit locale override`,key:`localeOverride`,schema:BS}),preventSleepWhileRunning:K({agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:RS}),keepRemoteControlAwakeWhilePluggedIn:K({agentAccess:`read-write`,default:!1,description:`Whether remote control keeps this computer awake while plugged in`,key:`keepRemoteControlAwakeWhilePluggedIn`,schema:RS})";

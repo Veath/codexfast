@@ -4,6 +4,8 @@ import { dirname, join } from "node:path";
 
 const MAIN_PROCESS_AUTOMATIC_UPDATE_SIGNATURE =
   /let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(\);\1>0&&setInterval\(d,\1\)\.unref\(\),d\(\)/;
+const MAIN_PROCESS_AUTOMATIC_DOWNLOAD_GATE_SIGNATURE =
+  /this\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\w$]*)=>\{([A-Za-z_$][\w$]*\.setAutomaticBackgroundDownloadsEnabled\(\1\)),\1&&d\(\)\},this\.updater=/;
 const MAIN_PROCESS_SETTINGS_SCHEMA_SIGNATURE =
   /(preventSleepWhileRunning:([A-Za-z_$][\w$]*)\(\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\w$]*)\}\),)/;
 const MAIN_PROCESS_SETTINGS_SCHEMA_REPLACEMENT =
@@ -91,10 +93,22 @@ export function isAutomaticUpdatesDisabledInConfig(env: NodeJS.ProcessEnv = proc
 }
 
 export function patchMainProcessAutomaticUpdateSource(source: string): string {
-  return source.replace(
+  const patchedSource = source.replace(
     MAIN_PROCESS_AUTOMATIC_UPDATE_SIGNATURE,
     (_match, intervalVar: string, readIntervalVar: string) =>
       `let ${intervalVar}=${readIntervalVar}(),${MAIN_PROCESS_AUTOMATIC_UPDATE_READER},codexfastAutomaticUpdateCheck=()=>{try{let e=require(\`node:path\`),t=require(\`node:fs\`).readFileSync(e.join(process.env.CODEX_HOME||e.join(require(\`node:os\`).homedir(),\`.codex\`),\`config.toml\`),\`utf8\`);if(codexfastReadDisableAutomaticUpdates(t))return}catch{}d()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`,
+  );
+  if (patchedSource === source) {
+    return source;
+  }
+  return patchedSource.replace(
+    MAIN_PROCESS_AUTOMATIC_DOWNLOAD_GATE_SIGNATURE,
+    (
+      _match,
+      enabledVar: string,
+      setAutomaticBackgroundDownloadsEnabledCall: string,
+    ) =>
+      `this.setAutomaticBackgroundDownloadsEnabledForMac=${enabledVar}=>{${setAutomaticBackgroundDownloadsEnabledCall},${enabledVar}&&codexfastAutomaticUpdateCheck()},this.updater=`,
   );
 }
 
@@ -112,9 +126,13 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "const fs = require(\"node:fs\");",
     "const originalJsLoader = Module._extensions[\".js\"];",
     "const automaticUpdateSignature = /let ([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\(\\);\\1>0&&setInterval\\(d,\\1\\)\\.unref\\(\\),d\\(\\)/;",
+    "const automaticDownloadGateSignature = /this\\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\\w$]*)=>\\{([A-Za-z_$][\\w$]*\\.setAutomaticBackgroundDownloadsEnabled\\(\\1\\)),\\1&&d\\(\\)\\},this\\.updater=/;",
     `const automaticUpdateReader = ${JSON.stringify(MAIN_PROCESS_AUTOMATIC_UPDATE_READER)};`,
     "function automaticUpdateReplacement(_match, intervalVar, readIntervalVar) {",
     "  return `let ${intervalVar}=${readIntervalVar}(),${automaticUpdateReader},codexfastAutomaticUpdateCheck=()=>{try{let e=require(\\`node:path\\`),t=require(\\`node:fs\\`).readFileSync(e.join(process.env.CODEX_HOME||e.join(require(\\`node:os\\`).homedir(),\\`.codex\\`),\\`config.toml\\`),\\`utf8\\`);if(codexfastReadDisableAutomaticUpdates(t))return}catch{}d()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`;",
+    "}",
+    "function automaticDownloadGateReplacement(_match, enabledVar, setAutomaticBackgroundDownloadsEnabledCall) {",
+    "  return `this.setAutomaticBackgroundDownloadsEnabledForMac=${enabledVar}=>{${setAutomaticBackgroundDownloadsEnabledCall},${enabledVar}&&codexfastAutomaticUpdateCheck()},this.updater=`;",
     "}",
     "const settingsSchemaSignature = /(preventSleepWhileRunning:([A-Za-z_$][\\w$]*)\\(\\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\\w$]*)\\}\\),)/;",
     "const settingsSchemaReplacement = \"$1disableAutomaticUpdates:$2({agentAccess:`read-write`,default:!1,description:`Whether background automatic update checks are disabled`,key:`disableAutomaticUpdates`,schema:$3}),\";",
@@ -127,7 +145,10 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "    const source = fs.readFileSync(filename, \"utf8\");",
     "    let patchedSource = source;",
     "    if (shouldPatchSettingsSchema) patchedSource = patchedSource.replace(settingsSchemaSignature, settingsSchemaReplacement);",
-    "    if (shouldPatchAutomaticUpdates) patchedSource = patchedSource.replace(automaticUpdateSignature, automaticUpdateReplacement);",
+    "    if (shouldPatchAutomaticUpdates) {",
+    "      const nextSource = patchedSource.replace(automaticUpdateSignature, automaticUpdateReplacement);",
+    "      patchedSource = nextSource === patchedSource ? nextSource : nextSource.replace(automaticDownloadGateSignature, automaticDownloadGateReplacement);",
+    "    }",
     "    module._compile(patchedSource, filename);",
     "    return;",
     "  }",

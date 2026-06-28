@@ -32,6 +32,12 @@ If a Fast conversation falls back to Standard after stopping, editing, and resen
 2. Confirm `serviceTierForRequest` preserves explicit non-standard `latestThreadSettings.serviceTier` values, but does not let Standard/null conversation state or latest-turn `params.serviceTier` override the configured Settings tier.
 3. Confirm send/edit/resume paths that compute `serviceTier` through the request helper do not block non-ChatGPT auth methods with the original `fast_mode`-only gate, especially after changing reasoning effort before resending.
 
+If `Disable automatic updates` is enabled but Codex still updates:
+
+1. Confirm `~/.codex/config.toml` contains `[desktop].disableAutomaticUpdates = true` or a supported legacy top-level value.
+2. Inspect the real extracted `.vite/build/workspace-root-drop-handler-*.js` file for every automatic path that calls the raw background check function. Newer bundles can call it through both the interval/immediate startup shape and `setAutomaticBackgroundDownloadsEnabledForMac`.
+3. Confirm manual `checkForUpdates` and `installUpdatesIfAvailable` remain untouched; do not use `CODEX_SPARKLE_ENABLED=false` or another global updater disable as a shortcut.
+
 If launch reports `Runtime patch session lost after 3 reconnect attempts`:
 
 1. Fully quit Codex and confirm no `Codex` main process remains.
