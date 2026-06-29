@@ -6,6 +6,21 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-06-29
+
+### Added
+
+- Added support for `Codex.app` `26.623.61825` (`build 4548`) after direct installed-bundle inspection confirmed the current 26.623 Fast, `/fast`, Speed, automatic-update, and official Plugins support scope still applies.
+
+### Changed
+
+- Skipped Plugins runtime targets for `26.623.61825` (`build 4548`) because Plugins remains supported through the official app path.
+
+### Fixed
+
+- Made the `26.623` Settings > General automatic-update row target tolerate another renamed local-variable layout while still injecting the `Disable automatic updates` switch.
+- Fixed the `26.623.61825` Settings > General patch so its generated Intl local no longer shadows the bundle's settings atom module local, preventing a temporal-dead-zone crash when Settings loads.
+
 ## [0.42.0] - 2026-06-28
 
 ### Added
