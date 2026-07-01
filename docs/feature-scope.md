@@ -56,7 +56,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 - Exposes `GPT-5.5` in the app model list on supported builds when the bundled model catalog does not include it.
 - On `26.422.21637`, the app filters the raw `model/list` response into `modelsByType` before rendering menus, so the patch also preserves the injected entry after that query selector filter.
-- On `26.422.30944` and later builds, GPT-5.5 is expected to be visible through the official app path. `codexfast` skips GPT-5.5 runtime targets from that version onward.
+- On later builds, GPT-5.5 can be visible through the official app path. `codexfast` should still patch model-list metadata when the official GPT-5.5 entry lacks Fast service-tier metadata, otherwise switching accounts can leave GPT-5.5 selected while hiding Settings Fast, `/fast`, and the composer Speed menu.
 - This injects the UI catalog metadata only. The configured custom API provider must still accept `gpt-5.5` at request time.
 - This does not replace the app's model execution path or make Codex merge arbitrary custom provider `/v1/models` responses into the UI catalog.
 

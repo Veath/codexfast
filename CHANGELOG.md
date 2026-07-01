@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.44.1] - 2026-07-01
+
+### Fixed
+
+- Fixed Fast controls disappearing after account switching leaves GPT-5.5 selected by augmenting official GPT-5.5 model-list entries that omit Fast service-tier metadata.
+
 ## [0.44.0] - 2026-06-30
 
 ### Added

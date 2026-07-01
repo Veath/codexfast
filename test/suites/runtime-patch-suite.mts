@@ -521,6 +521,14 @@ export function runRuntimePatchSuite(): void {
   assertNotContains(pluginCatalogLocalCache26616Result.content, "return Je([...typeof n==`string`?[n]:n??r??[],...i==null?[]:[i]],e)", "expected 26.616 plugin catalog patch to stop querying only workspace and internal-testing roots");
   assertContains(pluginCatalogLocalCache26616Result.patchedLabels.join("\n"), "Plugins catalog local cache", "expected 26.616 plugin catalog local cache patch to report its target");
 
+  const gpt55OfficialModelListBody = "\"list-models-for-host\":n9((e,t)=>e.sendRequest(`model/list`,t));";
+  const gpt55OfficialModelListResult = applyRuntimePatchesToBody("webview/assets/automations-page-26623.js", gpt55OfficialModelListBody);
+  assertContains(gpt55OfficialModelListResult.content, "/*codexfast-gpt55*/", "expected GPT-5.5 model-list patch to wrap the current handler shape");
+  assertContains(gpt55OfficialModelListResult.content, "e.model===`gpt-5.5`?{...e", "expected GPT-5.5 model-list patch to update an existing official model entry");
+  assertContains(gpt55OfficialModelListResult.content, "additionalSpeedTiers:Array.isArray(e.additionalSpeedTiers)&&e.additionalSpeedTiers.length>0?e.additionalSpeedTiers:[`fast`]", "expected GPT-5.5 model-list patch to preserve or add Fast speed metadata");
+  assertContains(gpt55OfficialModelListResult.content, "serviceTiers:Array.isArray(e.serviceTiers)&&e.serviceTiers.length>0?e.serviceTiers:[{id:`priority`,name:`Fast`,description:`1.5x speed, increased usage`}]", "expected GPT-5.5 model-list patch to add the Fast service tier when the official entry lacks it");
+  assertContains(gpt55OfficialModelListResult.patchedLabels.join("\n"), "GPT-5.5 model list", "expected GPT-5.5 model-list patch to report its target");
+
   const versionFilteredPatcherSource = runtimePatcherSourceForVersion(`
 const TARGET_SPECS = [
   {id: "plugins-catalog-visibility-26601", label: "Plugins catalog visibility", needle: "plugin-needle", guardedSignature: /PLUGIN_DISABLED/, patchedSignature: /PLUGIN_ENABLED/, legacyPatchedSignature: null, applyReplacement: "PLUGIN_ENABLED"},
