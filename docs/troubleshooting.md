@@ -26,6 +26,14 @@ If Settings Fast or Plugins content is still missing after launch:
 2. Fully quit Codex, rerun `npx codexfast launch`, and keep that process open while navigating to Settings and Plugins.
 3. If the process is still running and the build is supported, inspect runtime debug output for lazy chunk matches such as `general-settings-*.js` and `skills-page-*.js`.
 
+If Settings Fast, `/fast`, and the composer Speed menu all disappear after account switching:
+
+1. Confirm `npx codexfast launch` is still running and the expected Fast patch labels were reported. If the launcher is gone, lazy chunks can load without runtime patches.
+2. Inspect the app config through the live bridge, especially the current `read-config-for-host` model and `service_tier` values.
+3. Inspect `list-models-for-host` and compare the selected model's `serviceTiers` / `additionalSpeedTiers` with another known Fast-capable model. On the `26.623.70822` failure mode, account switching left `model = "gpt-5.5"` and `service_tier = "default"`, while official `gpt-5.5` had no Fast service-tier metadata and `gpt-5.4` still had `{ id: "priority", name: "Fast" }`.
+4. If the selected model is visible but lacks Fast metadata, inspect `src/targets/models.mts` and the runtime match for `GPT-5.5 model list`, not only `src/targets/speed.mts`. Current `26.623.70822` bundles can expose the bridge handler from `app-initial~app-main~automations-page-*.js` as ``"list-models-for-host":n9((e,t)=>e.sendRequest(`model/list`,t))``.
+5. Do not remove the `availableOptions.length` guard as a shortcut. That guard intentionally hides one-option speed controls; when all three Fast entry points vanish together, missing selected-model tier metadata is a likely root cause.
+
 If a Fast conversation falls back to Standard after stopping, editing, and resending:
 
 1. Inspect the shared service-tier hook in `use-service-tier-settings-*.js`.
