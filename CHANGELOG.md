@@ -6,6 +6,10 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Changed
+
+- Runtime launch output now includes the current `codexfast` package version in the action header.
+
 ### Fixed
 
 - `Disable automatic updates` now also suppresses Sparkle forced install scheduling for already-downloaded updates, not only new background checks, while preserving manual `Check for Updates` and install actions.

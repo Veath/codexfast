@@ -40,6 +40,7 @@ const launchAgentFileName = 'com.codexfast.watcher.plist';
 
 function printActionHeader(action: string): void {
   printActionHeaderBlock(action, {
+    codexfastVersion: __PACKAGE_VERSION__,
     resources: context.paths.resources,
     version: context.metadata.version,
     build: context.metadata.build,

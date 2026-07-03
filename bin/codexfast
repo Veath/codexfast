@@ -636,6 +636,7 @@ function createCodexfastContext(appBundle = process.env.CODEXFAST_APP_BUNDLE) {
 function printActionHeaderBlock(action, details) {
     printLine("");
     printLine(`Action: ${action}`);
+    printLine(`codexfast version: ${details.codexfastVersion}`);
     printLine(`Resources: ${details.resources}`);
     printLine(`Detected version: ${details.version}`);
     printLine(`Detected build: ${details.build}`);
@@ -1722,6 +1723,7 @@ const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(', ');
 const launchAgentFileName = 'com.codexfast.watcher.plist';
 function printActionHeader(action) {
     printActionHeaderBlock(action, {
+        codexfastVersion: __PACKAGE_VERSION__,
         resources: context.paths.resources,
         version: context.metadata.version,
         build: context.metadata.build,

@@ -5,6 +5,7 @@ export type CliExitStatus = {
 };
 
 export type CliActionDetails = {
+  codexfastVersion: string;
   resources: string;
   version: string;
   build: string;
@@ -14,6 +15,7 @@ export type CliActionDetails = {
 export function printActionHeaderBlock(action: string, details: CliActionDetails): void {
   printLine("");
   printLine(`Action: ${action}`);
+  printLine(`codexfast version: ${details.codexfastVersion}`);
   printLine(`Resources: ${details.resources}`);
   printLine(`Detected version: ${details.version}`);
   printLine(`Detected build: ${details.build}`);
