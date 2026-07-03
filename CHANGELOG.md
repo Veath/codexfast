@@ -6,6 +6,11 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Fixed
+
+- `Disable automatic updates` now also suppresses Sparkle forced install scheduling for already-downloaded updates, not only new background checks, while preserving manual `Check for Updates` and install actions.
+- Runtime launch now fails closed when CDP reconnects are exhausted: codexfast closes the launched Codex process and exits non-zero instead of leaving a session running without runtime patching, which could let lazy-loaded patches stop being enforced.
+
 ## [0.46.0] - 2026-07-03
 
 ### Added

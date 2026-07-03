@@ -13,8 +13,9 @@ Use these checks when validating `launch` behavior. Do not mark a build as real-
 - The launch output reports the required initial target labels for the current build before it reports `Runtime launch completed`; older builds include `Plugins access`, while `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, `26.608.12217`, `26.609.30741`, `26.609.41114`, `26.609.71450`, `26.611.61049`, `26.611.61753`, `26.611.62324`, `26.616.31447`, `26.616.51431`, `26.616.71553`, `26.616.81150`, `26.623.31443`, `26.623.31921`, `26.623.42026`, `26.623.61825`, `26.623.70822`, `26.623.81905`, and `26.623.101652` do not require that legacy target because the old sidebar/page/detail gates are absent or Plugins is supported by the official app path
 - The `codexfast launch` process remains running while the launched Codex session is open
 - The runtime patch session heartbeat stays quiet during normal use, and no `Runtime patch session lost` message appears
-- If the launch process exits or the runtime patch session is lost after Codex has started, Codex keeps running without further runtime patching
+- If the runtime patch session is lost after reconnect attempts are exhausted, codexfast closes the launched Codex process and exits non-zero instead of leaving Codex running without runtime patching
 - With the launch process still running, opening Settings activates the Settings-side Fast control even if the Settings chunk loads after the initial window
+- If `[desktop].disableAutomaticUpdates = true`, automatic background checks and forced automatic install scheduling are suppressed while manual `Check for Updates` and install actions remain available
 - With the launch process still running, opening Plugins shows plugin page content even if the Plugins chunk loads after the initial window
 - `app.asar`, `Info.plist`, and the app code signature are unchanged after launch exits
 - If launch fails before runtime patching starts, the app signature and `app.asar` are still unchanged and no Codex main process is left running

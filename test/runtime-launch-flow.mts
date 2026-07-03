@@ -215,13 +215,15 @@ function main(): void {
   const launchSessionLostOutput = join(tmpDir, "launch-session-lost-output.txt");
   prepareFakeApp(launchSessionLostApp, "26.519.22136", "3003");
   runScriptCommand(launchSessionLostApp, ["launch"], launchSessionLostOutput, {
+    CODEXFAST_TEST_ALLOW_NONZERO: "1",
     CODEXFAST_TEST_RUNTIME_LAUNCH_SESSION_LOST: "1",
     CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS: "1",
   });
   assertContains(readOutput(launchSessionLostOutput), "Runtime launch completed.", "expected launch session-lost hook to reach a ready session first", readOutput(launchSessionLostOutput));
   assertContains(readOutput(launchSessionLostOutput), "Runtime patch session lost after 3 reconnect attempts:", "expected launch to report exhausted runtime reconnect attempts", readOutput(launchSessionLostOutput));
-  assertContains(readOutput(launchSessionLostOutput), "Codex.app will keep running without further runtime patching.", "expected exhausted runtime reconnect attempts to leave Codex running", readOutput(launchSessionLostOutput));
-  assertContains(readOutput(launchSessionLostOutput), "Exit code: 0", "expected exhausted runtime reconnect attempts not to fail launch after Codex is running", readOutput(launchSessionLostOutput));
+  assertContains(readOutput(launchSessionLostOutput), "Codex.app will be closed because runtime patching is no longer active.", "expected exhausted runtime reconnect attempts to fail closed instead of leaving an unpatched Codex session running", readOutput(launchSessionLostOutput));
+  assertNotContains(readOutput(launchSessionLostOutput), "Codex.app will keep running without further runtime patching.", "expected exhausted runtime reconnect attempts not to describe an unpatched Codex session as usable", readOutput(launchSessionLostOutput));
+  assertContains(readOutput(launchSessionLostOutput), "Exit code: 1", "expected exhausted runtime reconnect attempts to fail launch after runtime patching is lost", readOutput(launchSessionLostOutput));
   assertNoBundleMutationTools(launchSessionLostOutput);
 
   const menuLaunchSuccessApp = join(tmpDir, "MenuLaunchSuccess.app");

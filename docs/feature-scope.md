@@ -47,9 +47,9 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 - Adds a `Disable automatic updates` switch to Settings > General.
 - The injected Settings row uses locale-aware label and description copy for common Codex app locales, with English fallback.
-- The launcher injects a process-local main-process hook that reads the latest `config.toml` before each Sparkle background update check and skips that check when `[desktop].disableAutomaticUpdates = true`; a legacy top-level `disableAutomaticUpdates = true` is still accepted only when the desktop setting is absent.
+- The launcher injects a process-local main-process hook that reads the latest `config.toml` before each Sparkle background update check and automatic forced install scheduling pass, then skips those automatic paths when `[desktop].disableAutomaticUpdates = true`; a legacy top-level `disableAutomaticUpdates = true` is still accepted only when the desktop setting is absent.
 - Manual `Check for Updates` and update install actions remain available because the updater is still initialized.
-- The switch affects later background checks in the same `codexfast launch` session. It cannot undo a startup/background check that already began before the setting changed.
+- The switch affects later background checks and automatic forced install scheduling in the same `codexfast launch` session. It cannot undo a startup/background check that already began before the setting changed.
 - This does not modify `app.asar`, `Info.plist`, the app bundle, the app signature, or macOS update metadata.
 
 ### GPT-5.5 model-list entry for custom API users
@@ -65,5 +65,5 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - `Settings-side Fast control`, composer `/fast`, and the composer-side `Speed` menu should be treated as one combined Fast feature set.
 - `Plugins` support should not be described as available unless the sidebar/page gates still work cleanly on the target build.
 - `GPT-5.5` model-list support should not be described as provider support. It is only a UI catalog entry.
-- `Disable automatic updates` should be described as background-check suppression only, not as a global updater removal.
+- `Disable automatic updates` should be described as suppression for automatic background checks and forced install scheduling, not as a global updater removal.
 - Compatibility claims must also match `docs/compatibility-matrix.md` and the strict whitelist in `src/supported-app-versions.mts`.

@@ -10,7 +10,7 @@ Expected behavior:
 - It starts Codex with a local CDP endpoint and applies runtime patches only to that launched session.
 - Keep the `codexfast launch` process running while you use Codex. Settings and Plugins load some chunks lazily, and those later requests still need the runtime interceptor.
 - During initial startup, the launcher connects to the browser-level CDP target, auto-attaches to renderer targets with `waitForDebuggerOnStart`, enables `Fetch` interception in the renderer session, and then lets the renderer continue. If a required target for the current build is still not observed, launch retries one renderer reload and then fails closed instead of repeatedly refreshing the app. Older builds require `Plugins access`; `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, `26.608.12217`, `26.609.30741`, `26.609.41114`, `26.609.71450`, `26.611.61049`, `26.611.61753`, `26.611.62324`, `26.616.31447`, `26.616.51431`, `26.616.71553`, `26.616.81150`, `26.623.31443`, `26.623.31921`, `26.623.42026`, `26.623.61825`, `26.623.70822`, and `26.623.81905` do not require that legacy target because the old sidebar/page/detail gates are absent or Plugins is supported by the official app path.
-- The launcher sends a lightweight browser-level CDP heartbeat. If the runtime patch session drops, it reconnects at most three times, re-enables browser auto-attach, and then reports `Runtime patch session lost` if reconnects are exhausted.
+- The launcher sends a lightweight browser-level CDP heartbeat. If the runtime patch session drops, it reconnects at most three times and re-enables browser auto-attach. If reconnects are exhausted, it reports `Runtime patch session lost`, closes the launched Codex process, and exits non-zero so Codex does not keep running without runtime patching.
 - It does not modify `app.asar`, `Info.plist`, the app bundle, the app signature, backups, or macOS privacy permissions.
 - It removes the legacy launchd auto-repair watcher if an older codexfast version installed one.
 
@@ -49,14 +49,14 @@ If Fast writes `service_tier = "priority"` to `config.toml` but the UI still loo
 If `Disable automatic updates` is enabled but Codex still updates:
 
 1. Confirm `~/.codex/config.toml` contains `[desktop].disableAutomaticUpdates = true` or a supported legacy top-level value.
-2. Inspect the real extracted `.vite/build/workspace-root-drop-handler-*.js` file for every automatic path that calls the raw background check function. Newer bundles can call it through both the interval/immediate startup shape and `setAutomaticBackgroundDownloadsEnabledForMac`.
+2. Inspect the real extracted `.vite/build/workspace-root-drop-handler-*.js` file for every automatic path that calls the raw background check function or schedules an already-downloaded update for forced installation. Newer bundles can call the background check through both the interval/immediate startup shape and `setAutomaticBackgroundDownloadsEnabledForMac`, and can also install a downloaded update through `scheduleForcedUpdateInstall()`.
 3. Confirm manual `checkForUpdates` and `installUpdatesIfAvailable` remain untouched; do not use `CODEX_SPARKLE_ENABLED=false` or another global updater disable as a shortcut.
 
 If launch reports `Runtime patch session lost after 3 reconnect attempts`:
 
 1. Fully quit Codex and confirm no `Codex` main process remains.
 2. Re-run `npx codexfast launch`.
-3. Do not keep using that launched session as proof of runtime patch behavior; reconnects were exhausted, so later lazy chunks may not be patched.
+3. Do not keep using any remaining Codex window as proof of runtime patch behavior; reconnects were exhausted, so codexfast deliberately closed the launched process instead of allowing an unpatched session to continue.
 
 If Codex shows `Codex failed to start` with `ERR_FAILED` while runtime launch is being tested:
 

@@ -23,9 +23,9 @@ Verified for `Codex.app` `26.623.101652` (`build 4674`), `26.623.81905` (`build 
 
 `codexfast launch` starts Codex with a local Chrome DevTools Protocol endpoint, attaches through the browser-level CDP target before renderer JavaScript runs, intercepts matching renderer JavaScript responses for that launched session, and applies narrow patch rules in memory. Keep the `codexfast launch` process running while you use Codex; Settings and patched feature chunks can load lazily, so the runtime interceptor must stay attached after the first window appears.
 
-The Settings > General `Disable automatic updates` switch is stored in Codex desktop configuration as `[desktop].disableAutomaticUpdates`. `codexfast` injects a process-local main-process hook that reads the latest configuration before each Sparkle background update check, so enabling the switch during a `codexfast launch` session suppresses later background checks in that same session. Manual `Check for Updates` and update install actions remain available, and the injected Settings row uses locale-aware copy for common Codex app locales.
+The Settings > General `Disable automatic updates` switch is stored in Codex desktop configuration as `[desktop].disableAutomaticUpdates`. `codexfast` injects a process-local main-process hook that reads the latest configuration before each Sparkle background update check and automatic forced install scheduling pass, so enabling the switch during a `codexfast launch` session suppresses later automatic update activity in that same session. Manual `Check for Updates` and update install actions remain available, and the injected Settings row uses locale-aware copy for common Codex app locales.
 
-The launcher sends a lightweight browser-level CDP heartbeat, tries up to three bounded reconnects if the runtime patch session drops, and reports `Runtime patch session lost` instead of silently continuing unpatched. If the launch process exits or the runtime patch session disconnects after Codex has started, Codex keeps running. Lazy-loaded features that were not patched before that point may stay unavailable until you fully quit Codex and relaunch with `codexfast`.
+The launcher sends a lightweight browser-level CDP heartbeat, tries up to three bounded reconnects if the runtime patch session drops, and reports `Runtime patch session lost` instead of silently continuing unpatched. If reconnects are exhausted, `codexfast` closes the launched Codex process and exits non-zero so the session cannot keep running without runtime patching. If the launch process itself is killed externally, fully quit Codex and relaunch with `codexfast` before relying on patched lazy-loaded features.
 
 If an older codexfast version installed the launchd auto-repair watcher, `launch` removes that legacy watcher before starting Codex.
 
@@ -73,7 +73,7 @@ The script matches code signatures in frontend build output, so it can break aft
 
 - `launch` is blocked unless the installed version/build is whitelisted
 - Runtime launch does not rewrite `app.asar`, `Info.plist`, the app bundle, backups, the app signature, or macOS privacy permissions
-- The automatic-update switch disables later background update checks during the current `codexfast launch` session; manual update checks remain available
+- The automatic-update switch disables later background update checks and forced automatic install scheduling during the current `codexfast launch` session; manual update checks and installs remain available
 
 ## Troubleshooting
 
@@ -83,9 +83,9 @@ The script matches code signatures in frontend build output, so it can break aft
 
 **Settings Fast or a patched feature is still missing after `launch`** - confirm the `codexfast launch` terminal process is still running. Closing it ends CDP interception, so lazy-loaded chunks cannot be patched later in the session.
 
-**Automatic updates still checked once after changing the setting** - the updater can run a startup/background check before the Settings page is opened, and a check that already started cannot be undone. After the switch is enabled, later background checks in the same `codexfast launch` session are skipped.
+**Automatic updates still checked once after changing the setting** - the updater can run a startup/background check before the Settings page is opened, and a check that already started cannot be undone. After the switch is enabled, later background checks and forced automatic install scheduling in the same `codexfast launch` session are skipped.
 
-**Runtime patch session lost after reconnect attempts** - Codex keeps running, but no further lazy-loaded chunks can be patched by that launch process. Fully quit Codex and rerun `npx codexfast launch` when you need a fresh patched session.
+**Runtime patch session lost after reconnect attempts** - codexfast closes the launched Codex process because runtime patching is no longer active. Fully quit any remaining Codex process and rerun `npx codexfast launch` to start a fresh patched session.
 
 **An older auto-repair watcher was installed** - run `npx codexfast launch` once. The launcher removes `~/Library/LaunchAgents/com.codexfast.watcher.plist` and the old local watcher runtime before starting Codex.
 

@@ -299,9 +299,11 @@ function runtimePatchSessionLostMessage(error: Error): string {
 
 function printRuntimePatchSessionLost(error: Error): void {
   printLine(error.message);
-  printLine("Codex.app will keep running without further runtime patching.");
   printLine(
-    "Lazy-loaded features that were not patched before this point may stay unavailable until you fully quit Codex and relaunch with codexfast.",
+    "Codex.app will be closed because runtime patching is no longer active.",
+  );
+  printLine(
+    "Fully quit Codex and relaunch with codexfast to start a patched session.",
   );
 }
 
@@ -932,7 +934,7 @@ export async function runRuntimeLaunch(
           ),
         ),
       );
-      return printExitBlock(0).exitCode;
+      return printExitBlock(1).exitCode;
     }
     return printExitCode(0).exitCode;
   }
@@ -975,8 +977,11 @@ export async function runRuntimeLaunch(
     if (outcome.type === "session-lost") {
       session.close();
       session = null;
+      if (child && !child.killed) {
+        terminateRuntimeLaunchProcess(child);
+      }
       printRuntimePatchSessionLost(outcome.error);
-      return printExitBlock(0).exitCode;
+      return printExitBlock(1).exitCode;
     }
     session.close();
     session = null;

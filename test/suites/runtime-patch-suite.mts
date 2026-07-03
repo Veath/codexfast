@@ -83,7 +83,7 @@ export function runRuntimePatchSuite(): void {
     "localeOverride:K({agentAccess:`read-write`,default:null,description:`Explicit locale override`,key:`localeOverride`,schema:BS}),preventSleepWhileRunning:K({agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:RS}),keepRemoteControlAwakeWhilePluggedIn:K({agentAccess:`read-write`,default:!1,description:`Whether remote control keeps this computer awake while plugged in`,key:`keepRemoteControlAwakeWhilePluggedIn`,schema:RS})";
   assertContains(
     patchMainProcessSettingsSchemaSource(mainProcessSettingsSchemaBody),
-    "disableAutomaticUpdates:K({agentAccess:`read-write`,default:!1,description:`Whether background automatic update checks are disabled`,key:`disableAutomaticUpdates`,schema:RS})",
+    "disableAutomaticUpdates:K({agentAccess:`read-write`,default:!1,description:`Whether automatic update checks and forced installs are disabled`,key:`disableAutomaticUpdates`,schema:RS})",
     "expected main-process settings schema patch to let the backend persist disableAutomaticUpdates",
   );
 
@@ -165,6 +165,30 @@ export function runRuntimePatchSuite(): void {
     "checkForUpdates:async()=>{u&&!this.isUpdateReady",
     "expected automatic background download gate patch to preserve manual update checks",
   );
+  const mainProcessUpdaterBodyWithForcedInstall =
+    "this.setAutomaticBackgroundDownloadsEnabledForMac=e=>{c.setAutomaticBackgroundDownloadsEnabled(e),e&&d()},this.updater={checkForUpdates:async()=>{u&&!this.isUpdateReady&&this.updateLifecycleState===`idle`&&this.setUpdateLifecycleState(`checking`),c.checkForUpdates()},installUpdatesIfAvailable:async()=>{if(typeof c.installLatestUpdate==`function`){c.installLatestUpdate();return}this.isUpdateReady&&this.options.onInstallUpdatesRequested?.(),c.installUpdatesIfAvailable()}};let f=XB();f>0&&setInterval(d,f).unref(),d()}scheduleForcedUpdateInstall(){this.forcedUpdateTimer&&=(clearTimeout(this.forcedUpdateTimer),null);let e=this.getRelaunchNotificationPolicy();if(!this.isUpdateReady||this.updateDownloadedAtMs==null||e?.relaunchNotification!==2||this.forcedUpdateInstallStarted){this.setRelaunchNotice(null);return}this.scheduleForcedUpdateInstallAt(Date.now(),Date.now(),Date.now())}installForcedUpdate(){this.installUpdatesIfAvailable()}resolveMacSparkleFeedUrl(){return n.o(`codexSparkleFeedUrl`)}";
+  const patchedMainProcessUpdaterWithForcedInstall =
+    patchMainProcessAutomaticUpdateSource(mainProcessUpdaterBodyWithForcedInstall);
+  assertContains(
+    patchedMainProcessUpdaterWithForcedInstall,
+    "this.setRelaunchNotice(null);return}this.forcedUpdateTimer&&=",
+    "expected disableAutomaticUpdates to suppress automatic forced update installs that were already downloaded",
+  );
+  assertNotContains(
+    patchedMainProcessUpdaterWithForcedInstall,
+    "scheduleForcedUpdateInstall(){this.forcedUpdateTimer&&=",
+    "expected forced update scheduling not to run before checking disableAutomaticUpdates",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithForcedInstall,
+    "installForcedUpdate(){this.installUpdatesIfAvailable()}",
+    "expected forced install guard not to remove the existing update install method body",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithForcedInstall,
+    "checkForUpdates:async()=>{u&&!this.isUpdateReady",
+    "expected forced install guard to preserve manual update checks",
+  );
 
   const settingsSchemaBody =
     "localeOverride:K({agentAccess:`read-write`,default:null,description:`Explicit locale override`,key:`localeOverride`,schema:BS}),preventSleepWhileRunning:K({agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:RS}),keepRemoteControlAwakeWhilePluggedIn:K({agentAccess:`read-write`,default:!1,description:`Whether remote control keeps this computer awake while plugged in`,key:`keepRemoteControlAwakeWhilePluggedIn`,schema:RS})";
@@ -174,7 +198,7 @@ export function runRuntimePatchSuite(): void {
   );
   assertContains(
     settingsSchemaResult.content,
-    "disableAutomaticUpdates:K({agentAccess:`read-write`,default:!1,description:`Whether background automatic update checks are disabled`,key:`disableAutomaticUpdates`,schema:RS})",
+    "disableAutomaticUpdates:K({agentAccess:`read-write`,default:!1,description:`Whether automatic update checks and forced installs are disabled`,key:`disableAutomaticUpdates`,schema:RS})",
     "expected settings schema patch to add the disable automatic updates setting",
   );
   assertContains(
@@ -196,8 +220,8 @@ export function runRuntimePatchSuite(): void {
   );
   assertContains(
     generalSettingsResult.content,
-    "description:`Stop future background update checks without disabling manual Check for Updates.`",
-    "expected General settings patch to keep an English automatic-update description fallback without restart-specific wording",
+    "description:`Stop future automatic update checks and installs without disabling manual Check for Updates.`",
+    "expected General settings patch to keep an English automatic-update description fallback that covers checks and installs without restart-specific wording",
   );
   assertContains(
     generalSettingsResult.content,

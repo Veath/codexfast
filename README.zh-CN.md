@@ -23,9 +23,9 @@ npx codexfast launch
 
 `codexfast launch` 会用本地 Chrome DevTools Protocol endpoint 启动 Codex，通过 browser-level CDP target 在 renderer JavaScript 执行前挂载拦截，拦截当前会话里匹配的 renderer JavaScript 响应，并在内存里应用窄范围 patch。使用 Codex 时需要保持 `codexfast launch` 进程运行；Settings 和被 patch 的功能 chunk 都可能懒加载，首次窗口打开后仍然需要 runtime interceptor。
 
-Settings > General 里的 `Disable automatic updates` 开关会写入 Codex desktop 配置 `[desktop].disableAutomaticUpdates`。`codexfast` 会给当前进程注入 main-process hook，并在每次 Sparkle 后台更新检查前读取最新配置，所以在一次 `codexfast launch` 会话中打开开关后，后续后台检查会被跳过；手动 `Check for Updates` 和安装更新动作仍然可用。注入到 Settings 的这一行会按常见 Codex app 语言显示对应文案。
+Settings > General 里的 `Disable automatic updates` 开关会写入 Codex desktop 配置 `[desktop].disableAutomaticUpdates`。`codexfast` 会给当前进程注入 main-process hook，并在每次 Sparkle 后台更新检查和自动强制安装调度前读取最新配置，所以在一次 `codexfast launch` 会话中打开开关后，后续自动更新行为会被跳过；手动 `Check for Updates` 和安装更新动作仍然可用。注入到 Settings 的这一行会按常见 Codex app 语言显示对应文案。
 
-launcher 会发送轻量 browser-level CDP heartbeat。runtime patch session 断开时最多做三次 bounded reconnect，仍失败则打印 `Runtime patch session lost`，不会静默继续跑一个未 patch 的会话。如果 launch 进程退出，或者 Codex 启动后 runtime patch session 断开，Codex 会继续运行；但断开后才懒加载的功能 chunk 可能不会再被 patch，需要完全退出 Codex 并重新用 `codexfast` 启动。
+launcher 会发送轻量 browser-level CDP heartbeat。runtime patch session 断开时最多做三次 bounded reconnect，仍失败则打印 `Runtime patch session lost`，并关闭本次启动的 Codex 进程、以非 0 退出，避免未受 runtime patch 保护的会话继续运行。如果 launch 进程本身被外部杀掉，需要完全退出 Codex 并重新用 `codexfast` 启动后，再依赖后续懒加载功能的 patch。
 
 如果旧版 codexfast 安装过 launchd auto-repair watcher，`launch` 会在启动 Codex 前自动移除这个 legacy watcher。
 
@@ -73,7 +73,7 @@ q) Quit
 
 - `launch` 只允许在白名单里的 version/build 上执行
 - Runtime launch 不会改写 `app.asar`、`Info.plist`、app bundle、备份、app 签名或 macOS 隐私权限
-- 自动更新开关会在当前 `codexfast launch` 会话中禁用后续后台更新检查；手动更新检查仍然可用
+- 自动更新开关会在当前 `codexfast launch` 会话中禁用后续后台更新检查和自动强制安装调度；手动更新检查和安装仍然可用
 
 ## 排查
 
@@ -83,9 +83,9 @@ q) Quit
 
 **`launch` 后 Settings Fast 或被 patch 的功能仍然缺失** - 确认 `codexfast launch` 终端进程仍在运行。关闭它会结束 CDP interception，后续懒加载的 chunk 就无法继续被 patch。
 
-**修改开关后仍出现一次自动更新检查** - updater 可能在打开 Settings 页面前已经触发一次启动/后台检查，已经开始的检查无法撤回。打开开关后，同一次 `codexfast launch` 会话里的后续后台检查会被跳过。
+**修改开关后仍出现一次自动更新检查** - updater 可能在打开 Settings 页面前已经触发一次启动/后台检查，已经开始的检查无法撤回。打开开关后，同一次 `codexfast launch` 会话里的后续后台检查和自动强制安装调度会被跳过。
 
-**出现 `Runtime patch session lost after reconnect attempts`** - Codex 会继续运行，但该 launch 进程无法继续 patch 后续懒加载 chunk。需要新的 patched session 时，完全退出 Codex，然后重新运行 `npx codexfast launch`。
+**出现 `Runtime patch session lost after reconnect attempts`** - codexfast 会关闭本次启动的 Codex，因为 runtime patching 已经不再活跃。完全退出任何残留的 Codex 进程，然后重新运行 `npx codexfast launch` 启动新的 patched session。
 
 **以前安装过 auto-repair watcher** - 执行一次 `npx codexfast launch`。launcher 会在启动 Codex 前移除 `~/Library/LaunchAgents/com.codexfast.watcher.plist` 和旧的本地 watcher runtime。
 

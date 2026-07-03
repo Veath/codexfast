@@ -65,7 +65,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - the composer `/fast` slash command
   - the composer-side `Speed` menu, whether exposed through add-context or Intelligence UI
   - every Plugins gate required by the target build, including sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, install-modal content, plugin detail app-connect content, and post-install app connect where present
-  - the Settings-side automatic-update switch, settings schema target, and launcher main-process hook that skips only background update checks while preserving manual update actions
+  - the Settings-side automatic-update switch, settings schema target, and launcher main-process hook that skips background update checks and forced automatic install scheduling while preserving manual update actions
   - the GPT-5.5 model-list bridge and model query selector injection targets
   - unsupported-version blocking before runtime launch
   - generated CLI behavior for runtime patch extraction
@@ -73,7 +73,8 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - requires Codex to be fully quit before launch
   - reports patched target labels on supported builds
   - removes legacy auto-repair watcher files if they are present
-  - injects the automatic-update main-process hook so background checks read `disableAutomaticUpdates` dynamically
+  - injects the automatic-update main-process hook so background checks and forced automatic install scheduling read `disableAutomaticUpdates` dynamically
+  - closes the launched Codex process if the runtime patch session is lost after reconnect attempts are exhausted
   - leaves `app.asar`, `Info.plist`, and the app signature unchanged
   - fails closed without modifying the app when interception does not complete
 - Do not ship a change that enables only part of the combined Fast feature set.
