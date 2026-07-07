@@ -6,6 +6,16 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-07-07
+
+### Added
+
+- Added support for `Codex.app` `26.623.141536` (`build 4753`) after direct installed-bundle inspection confirmed the current 26.623 Fast, `/fast`, Speed, GPT-5.5 model-list, automatic-update, and official Plugins support scope still applies.
+
+### Changed
+
+- Skipped Plugins runtime targets for `26.623.141536` (`build 4753`) because Plugins remains supported through the official app path.
+
 ## [0.47.0] - 2026-07-03
 
 ### Changed

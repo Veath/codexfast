@@ -449,6 +449,15 @@ function main(): void {
   assertNoLaunchCalls(nonRunningLaunch26623101652Output);
   assertNoBundleMutationTools(nonRunningLaunch26623101652Output);
 
+  const nonRunningLaunch26623141536App = join(tmpDir, "NonRunningLaunch26623141536.app");
+  const nonRunningLaunch26623141536Output = join(tmpDir, "non-running-launch-26623-141536-output.txt");
+  prepareFakeApp(nonRunningLaunch26623141536App, "26.623.141536", "4753");
+  runScriptCommand(nonRunningLaunch26623141536App, ["launch"], nonRunningLaunch26623141536Output, { CODEXFAST_TEST_ALLOW_NONZERO: "1" });
+  assertContains(readOutput(nonRunningLaunch26623141536Output), "Compatibility: supported", "expected 26.623.141536 launch gate to be supported", readOutput(nonRunningLaunch26623141536Output));
+  assertContains(readOutput(nonRunningLaunch26623141536Output), "Runtime launch failed: Codex executable not found:", "expected supported 26.623.141536 fake app launch to fail closed before app start", readOutput(nonRunningLaunch26623141536Output));
+  assertNoLaunchCalls(nonRunningLaunch26623141536Output);
+  assertNoBundleMutationTools(nonRunningLaunch26623141536Output);
+
   const launchPendingTargets26608App = join(tmpDir, "LaunchPendingTargets26608.app");
   const launchPendingTargets26608Output = join(tmpDir, "launch-pending-targets-26608-output.txt");
   prepareFakeApp(launchPendingTargets26608App, "26.608.12217", "3722");
@@ -664,6 +673,18 @@ function main(): void {
   assertNotContains(readOutput(launchPendingTargets26623101652Output), "Plugins access", "expected 26.623.101652 missing required target output not to name Plugins access", readOutput(launchPendingTargets26623101652Output));
   assertNoLaunchCalls(launchPendingTargets26623101652Output);
   assertNoBundleMutationTools(launchPendingTargets26623101652Output);
+
+  const launchPendingTargets26623141536App = join(tmpDir, "LaunchPendingTargets26623141536.app");
+  const launchPendingTargets26623141536Output = join(tmpDir, "launch-pending-targets-26623-141536-output.txt");
+  prepareFakeApp(launchPendingTargets26623141536App, "26.623.141536", "4753");
+  runScriptCommand(launchPendingTargets26623141536App, ["launch"], launchPendingTargets26623141536Output, {
+    CODEXFAST_TEST_RUNTIME_LAUNCH_PENDING_TARGETS: "1",
+    CODEXFAST_TEST_ALLOW_NONZERO: "1",
+  });
+  assertContains(readOutput(launchPendingTargets26623141536Output), "Runtime patch interception did not observe required targets: none.", "expected 26.623.141536 launch not to require the removed Plugins access target", readOutput(launchPendingTargets26623141536Output));
+  assertNotContains(readOutput(launchPendingTargets26623141536Output), "Plugins access", "expected 26.623.141536 missing required target output not to name Plugins access", readOutput(launchPendingTargets26623141536Output));
+  assertNoLaunchCalls(launchPendingTargets26623141536Output);
+  assertNoBundleMutationTools(launchPendingTargets26623141536Output);
 
   const missingPgrepLaunchApp = join(tmpDir, "MissingPgrepLaunch.app");
   const missingPgrepLaunchOutput = join(tmpDir, "missing-pgrep-launch-output.txt");
