@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.49.1] - 2026-07-10
+
 ### Fixed
 
 - Fixed Fast/Standard state drifting across reopened `26.707` conversations by making the configured global service tier authoritative and ignoring stored conversation-level and latest-turn tier values in both directions.
