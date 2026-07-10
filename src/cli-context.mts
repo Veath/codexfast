@@ -1,3 +1,4 @@
+import { existsSync } from "node:fs";
 import { join } from "node:path";
 
 export type AppPaths = {
@@ -49,9 +50,19 @@ export function emptyToolchain(): Toolchain {
   };
 }
 
+export function resolveDefaultAppBundle(): string {
+  if (existsSync("/Applications/Codex.app")) {
+    return "/Applications/Codex.app";
+  }
+  if (existsSync("/Applications/ChatGPT.app")) {
+    return "/Applications/ChatGPT.app";
+  }
+  return "/Applications/Codex.app";
+}
+
 export function createCodexfastContext(appBundle = process.env.CODEXFAST_APP_BUNDLE): CodexfastContext {
   return {
-    paths: createAppPaths(appBundle ?? "/Applications/Codex.app"),
+    paths: createAppPaths(appBundle ?? resolveDefaultAppBundle()),
     metadata: emptyAppMetadata(),
     toolchain: emptyToolchain(),
   };

@@ -24,10 +24,18 @@ const SERVICE_TIER_REQUEST_ALLOWANCE_GUARDED_SIGNATURE =
   /(async function [A-Za-z_$][\w$]*\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)\{let ([A-Za-z_$][\w$]*)=await [A-Za-z_$][\w$]*\(\2,\3\);return \4===`chatgpt`\?\(await \2\.query\.fetch\([A-Za-z_$][\w$]*,\{authMethod:\4,hostId:\3\}\)\)\.requirements\?\.featureRequirements\?\.fast_mode!==!1:)!1(\})/;
 const SERVICE_TIER_REQUEST_ALLOWANCE_PATCHED_SIGNATURE =
   /(async function [A-Za-z_$][\w$]*\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)\{let ([A-Za-z_$][\w$]*)=await [A-Za-z_$][\w$]*\(\2,\3\);return \4===`chatgpt`\?\(await \2\.query\.fetch\([A-Za-z_$][\w$]*,\{authMethod:\4,hostId:\3\}\)\)\.requirements\?\.featureRequirements\?\.fast_mode!==!1:)!0(\})/;
+const SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_GUARDED_SIGNATURE =
+  /(async function [A-Za-z_$][\w$]*\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)\{let ([A-Za-z_$][\w$]*)=await [A-Za-z_$][\w$]*\(\2,\3\);if\(\4!==`chatgpt`\)return)!1(;let [A-Za-z_$][\w$]*=await [A-Za-z_$][\w$]*\(\3,\{priority:`critical`\}\);return \2\.query\.setData\([A-Za-z_$][\w$]*,\{authMethod:\4,hostId:\3\},[A-Za-z_$][\w$]*\),[A-Za-z_$][\w$]*\.requirements\?\.featureRequirements\?\.fast_mode!==!1\})/;
+const SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_PATCHED_SIGNATURE =
+  /(async function [A-Za-z_$][\w$]*\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)\{let ([A-Za-z_$][\w$]*)=await [A-Za-z_$][\w$]*\(\2,\3\);if\(\4!==`chatgpt`\)return)!0(;let [A-Za-z_$][\w$]*=await [A-Za-z_$][\w$]*\(\3,\{priority:`critical`\}\);return \2\.query\.setData\([A-Za-z_$][\w$]*,\{authMethod:\4,hostId:\3\},[A-Za-z_$][\w$]*\),[A-Za-z_$][\w$]*\.requirements\?\.featureRequirements\?\.fast_mode!==!1\})/;
 const SERVICE_TIER_CONVERSATION_FALLBACK_GUARDED_SIGNATURE =
   /(let [^;]+,[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*!=null&&[A-Za-z_$][\w$]*\?\.serviceTier(?:!==void 0|!=null)\?[^;]+;[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*!=null&&\([A-Za-z_$][\w$]*\?\.serviceTier(?:!==void 0|!=null)\|\|[A-Za-z_$][\w$]*\?\.params\.serviceTier(?:!==void 0|!=null)\)\?[^,]+:[A-Za-z_$][\w$]*\([^,]+,[A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*\),)/;
 const SERVICE_TIER_CONVERSATION_FALLBACK_PATCHED_SIGNATURE =
   /(let [^;]+,[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*!=null&&[A-Za-z_$][\w$]*\?\.serviceTier!=null&&[A-Za-z_$][\w$]*\.serviceTier!==`standard`\?[A-Za-z_$][\w$]*\.serviceTier:[A-Za-z_$][\w$]*\.serviceTier;[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*\([^,]+,[A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*\),)/;
+const SERVICE_TIER_CONVERSATION_FALLBACK_26707_GUARDED_SIGNATURE =
+  /(let [^;]+,([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*==null&&[A-Za-z_$][\w$]*!=null\?[A-Za-z_$][\w$]*\.value:[A-Za-z_$][\w$]*\?[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*\):[A-Za-z_$][\w$]*\.serviceTier,([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)!=null&&([A-Za-z_$][\w$]*)\?\.serviceTier!==void 0\?\5\.serviceTier:\4!=null&&([A-Za-z_$][\w$]*)!==void 0\?\6:\2;)([A-Za-z_$][\w$]*)=\4!=null&&\(\5\?\.serviceTier!==void 0\|\|\6!==void 0\)\?[A-Za-z_$][\w$]*\?\3:null:([A-Za-z_$][\w$]*)\(([^,]+),\3,([A-Za-z_$][\w$]*)\),/;
+const SERVICE_TIER_CONVERSATION_FALLBACK_26707_PATCHED_SIGNATURE =
+  /(let [^;]+,([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*==null&&[A-Za-z_$][\w$]*!=null\?[A-Za-z_$][\w$]*\.value:[A-Za-z_$][\w$]*\?[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*\):[A-Za-z_$][\w$]*\.serviceTier,([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)!=null&&([A-Za-z_$][\w$]*)\?\.serviceTier!=null&&\5\.serviceTier!==`standard`\?\5\.serviceTier:\2;)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(([^,]+),\3,([A-Za-z_$][\w$]*)\),/;
 const GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|je)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
@@ -128,6 +136,26 @@ function patchConversationServiceTierFallback(match: string): string {
     );
 }
 
+function patchConversationServiceTierFallback26707(
+  _match: string,
+  prefix: string,
+  baseTierVar: string,
+  requestTierVar: string,
+  conversationVar: string,
+  nextTurnSettingsVar: string,
+  _latestTurnTierVar: string,
+  serviceTierForRequestVar: string,
+  fallbackFunction: string,
+  modelVar: string,
+  isAllowedVar: string,
+): string {
+  const prefixBeforeRequestTier = prefix.replace(
+    new RegExp("," + requestTierVar + "=[^;]+;"),
+    ",",
+  );
+  return `${prefixBeforeRequestTier}${requestTierVar}=${conversationVar}!=null&&${nextTurnSettingsVar}?.serviceTier!=null&&${nextTurnSettingsVar}.serviceTier!==\`standard\`?${nextTurnSettingsVar}.serviceTier:${baseTierVar};${serviceTierForRequestVar}=${fallbackFunction}(${modelVar},${requestTierVar},${isAllowedVar}),`;
+}
+
 export const SPEED_TARGET_SPECS = defineTargetSpecs(
   {
     id: "speed-setting-option-count",
@@ -163,12 +191,28 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     applyReplacement: "$1!0$5",
   },
   {
+    id: "speed-service-tier-request-allowance-26707",
+    label: "Speed service tier request allowance",
+    needle: SERVICE_TIER_REQUEST_ALLOWANCE_NEEDLE,
+    guardedSignature: SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_GUARDED_SIGNATURE,
+    patchedSignature: SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_PATCHED_SIGNATURE,
+    applyReplacement: "$1!0$5",
+  },
+  {
     id: "speed-service-tier-conversation-fallback-26601",
     label: "Speed service tier conversation fallback",
     needle: "serviceTierForRequest",
     guardedSignature: SERVICE_TIER_CONVERSATION_FALLBACK_GUARDED_SIGNATURE,
     patchedSignature: SERVICE_TIER_CONVERSATION_FALLBACK_PATCHED_SIGNATURE,
     applyReplacement: patchConversationServiceTierFallback,
+  },
+  {
+    id: "speed-service-tier-conversation-fallback-26707",
+    label: "Speed service tier conversation fallback",
+    needle: "serviceTierForRequest",
+    guardedSignature: SERVICE_TIER_CONVERSATION_FALLBACK_26707_GUARDED_SIGNATURE,
+    patchedSignature: SERVICE_TIER_CONVERSATION_FALLBACK_26707_PATCHED_SIGNATURE,
+    applyReplacement: patchConversationServiceTierFallback26707,
   },
   {
     id: "speed-setting",

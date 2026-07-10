@@ -66,7 +66,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - the composer-side `Speed` menu, whether exposed through add-context or Intelligence UI
   - every Plugins gate required by the target build, including sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, install-modal content, plugin detail app-connect content, and post-install app connect where present
   - the Settings-side automatic-update switch, settings schema target, and launcher main-process hook that skips background update checks and forced automatic install scheduling while preserving manual update actions
-  - the GPT-5.5 model-list bridge and model query selector injection targets
+  - the GPT-5.x model-list bridge plus GPT-5.5 and GPT-5.6 query selector injection targets, including the GPT-5.6 Sol/Terra/Luna allowlist, Max/Ultra effort filtering, and Luna's required Ultra exclusion
   - unsupported-version blocking before runtime launch
   - generated CLI behavior for runtime patch extraction
 - Confirm runtime launch still:

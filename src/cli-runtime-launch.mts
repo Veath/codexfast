@@ -106,6 +106,7 @@ const runtimePatchNoPluginsAccessRequiredVersionKeys = new Set([
   "26.623.81905+4598",
   "26.623.101652+4674",
   "26.623.141536+4753",
+  "26.707.31428+5059",
 ]);
 const runtimePatchNoPluginTargetsVersionKeys = new Set([
   "26.623.31443+4441",
@@ -116,6 +117,7 @@ const runtimePatchNoPluginTargetsVersionKeys = new Set([
   "26.623.81905+4598",
   "26.623.101652+4674",
   "26.623.141536+4753",
+  "26.707.31428+5059",
 ]);
 const runtimePatchPluginTargetIdPrefixes = [
   "plugin",
@@ -139,25 +141,36 @@ function checkCodexRunning(): CodexRunningCheck {
     };
   }
 
-  const result = run(pgrepBin, ["-x", "Codex"]);
-  if (result.status === 0) {
-    return { ok: true, running: true };
+  for (const processName of ["Codex", "ChatGPT"]) {
+    const result = run(pgrepBin, ["-x", processName]);
+    if (result.status === 0) {
+      return { ok: true, running: true };
+    }
+    if (result.status !== 1) {
+      return {
+        ok: false,
+        message: `Cannot determine whether Codex.app is running because pgrep failed with exit code ${result.status}.`,
+      };
+    }
   }
-  if (result.status === 1) {
-    return { ok: true, running: false };
-  }
-  return {
-    ok: false,
-    message: `Cannot determine whether Codex.app is running because pgrep failed with exit code ${result.status}.`,
-  };
+  return { ok: true, running: false };
 }
 
 function randomDebugPort(): number {
   return 40_000 + (randomBytes(2).readUInt16BE(0) % 20_000);
 }
 
-function codexExecutablePath(context: CodexfastContext): string {
-  return join(context.paths.bundle, "Contents", "MacOS", "Codex");
+function codexExecutablePathCandidates(context: CodexfastContext): string[] {
+  return [
+    join(context.paths.bundle, "Contents", "MacOS", "Codex"),
+    join(context.paths.bundle, "Contents", "MacOS", "ChatGPT"),
+  ];
+}
+
+function codexExecutablePath(context: CodexfastContext): string | null {
+  return codexExecutablePathCandidates(context).find((candidate) =>
+    existsSync(candidate)
+  ) ?? null;
 }
 
 function launchCodexProcess(
@@ -165,8 +178,10 @@ function launchCodexProcess(
   debugPort: number,
 ): ChildProcess {
   const executable = codexExecutablePath(context);
-  if (!existsSync(executable)) {
-    throw new Error(`Codex executable not found: ${executable}`);
+  if (!executable) {
+    throw new Error(
+      `Codex executable not found: tried ${codexExecutablePathCandidates(context).join(", ")}`,
+    );
   }
 
   const child = spawn(

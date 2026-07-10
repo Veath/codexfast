@@ -6,6 +6,24 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-07-10
+
+### Added
+
+- Added support for local `ChatGPT.app` / `Codex.app` `26.707.31428` (`build 5059`) after direct installed-bundle inspection confirmed the current Fast, `/fast`, Speed, automatic-update, GPT-5.x model-list, and official Plugins support scope.
+- Added GPT-5.6 Sol, Terra, and Luna UI catalog injection/augmentation for the newer `list-models-for-host` bridge shape, including Fast service-tier metadata. Sol and Terra expose reasoning through Max and Ultra; Luna exposes reasoning through Max without Ultra.
+
+### Changed
+
+- Runtime launch now falls back to `/Applications/ChatGPT.app` and the `Contents/MacOS/ChatGPT` executable when `Codex.app`/`Codex` is not present.
+- Skipped Plugins runtime targets for `26.707.31428` (`build 5059`) because Plugins remains supported through the official app path.
+
+### Fixed
+
+- Updated the Fast request helper, service-tier fallback, and Settings > General automatic-update row signatures for the `26.707.31428` bundle shape.
+- Avoided minified-parameter collisions in the GPT-5.x model-list wrapper by using a codexfast-prefixed result variable.
+- Kept GPT-5.6 Sol, Terra, and Luna visible after the `use_hidden_models` query selector applies its remote model allowlist, and enabled Max/Ultra to reach per-model effort filtering.
+
 ## [0.48.0] - 2026-07-07
 
 ### Added

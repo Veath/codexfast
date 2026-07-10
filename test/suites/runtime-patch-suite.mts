@@ -401,6 +401,28 @@ export function runRuntimePatchSuite(): void {
     "expected 26.623.81905 General settings patch to report its target",
   );
 
+  const generalSettings26707Body =
+    "function _a(){let e=(0,Q.c)(10),t=I(_),{platform:n}=ot(),r=n!==`windows`,i=L(),a=R(B.preventSleepWhileRunning);if(!r)return null;let o;e[0]===Symbol.for(`react.memo_cache_sentinel`)?(o=(0,$.jsx)(O,{...H.preventSleepWhileRunning}),e[0]=o):o=e[0];let s;e[1]===Symbol.for(`react.memo_cache_sentinel`)?(s=(0,$.jsx)(O,{id:`settings.general.power.preventSleepWhileRunning.description`,defaultMessage:`Keep your computer awake while {appName} is running a task`,description:`Description for preventing sleep while a task runs`,values:{appName:wt}}),e[1]=s):s=e[1];let c=a??!1,l;e[2]===t?l=e[3]:(l=e=>{z(t,B.preventSleepWhileRunning,e)},e[2]=t,e[3]=l);let u;e[4]===i?u=e[5]:(u=i.formatMessage(H.preventSleepWhileRunning),e[4]=i,e[5]=u);let d;return e[6]!==c||e[7]!==l||e[8]!==u?(d=(0,$.jsx)(G,{label:o,description:s,control:(0,$.jsx)(U,{checked:c,onChange:l,ariaLabel:u})}),e[6]=c,e[7]=l,e[8]=u,e[9]=d):d=e[9],d}settings.general.power.preventSleepWhileRunning.description";
+  const generalSettings26707Result = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-26707.js",
+    generalSettings26707Body,
+  );
+  assertContains(
+    generalSettings26707Result.content,
+    "z(codexfastSettingsState,B.disableAutomaticUpdates,codexfastNextValue)",
+    "expected 26.707 General settings patch to persist disableAutomaticUpdates despite the appName task-copy shape",
+  );
+  assertContains(
+    generalSettings26707Result.content,
+    "values:{appName:wt}",
+    "expected 26.707 General settings patch to preserve the appName-aware prevent-sleep description",
+  );
+  assertContains(
+    generalSettings26707Result.patchedLabels.join("\n"),
+    "Disable automatic updates setting",
+    "expected 26.707 General settings patch to report its target",
+  );
+
   const speedBody = "settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;";
   const speedResult = applyRuntimePatchesToBody("webview/assets/general-settings-demo.js", speedBody);
   assertContains(speedResult.content, "{serviceTierSettings:r,setServiceTier:i}=fe();let o;", "expected runtime patch engine to keep patching matching Speed settings bodies");
@@ -438,6 +460,27 @@ export function runRuntimePatchSuite(): void {
   assertNotContains(serviceTierRequestAllowance26623Result.content, ":!1}", "expected request service tier helper not to block custom API users at the request layer");
   assertContains(serviceTierRequestAllowance26623Result.patchedLabels.join("\n"), "Speed service tier request allowance", "expected request service tier allowance patch to report its target");
 
+  const serviceTierRequestAllowance26707Body = "Failed to read service tier for request;async function rer(e,t,n){try{let r=await ier(e,t),i=e.get(q9t,t);return r}catch(e){return null}}async function ier(e,t){let n=await eer(e,t);if(n!==`chatgpt`)return!1;let r=await vtn(t,{priority:`critical`});return e.query.setData(Utn,{authMethod:n,hostId:t},r),r.requirements?.featureRequirements?.fast_mode!==!1}";
+  const serviceTierRequestAllowance26707Result = applyRuntimePatchesToBody(
+    "webview/assets/service-tier-request-allowance-26707.js",
+    serviceTierRequestAllowance26707Body,
+  );
+  assertContains(
+    serviceTierRequestAllowance26707Result.content,
+    "if(n!==`chatgpt`)return!0",
+    "expected 26.707 request service tier helper to allow non-ChatGPT custom providers while preserving ChatGPT fast_mode checks",
+  );
+  assertNotContains(
+    serviceTierRequestAllowance26707Result.content,
+    "if(n!==`chatgpt`)return!1",
+    "expected 26.707 request service tier helper not to block custom providers before reading settings",
+  );
+  assertContains(
+    serviceTierRequestAllowance26707Result.patchedLabels.join("\n"),
+    "Speed service tier request allowance",
+    "expected 26.707 request service tier allowance patch to report its target",
+  );
+
   const serviceTierConversationFallback26608Body = "serviceTierForRequest;function F(e){let r=(0,A.c)(29),a=e===void 0?null:e,d=n(i),f=k(a),{modelSettings:h}=E(a),_;r[0]===f.hostId?_=r[1]:(_={hostId:f.hostId},r[0]=f.hostId,r[1]=_);let{data:x,isLoading:S}=O(_),C=t(o,a),w=t(g,a),D=M(f.hostId),P=N(f.hostId,D.activeProfileForWrite),F;r[2]===f.hostId?F=r[3]:(F={hostId:f.hostId},r[2]=f.hostId,r[3]=F);let{isServiceTierAllowed:I}=j(F),L,R,z,B,V;if(r[4]!==a||r[5]!==S||r[6]!==I||r[7]!==C||r[8]!==w||r[9]!==x?.models||r[10]!==h.isLoading||r[11]!==h.model||r[12]!==d||r[13]!==P||r[14]!==D.isLoading||r[15]!==D.serviceTier){let e=T(x?.models,h.model),t=a!=null&&C?.serviceTier!==void 0?C.serviceTier:a!=null&&w?.params.serviceTier!==void 0?w.params.serviceTier:D.serviceTier;z=a!=null&&(C?.serviceTier!==void 0||w?.params.serviceTier!==void 0)?I?t:null:l(e,t,I),R=z==null?null:m(e,z);let n=c(z??null);L=h.isLoading||S||D.isLoading,B=async(e,t)=>{let r=s(e)!==D.serviceTier,i=a!=null&&e!==C?.serviceTier;try{i&&await p(`update-thread-settings-for-next-turn`,{conversationId:a,threadSettings:{serviceTier:e}}),r&&await P(e)}catch(e){let t=e;v.error(`Failed to set service tier`,{safe:{},sensitive:{error:t}});return}if(r||i){let r=c(e);if(n===r)return;b(d,y,{previousServiceTier:n,serviceTier:r,source:t})}},V=u(e),r[4]=a,r[5]=S,r[6]=I,r[7]=C,r[8]=w,r[9]=x?.models,r[10]=h.isLoading,r[11]=h.model,r[12]=d,r[13]=P,r[14]=D.isLoading,r[15]=D.serviceTier,r[16]=L,r[17]=R,r[18]=z,r[19]=B,r[20]=V}else L=r[16],R=r[17],z=r[18],B=r[19],V=r[20];let H;r[21]!==L||r[22]!==R||r[23]!==z||r[24]!==V?(H={availableOptions:V,isLoading:L,selectedServiceTier:R,serviceTierForRequest:z},r[21]=L,r[22]=R,r[23]=z,r[24]=V,r[25]=H):H=r[25];let U;return r[26]!==B||r[27]!==H?(U={serviceTierSettings:H,setServiceTier:B},r[26]=B,r[27]=H,r[28]=U):U=r[28],U}";
   const serviceTierConversationFallback26608Result = applyRuntimePatchesToBody("webview/assets/use-service-tier-settings-26608.js", serviceTierConversationFallback26608Body);
   assertContains(serviceTierConversationFallback26608Result.content, "t=a!=null&&C?.serviceTier!=null&&C.serviceTier!==`standard`?C.serviceTier:D.serviceTier", "expected explicit next-turn Fast state to be preserved without letting stale Standard override Settings Fast");
@@ -453,6 +496,32 @@ export function runRuntimePatchSuite(): void {
   assertContains(serviceTierConversationFallbackNullishResult.content, "z=l(e,t,I)", "expected nullish latest-turn params not to override the configured default tier");
   assertNotContains(serviceTierConversationFallbackNullishResult.content, "w?.params.serviceTier!=null?", "expected nullish latest-turn service tier params not to lock paused/edit/resend flows");
   assertContains(serviceTierConversationFallbackNullishResult.patchedLabels.join("\n"), "Speed service tier conversation fallback", "expected nullish service tier fallback patch to report its target");
+
+  const serviceTierConversationFallback26707Body = "serviceTierForRequest;function Kse(e,t,n,r){let i=(0,Cb.c)(41),a=$i(tt),o=yd(e),s;i[0]===o.hostId?s=i[1]:(s={hostId:o.hostId},i[0]=o.hostId,i[1]=s);let{data:c,isLoading:l}=cy(s),u=yi(qp,e),d=yi(wb,e),f=wc(o.hostId)?.authMethod??null,p;i[2]!==o.hostId||i[3]!==f?(p={authMethod:f,hostId:o.hostId},i[2]=o.hostId,i[3]=f,i[4]=p):p=i[4];let{data:m,isPending:h}=yi(Qa,p),g=Hse(o.hostId),_=Use(o.hostId,g.activeProfileForWrite),v;i[5]===o.hostId?v=i[6]:(v={hostId:o.hostId},i[5]=o.hostId,i[6]=v);let{isServiceTierAllowed:y}=Ey(v),b,x,S,C,w,T,E;if(i[7]!==m?.requirements?.models?.newThread||i[8]!==e||i[9]!==n||i[10]!==o.hostId||i[11]!==h||i[12]!==l||i[13]!==r||i[14]!==y||i[15]!==u||i[16]!==d||i[17]!==c?.models||i[18]!==t.isLoading||i[19]!==t.model||i[20]!==a||i[21]!==_||i[22]!==g.isLoading||i[23]!==g.serviceTier){let s=gy(c?.models,t.model),f=m?.requirements?.models?.newThread,p=e==null&&r&&f!=null,v=p?f.serviceTier:null,D=v!=null,O=e==null&&n!=null?n.value:D?jd(v):g.serviceTier,k=e!=null&&u?.serviceTier!==void 0?u.serviceTier:e!=null&&d!==void 0?d:O;S=e!=null&&(u?.serviceTier!==void 0||d!==void 0)?y?k:null:Iee(s,k,y),x=S==null?null:tne(s,S);let A=_u(S??null);b=t.isLoading||l||g.isLoading||e==null&&h,C=async(t,n)=>{},T=p,E=o.hostId,w=Bf(s),i[7]=m?.requirements?.models?.newThread}else b=i[24],x=i[25],S=i[26],C=i[27],w=i[28],T=i[29],E=i[30];let D;i[31]!==b||i[32]!==x||i[33]!==S||i[34]!==w?(D={availableOptions:w,isLoading:b,selectedServiceTier:x,serviceTierForRequest:S},i[31]=b,i[32]=x,i[33]=S,i[34]=w,i[35]=D):D=i[35];return D}";
+  const serviceTierConversationFallback26707Result = applyRuntimePatchesToBody(
+    "webview/assets/use-service-tier-settings-26707.js",
+    serviceTierConversationFallback26707Body,
+  );
+  assertContains(
+    serviceTierConversationFallback26707Result.content,
+    "k=e!=null&&u?.serviceTier!=null&&u.serviceTier!==`standard`?u.serviceTier:O",
+    "expected 26.707 fallback to preserve explicit next-turn Fast without letting stale Standard override Settings Fast",
+  );
+  assertContains(
+    serviceTierConversationFallback26707Result.content,
+    "S=Iee(s,k,y)",
+    "expected 26.707 fallback to ignore stale latest-turn params and recompute from configured tier",
+  );
+  assertNotContains(
+    serviceTierConversationFallback26707Result.content,
+    "e!=null&&d!==void 0?d:O",
+    "expected 26.707 fallback not to let stale latest-turn params override configured Settings Fast",
+  );
+  assertContains(
+    serviceTierConversationFallback26707Result.patchedLabels.join("\n"),
+    "Speed service tier conversation fallback",
+    "expected 26.707 service tier fallback patch to report its target",
+  );
 
   const serviceTierSlashCommandBody = "composer.speedSlashCommand.disableDescription;let g={id:l,title:u,description:d,requiresEmptyComposer:!1,enabled:n,Icon:c,onSelect:m,dependencies:h};";
   const serviceTierSlashCommandResult = applyRuntimePatchesToBody("webview/assets/composer-26519.js", serviceTierSlashCommandBody);
@@ -601,6 +670,169 @@ export function runRuntimePatchSuite(): void {
     gpt55OfficialModelListDollarHandlerResult.patchedLabels.join("\n"),
     "GPT-5.5 model list",
     "expected GPT-5.5 model-list patch to report the $7 handler target",
+  );
+
+  const gpt56ModelListWithOptionsBody = "\"list-models-for-host\":Q7((e,{priority:t,source:n,timeoutMs:r,...i})=>e.sendRequest(`model/list`,i,{priority:t,source:n,timeoutMs:r}));";
+  const gpt56ModelListWithOptionsResult = applyRuntimePatchesToBody(
+    "webview/assets/page-26707.js",
+    gpt56ModelListWithOptionsBody,
+  );
+  const gpt56ModelListWithOptionsProperty = gpt56ModelListWithOptionsResult.content.endsWith(";")
+    ? gpt56ModelListWithOptionsResult.content.slice(0, -1)
+    : gpt56ModelListWithOptionsResult.content;
+  try {
+    new Function("Q7", `return ({${gpt56ModelListWithOptionsProperty}});`);
+  } catch (error) {
+    fail(`expected GPT-5.x model-list patch to generate valid JavaScript: ${String(error)}`);
+  }
+  assertContains(
+    gpt56ModelListWithOptionsResult.content,
+    "/*codexfast-gpt5x*/",
+    "expected GPT-5.x model-list patch to wrap the priority/source/timeout handler shape",
+  );
+  assertContains(
+    gpt56ModelListWithOptionsResult.content,
+    "e.sendRequest(`model/list`,i,{priority:t,source:n,timeoutMs:r})",
+    "expected GPT-5.x model-list patch to preserve model-list request options",
+  );
+  assertContains(
+    gpt56ModelListWithOptionsResult.content,
+    "model===`gpt-5.6-sol`",
+    "expected GPT-5.x model-list patch to add or augment GPT-5.6 Sol",
+  );
+  assertContains(
+    gpt56ModelListWithOptionsResult.content,
+    "model===`gpt-5.6-terra`",
+    "expected GPT-5.x model-list patch to add or augment GPT-5.6 Terra",
+  );
+  assertContains(
+    gpt56ModelListWithOptionsResult.content,
+    "model===`gpt-5.6-luna`",
+    "expected GPT-5.x model-list patch to add or augment GPT-5.6 Luna",
+  );
+  const gpt56SolEntryStart = gpt56ModelListWithOptionsResult.content.indexOf("{id:`gpt-5.6-sol`");
+  const gpt56TerraEntryStart = gpt56ModelListWithOptionsResult.content.indexOf("{id:`gpt-5.6-terra`");
+  const gpt56LunaEntryStart = gpt56ModelListWithOptionsResult.content.indexOf("{id:`gpt-5.6-luna`");
+  if (gpt56SolEntryStart < 0 || gpt56TerraEntryStart < 0 || gpt56LunaEntryStart < 0) {
+    fail("expected GPT-5.x model-list patch to define Sol, Terra, and Luna entries");
+  }
+  const gpt56SolEntry = gpt56ModelListWithOptionsResult.content.slice(
+    gpt56SolEntryStart,
+    gpt56ModelListWithOptionsResult.content.indexOf("defaultReasoningEffort", gpt56SolEntryStart),
+  );
+  const gpt56TerraEntry = gpt56ModelListWithOptionsResult.content.slice(
+    gpt56TerraEntryStart,
+    gpt56ModelListWithOptionsResult.content.indexOf("defaultReasoningEffort", gpt56TerraEntryStart),
+  );
+  const gpt56LunaEntry = gpt56ModelListWithOptionsResult.content.slice(
+    gpt56LunaEntryStart,
+    gpt56ModelListWithOptionsResult.content.indexOf("defaultReasoningEffort", gpt56LunaEntryStart),
+  );
+  assertContains(gpt56SolEntry, "reasoningEffort:`max`", "expected GPT-5.6 Sol to expose Max reasoning");
+  assertContains(gpt56SolEntry, "reasoningEffort:`ultra`", "expected GPT-5.6 Sol to expose Ultra reasoning");
+  assertContains(gpt56TerraEntry, "reasoningEffort:`max`", "expected GPT-5.6 Terra to expose Max reasoning");
+  assertContains(gpt56TerraEntry, "reasoningEffort:`ultra`", "expected GPT-5.6 Terra to expose Ultra reasoning");
+  assertContains(gpt56LunaEntry, "reasoningEffort:`max`", "expected GPT-5.6 Luna to expose Max reasoning");
+  assertNotContains(gpt56LunaEntry, "reasoningEffort:`ultra`", "expected GPT-5.6 Luna not to expose Ultra reasoning");
+  assertContains(
+    gpt56ModelListWithOptionsResult.content,
+    "model===`gpt-5.5`",
+    "expected GPT-5.x model-list patch to keep GPT-5.5 metadata augmentation",
+  );
+  assertContains(
+    gpt56ModelListWithOptionsResult.patchedLabels.join("\n"),
+    "GPT-5.x model list",
+    "expected GPT-5.x model-list patch to report its target",
+  );
+  const gpt56ModelListAlreadyPatchedResult = applyRuntimePatchesToBody(
+    "webview/assets/page-26707.js",
+    gpt56ModelListWithOptionsResult.content,
+  );
+  if (gpt56ModelListAlreadyPatchedResult.content !== gpt56ModelListWithOptionsResult.content) {
+    fail("expected GPT-5.x model-list patch to remain unchanged when applied more than once");
+  }
+  assertContains(
+    gpt56ModelListAlreadyPatchedResult.alreadyPatchedLabels.join("\n"),
+    "GPT-5.x model list",
+    "expected GPT-5.x model-list patch to recognize the generated wrapper as already patched",
+  );
+
+  const gpt56ModelSelectorBody =
+    "use_hidden_models;select:({data:r})=>Jv({authMethod:t,availableModels:new Set(e),defaultModel:n,enabledReasoningEfforts:c,includeUltraReasoningEffort:l,models:r,useHiddenModels:o})";
+  const gpt56ModelSelectorResult = applyRuntimePatchesToBody(
+    "webview/assets/model-selector-26707.js",
+    gpt56ModelSelectorBody,
+  );
+  assertContains(
+    gpt56ModelSelectorResult.content,
+    "availableModels:new Set([...e,`gpt-5.6-sol`,`gpt-5.6-terra`,`gpt-5.6-luna`])",
+    "expected GPT-5.6 selector patch to keep Sol, Terra, and Luna visible when use_hidden_models enables the model allowlist",
+  );
+  assertContains(
+    gpt56ModelSelectorResult.content,
+    "enabledReasoningEfforts:new Set([...c,`max`,`ultra`])",
+    "expected GPT-5.6 selector patch to allow Max and Ultra reasoning options",
+  );
+  assertContains(
+    gpt56ModelSelectorResult.content,
+    "includeUltraReasoningEffort:!0",
+    "expected GPT-5.6 selector patch to preserve Ultra before per-model effort filtering",
+  );
+  assertContains(
+    gpt56ModelSelectorResult.patchedLabels.join("\n"),
+    "GPT-5.6 model query selector",
+    "expected GPT-5.6 selector patch to report its target",
+  );
+  const gpt56SelectorExpression = gpt56ModelSelectorResult.content.slice(
+    gpt56ModelSelectorResult.content.indexOf("select:") + "select:".length,
+  );
+  const gpt56Selector = new Function(
+    "Jv",
+    "e",
+    "t",
+    "n",
+    "c",
+    "l",
+    "o",
+    `return (${gpt56SelectorExpression});`,
+  )(
+    (value: unknown) => value,
+    ["gpt-5.5"],
+    "apikey",
+    "gpt-5.4",
+    new Set(["low", "medium", "high", "xhigh"]),
+    false,
+    true,
+  ) as (result: { data: unknown[] }) => {
+    availableModels: Set<string>;
+    enabledReasoningEfforts: Set<string>;
+    includeUltraReasoningEffort: boolean;
+  };
+  const gpt56SelectorArgs = gpt56Selector({ data: [] });
+  for (const model of ["gpt-5.6-sol", "gpt-5.6-terra", "gpt-5.6-luna"]) {
+    if (!gpt56SelectorArgs.availableModels.has(model)) {
+      fail(`expected GPT-5.6 selector allowlist to contain ${model}`);
+    }
+  }
+  for (const effort of ["max", "ultra"]) {
+    if (!gpt56SelectorArgs.enabledReasoningEfforts.has(effort)) {
+      fail(`expected GPT-5.6 selector effort set to contain ${effort}`);
+    }
+  }
+  if (!gpt56SelectorArgs.includeUltraReasoningEffort) {
+    fail("expected GPT-5.6 selector to pass Ultra through to per-model filtering");
+  }
+  const gpt56ModelSelectorAlreadyPatchedResult = applyRuntimePatchesToBody(
+    "webview/assets/model-selector-26707.js",
+    gpt56ModelSelectorResult.content,
+  );
+  if (gpt56ModelSelectorAlreadyPatchedResult.content !== gpt56ModelSelectorResult.content) {
+    fail("expected GPT-5.6 selector patch to remain unchanged when applied more than once");
+  }
+  assertContains(
+    gpt56ModelSelectorAlreadyPatchedResult.alreadyPatchedLabels.join("\n"),
+    "GPT-5.6 model query selector",
+    "expected GPT-5.6 selector patch to recognize the generated selector as already patched",
   );
 
   const versionFilteredPatcherSource = runtimePatcherSourceForVersion(`
@@ -1011,6 +1243,63 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
     versionFilteredResult4753.content,
     "SPEED_ENABLED",
     "expected 26.623.141536 runtime launch to keep non-Plugins runtime targets active",
+  );
+
+  const versionFilteredPatcherSource5059 = runtimePatcherSourceForVersion(`
+const TARGET_SPECS = [
+  {id: "plugins-catalog-visibility-26601", label: "Plugins catalog visibility", needle: "plugin-needle", guardedSignature: /PLUGIN_DISABLED/, patchedSignature: /PLUGIN_ENABLED/, legacyPatchedSignature: null, applyReplacement: "PLUGIN_ENABLED"},
+  {id: "speed-setting", label: "Speed setting", needle: "speed-needle", guardedSignature: /SPEED_DISABLED/, patchedSignature: /SPEED_ENABLED/, legacyPatchedSignature: null, applyReplacement: "SPEED_ENABLED"}
+];
+function replaceContent(content, signature, replacement) {
+  return content.replace(signature, replacement);
+}
+function replaceContentOrThrow(content, signature, replacement) {
+  return replaceContent(content, signature, replacement);
+}
+function inspectSpec(content, spec) {
+  if (!content.includes(spec.needle)) return null;
+  const guarded = spec.guardedSignature.test(content);
+  const patched = spec.patchedSignature.test(content);
+  const legacyPatched = spec.legacyPatchedSignature?.test(content) ?? false;
+  if (!guarded && !patched && !legacyPatched) return null;
+  return {spec, guarded, patched, legacyPatched};
+}
+function applyRuntimePatchesToBody(_resourcePath, body) {
+  let content = body;
+  const matchedLabels = [];
+  const patchedLabels = [];
+  const alreadyPatchedLabels = [];
+  for (const spec of TARGET_SPECS) {
+    const match = inspectSpec(content, spec);
+    if (!match) continue;
+    matchedLabels.push(spec.label);
+    if (match.guarded) {
+      content = replaceContent(content, spec.guardedSignature, spec.applyReplacement);
+      patchedLabels.push(spec.label);
+    } else if (match.patched) {
+      alreadyPatchedLabels.push(spec.label);
+    }
+  }
+  return {content, matchedLabels, patchedLabels, alreadyPatchedLabels};
+}
+`, "26.707.31428+5059");
+  const versionFilteredPatch5059 = new Function(`${versionFilteredPatcherSource5059}\nreturn applyRuntimePatchesToBody;`)() as (resourcePath: string, body: string) => {
+    content: string;
+    patchedLabels: string[];
+  };
+  const versionFilteredResult5059 = versionFilteredPatch5059(
+    "app://-/assets/demo.js",
+    "plugin-needle PLUGIN_DISABLED speed-needle SPEED_DISABLED",
+  );
+  assertContains(
+    versionFilteredResult5059.content,
+    "PLUGIN_DISABLED",
+    "expected 26.707 runtime launch to skip Plugins targets because the official app supports Plugins",
+  );
+  assertContains(
+    versionFilteredResult5059.content,
+    "SPEED_ENABLED",
+    "expected 26.707 runtime launch to keep non-Plugins runtime targets active",
   );
 
   const nativePipeBody = "function dP(){return lP().info(`browser-use native pipe peer authorization enabled`,{safe:{mode:a?`dev`:`packaged`},sensitive:{}}),e=>{let t=fP(e);return t==null?{authorized:!1,reason:`missing-socket-file-descriptor`}:s.authorizeSocketPeer(t,a)}}";
