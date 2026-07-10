@@ -35,7 +35,7 @@ const SERVICE_TIER_CONVERSATION_FALLBACK_PATCHED_SIGNATURE =
 const SERVICE_TIER_CONVERSATION_FALLBACK_26707_GUARDED_SIGNATURE =
   /(let [^;]+,([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*==null&&[A-Za-z_$][\w$]*!=null\?[A-Za-z_$][\w$]*\.value:[A-Za-z_$][\w$]*\?[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*\):[A-Za-z_$][\w$]*\.serviceTier,([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)!=null&&([A-Za-z_$][\w$]*)\?\.serviceTier!==void 0\?\5\.serviceTier:\4!=null&&([A-Za-z_$][\w$]*)!==void 0\?\6:\2;)([A-Za-z_$][\w$]*)=\4!=null&&\(\5\?\.serviceTier!==void 0\|\|\6!==void 0\)\?[A-Za-z_$][\w$]*\?\3:null:([A-Za-z_$][\w$]*)\(([^,]+),\3,([A-Za-z_$][\w$]*)\),/;
 const SERVICE_TIER_CONVERSATION_FALLBACK_26707_PATCHED_SIGNATURE =
-  /(let [^;]+,([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*==null&&[A-Za-z_$][\w$]*!=null\?[A-Za-z_$][\w$]*\.value:[A-Za-z_$][\w$]*\?[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*\):[A-Za-z_$][\w$]*\.serviceTier,([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)!=null&&([A-Za-z_$][\w$]*)\?\.serviceTier!=null&&\5\.serviceTier!==`standard`\?\5\.serviceTier:\2;)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(([^,]+),\3,([A-Za-z_$][\w$]*)\),/;
+  /(let [^;]+,([A-Za-z_$][\w$]*)=[A-Za-z_$][\w$]*==null&&[A-Za-z_$][\w$]*!=null\?[A-Za-z_$][\w$]*\.value:[A-Za-z_$][\w$]*\?[A-Za-z_$][\w$]*\([A-Za-z_$][\w$]*\):[A-Za-z_$][\w$]*\.serviceTier,([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)!=null&&([A-Za-z_$][\w$]*)\?\.serviceTier!=null&&\5\.serviceTier!==`standard`&&\5\.serviceTier!==`default`\?\5\.serviceTier:\2;)([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(([^,]+),\3,([A-Za-z_$][\w$]*)\),/;
 const GUARDED_SIGNATURE =
   /([A-Za-z_$][\w$]*)=((?:_e|ae|P|N|de|ie|se|je)\(\),)(\{serviceTierSettings:[^,}]+,setServiceTier:[^}]+\}=(?:Ce|se|be|xe|ye|Ve|de|fe|_e)\(\);)if\(!\1\)return null;/;
 const PATCHED_SIGNATURE =
@@ -153,7 +153,7 @@ function patchConversationServiceTierFallback26707(
     new RegExp("," + requestTierVar + "=[^;]+;"),
     ",",
   );
-  return `${prefixBeforeRequestTier}${requestTierVar}=${conversationVar}!=null&&${nextTurnSettingsVar}?.serviceTier!=null&&${nextTurnSettingsVar}.serviceTier!==\`standard\`?${nextTurnSettingsVar}.serviceTier:${baseTierVar};${serviceTierForRequestVar}=${fallbackFunction}(${modelVar},${requestTierVar},${isAllowedVar}),`;
+  return `${prefixBeforeRequestTier}${requestTierVar}=${conversationVar}!=null&&${nextTurnSettingsVar}?.serviceTier!=null&&${nextTurnSettingsVar}.serviceTier!==\`standard\`&&${nextTurnSettingsVar}.serviceTier!==\`default\`?${nextTurnSettingsVar}.serviceTier:${baseTierVar};${serviceTierForRequestVar}=${fallbackFunction}(${modelVar},${requestTierVar},${isAllowedVar}),`;
 }
 
 export const SPEED_TARGET_SPECS = defineTargetSpecs(

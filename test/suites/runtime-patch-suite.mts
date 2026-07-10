@@ -504,9 +504,45 @@ export function runRuntimePatchSuite(): void {
   );
   assertContains(
     serviceTierConversationFallback26707Result.content,
-    "k=e!=null&&u?.serviceTier!=null&&u.serviceTier!==`standard`?u.serviceTier:O",
-    "expected 26.707 fallback to preserve explicit next-turn Fast without letting stale Standard override Settings Fast",
+    "k=e!=null&&u?.serviceTier!=null&&u.serviceTier!==`standard`&&u.serviceTier!==`default`?u.serviceTier:O",
+    "expected 26.707 fallback to ignore current default and legacy standard conversation tiers while preserving explicit Fast",
   );
+  const requestTierExpression26707 =
+    serviceTierConversationFallback26707Result.content.match(/k=([^;]+);S=Iee/)?.[1];
+  if (!requestTierExpression26707) {
+    fail(
+      "expected to extract the 26.707 request-tier expression from the patched service-tier fallback",
+      serviceTierConversationFallback26707Result.content,
+    );
+  }
+  const resolveConversationTier26707 = new Function(
+    "e",
+    "u",
+    "O",
+    `return ${requestTierExpression26707}`,
+  ) as (
+    conversationId: string | null,
+    nextTurnSettings: { serviceTier?: string | null } | null,
+    configuredTier: string | null,
+  ) => string | null;
+  if (
+    resolveConversationTier26707("conversation", { serviceTier: "default" }, "priority") !==
+    "priority"
+  ) {
+    fail("expected stale default conversation tier to fall back to configured Fast");
+  }
+  if (
+    resolveConversationTier26707("conversation", { serviceTier: "standard" }, "priority") !==
+    "priority"
+  ) {
+    fail("expected legacy standard conversation tier to fall back to configured Fast");
+  }
+  if (
+    resolveConversationTier26707("conversation", { serviceTier: "priority" }, "default") !==
+    "priority"
+  ) {
+    fail("expected explicit non-Standard next-turn Fast to remain selected");
+  }
   assertContains(
     serviceTierConversationFallback26707Result.content,
     "S=Iee(s,k,y)",

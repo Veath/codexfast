@@ -6,6 +6,10 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Fixed
+
+- Fixed Fast falling back to Standard for only some reopened `26.707` conversations by treating the current `default` and legacy `standard` conversation-tier values as fallback state instead of overrides of configured Fast.
+
 ## [0.49.0] - 2026-07-10
 
 ### Added
