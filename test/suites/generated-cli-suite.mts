@@ -18,6 +18,8 @@ export function runGeneratedCliSuite(rootDir: string): void {
   assertContains(generatedCli, "app://*/.vite/build/*.js", "expected generated CLI to intercept main-process build assets if Electron serves them through app://");
   assertContains(generatedCli, "codexfastAutomaticUpdateCheck", "expected generated CLI to include the dynamic automatic update main-process hook");
   assertContains(generatedCli, "forcedUpdateScheduleSignature", "expected generated CLI to suppress automatic forced update install scheduling when disableAutomaticUpdates is enabled");
+  assertContains(generatedCli, "viteBuildFilePattern", "expected generated CLI to discover main-process patch modules by .vite/build location and source signature");
+  assertNotContains(generatedCli, "workspace-root-drop-handler-", "expected generated CLI not to depend on a historical updater chunk basename");
   assertNotContains(generatedCli, "CODEXFAST_DISABLE_AUTOMATIC_UPDATES", "expected generated CLI not to rely on startup-only automatic update environment state");
   assertContains(generatedCli, "disableAutomaticUpdates", "expected generated CLI to include the automatic update setting patches");
   assertContains(generatedCli, "detached: true", "expected runtime launch to isolate Codex from the launch terminal process group");

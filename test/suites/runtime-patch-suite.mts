@@ -73,10 +73,36 @@ export function runRuntimePatchSuite(): void {
     rmSync(codexHomeWithSpace, { force: true, recursive: true });
   }
 
+  const automaticUpdateHookSource = createMainProcessAutomaticUpdateHookSource();
   assertContains(
-    createMainProcessAutomaticUpdateHookSource(),
+    automaticUpdateHookSource,
     "disableAutomaticUpdates",
     "expected automatic update main-process hook to patch the backend settings schema used when saving the switch",
+  );
+  assertContains(
+    automaticUpdateHookSource,
+    "const viteBuildFilePattern = /[\\\\/]\\.vite[\\\\/]build[\\\\/][^\\\\/]+\\.js$/;",
+    "expected the main-process hook to inspect any JavaScript module under .vite/build",
+  );
+  assertContains(
+    automaticUpdateHookSource,
+    "const shouldPatchAutomaticUpdates = automaticUpdateSignature.test(source);",
+    "expected updater discovery to be based on the real source signature",
+  );
+  assertContains(
+    automaticUpdateHookSource,
+    "const shouldPatchSettingsSchema = settingsSchemaSignature.test(source);",
+    "expected Settings schema discovery to be based on the real source signature",
+  );
+  assertNotContains(
+    automaticUpdateHookSource,
+    "workspace-root-drop-handler-",
+    "expected updater discovery not to depend on a historical chunk basename",
+  );
+  assertNotContains(
+    automaticUpdateHookSource,
+    "src-[^\\\\/]+",
+    "expected Settings schema discovery not to depend on a historical chunk basename",
   );
 
   const mainProcessSettingsSchemaBody =
