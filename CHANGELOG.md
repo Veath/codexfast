@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.50.0] - 2026-07-11
+
 ### Added
 
 - Added support for `ChatGPT.app` `26.707.41301` (`build 5103`) after direct installed-bundle inspection.
