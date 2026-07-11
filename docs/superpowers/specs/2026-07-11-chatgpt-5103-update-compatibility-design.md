@@ -12,9 +12,9 @@ activity without removing manual update actions.
 - The installed application is `/Applications/ChatGPT.app`.
 - Its bundle identifier remains `com.openai.codex`.
 - Its version key is `26.707.41301+5103`.
-- The application contains official GPT-5.6 Sol and Terra product paths. For
-  this exact build, `codexfast` must not inject GPT-5.6 catalog entries or widen
-  the downstream GPT-5.6 selector.
+- The application contains official GPT-5.6 Sol and Terra product paths. From
+  this build onward, `codexfast` must not inject GPT-5.6 catalog entries or
+  widen the downstream GPT-5.6 selector.
 - Existing Fast service-tier, request allowance, conversation fallback,
   `/fast`, and composer Intelligence Speed signatures remain present.
 - Plugins remains supported through the official application path, so the
@@ -39,8 +39,12 @@ also be added to the build families that:
 - skip all Plugins runtime targets; and
 - skip the GPT-5.6 model-list injection and GPT-5.6 query-selector targets.
 
-The GPT-5.6 skip is scoped to this exact build. Older supported builds retain
-their existing GPT-5.6 compatibility patches.
+The GPT-5.6 skip uses `26.707.41301+5103` as an inclusive threshold. This build
+and every later build that is separately added to the strict compatibility
+whitelist will use the official GPT-5.6 paths. Unknown future builds remain
+blocked until they are inspected and whitelisted; the threshold does not relax
+the compatibility gate. Older supported builds retain their existing GPT-5.6
+compatibility patches.
 
 The remaining runtime targets continue to be evaluated normally. In
 particular, the Fast controls and service-tier request/fallback paths stay
@@ -91,8 +95,8 @@ No unrelated General Settings rows will be changed.
 
 ## GPT-5.6 Runtime Design
 
-The build-specific runtime patcher will exclude these target ids for
-`26.707.41301+5103`:
+The version-aware runtime patcher will exclude these target ids for
+`26.707.41301+5103` and every later supported version/build:
 
 - `gpt5x-model-list-options`
 - `gpt56-model-query-selector`
@@ -100,7 +104,12 @@ The build-specific runtime patcher will exclude these target ids for
 This prevents `codexfast` from adding Sol, Terra, or Luna entries, replacing
 official reasoning metadata, or widening the official remote allowlist. The
 application's official GPT-5.6 catalog and selector behavior become the source
-of truth for this build.
+of truth from this threshold onward.
+
+The threshold comparison will parse the dotted application version into
+numeric segments and compare the numeric build when the application version is
+equal. It will only affect builds that have already passed the strict whitelist
+check.
 
 The change does not remove the target definitions because they remain required
 for older compatible builds.
@@ -113,7 +122,10 @@ current implementation.
 Coverage will prove that:
 
 - build `26.707.41301+5103` is recognized as supported;
-- Plugins targets and the two GPT-5.6 targets are skipped only for that build;
+- Plugins targets are skipped for build 5103, while the two GPT-5.6 targets are
+  skipped for build 5103 and representative later supported version keys;
+- an older supported version below the threshold still applies the GPT-5.6
+  compatibility targets;
 - Fast, `/fast`, Speed, Settings, and updater targets remain eligible;
 - the generated main-process hook discovers updater and schema signatures in
   arbitrarily named `.vite/build/*.js` chunks, including `sqlite-*.js`;
@@ -140,9 +152,9 @@ After implementation, validation will run:
 
 The change will update the compatibility matrix, feature scope, patch-target
 documentation, English and Chinese READMEs, bundle notes when useful, and the
-unreleased changelog. Documentation will state that GPT-5.6 is official on
-build 5103 and that automatic-update suppression remains a runtime-session
-feature which preserves manual update actions.
+unreleased changelog. Documentation will state that GPT-5.6 uses the official
+application path from build 5103 onward and that automatic-update suppression
+remains a runtime-session feature which preserves manual update actions.
 
 ## Real-App Validation Boundary
 
