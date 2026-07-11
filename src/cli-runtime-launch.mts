@@ -107,6 +107,7 @@ const runtimePatchNoPluginsAccessRequiredVersionKeys = new Set([
   "26.623.101652+4674",
   "26.623.141536+4753",
   "26.707.31428+5059",
+  "26.707.41301+5103",
 ]);
 const runtimePatchNoPluginTargetsVersionKeys = new Set([
   "26.623.31443+4441",
@@ -118,6 +119,7 @@ const runtimePatchNoPluginTargetsVersionKeys = new Set([
   "26.623.101652+4674",
   "26.623.141536+4753",
   "26.707.31428+5059",
+  "26.707.41301+5103",
 ]);
 const runtimePatchPluginTargetIdPrefixes = [
   "plugin",
@@ -125,7 +127,40 @@ const runtimePatchPluginTargetIdPrefixes = [
   "composer-plugin",
   "shared-plugin",
 ];
+const runtimePatchOfficialGpt56ThresholdVersionKey = "26.707.41301+5103";
+const runtimePatchOfficialGpt56TargetIds = new Set([
+  "gpt5x-model-list-options",
+  "gpt56-model-query-selector",
+]);
 const runtimePatchRequiredInitialReloadMaxAttempts = 1;
+
+function compareNumericVersionKeys(left: string, right: string): number {
+  const parse = (value: string): { version: number[]; build: number } => {
+    const [versionText, buildText = "0"] = value.split("+", 2);
+    return {
+      version: versionText.split(".").map((segment) => Number.parseInt(segment, 10)),
+      build: Number.parseInt(buildText, 10),
+    };
+  };
+  const leftValue = parse(left);
+  const rightValue = parse(right);
+  const length = Math.max(leftValue.version.length, rightValue.version.length);
+  for (let index = 0; index < length; index += 1) {
+    const difference = (leftValue.version[index] ?? 0) -
+      (rightValue.version[index] ?? 0);
+    if (difference !== 0) {
+      return difference;
+    }
+  }
+  return leftValue.build - rightValue.build;
+}
+
+function usesOfficialGpt56(versionKey: string): boolean {
+  return compareNumericVersionKeys(
+    versionKey,
+    runtimePatchOfficialGpt56ThresholdVersionKey,
+  ) >= 0;
+}
 
 function checkCodexRunning(): CodexRunningCheck {
   if (process.env.CODEXFAST_TEST_CODEX_RUNNING === "1") {
@@ -378,14 +413,22 @@ export function runtimePatcherSourceForVersion(
   patcherSource: string,
   versionKey: string,
 ): string {
-  if (!runtimePatchNoPluginTargetsVersionKeys.has(versionKey)) {
+  const skipPluginTargets = runtimePatchNoPluginTargetsVersionKeys.has(versionKey);
+  const skipOfficialGpt56Targets = usesOfficialGpt56(versionKey);
+  if (!skipPluginTargets && !skipOfficialGpt56Targets) {
     return patcherSource;
   }
 
-  const skippedPrefixes = JSON.stringify(runtimePatchPluginTargetIdPrefixes);
+  const skippedPrefixes = JSON.stringify(
+    skipPluginTargets ? runtimePatchPluginTargetIdPrefixes : [],
+  );
+  const skippedIds = JSON.stringify(
+    skipOfficialGpt56Targets ? [...runtimePatchOfficialGpt56TargetIds] : [],
+  );
   return `${patcherSource}
 const __codexfastPluginTargetIdPrefixes = ${skippedPrefixes};
-const __codexfastShouldSkipTarget = (spec) => __codexfastPluginTargetIdPrefixes.some((prefix) => spec.id.startsWith(prefix));
+const __codexfastSkippedTargetIds = new Set(${skippedIds});
+const __codexfastShouldSkipTarget = (spec) => __codexfastSkippedTargetIds.has(spec.id) || __codexfastPluginTargetIdPrefixes.some((prefix) => spec.id.startsWith(prefix));
 applyRuntimePatchesToBody = function(_resourcePath, body) {
   let content = body;
   const matchedLabels = [];

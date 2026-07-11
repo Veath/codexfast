@@ -1350,6 +1350,70 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
     "expected 26.707 runtime launch to keep non-Plugins runtime targets active",
   );
 
+  const officialGpt56PatcherSource = `
+const TARGET_SPECS = [
+  {id: "gpt5x-model-list-options", label: "GPT-5.x model list", needle: "gpt56-list", guardedSignature: /GPT56_LIST_DISABLED/, patchedSignature: /GPT56_LIST_ENABLED/, legacyPatchedSignature: null, applyReplacement: "GPT56_LIST_ENABLED"},
+  {id: "gpt56-model-query-selector", label: "GPT-5.6 model query selector", needle: "gpt56-selector", guardedSignature: /GPT56_SELECTOR_DISABLED/, patchedSignature: /GPT56_SELECTOR_ENABLED/, legacyPatchedSignature: null, applyReplacement: "GPT56_SELECTOR_ENABLED"},
+  {id: "speed-setting", label: "Speed setting", needle: "speed-needle", guardedSignature: /SPEED_DISABLED/, patchedSignature: /SPEED_ENABLED/, legacyPatchedSignature: null, applyReplacement: "SPEED_ENABLED"}
+];
+function replaceContent(content, signature, replacement) {
+  return content.replace(signature, replacement);
+}
+function replaceContentOrThrow(content, signature, replacement) {
+  return replaceContent(content, signature, replacement);
+}
+function inspectSpec(content, spec) {
+  if (!content.includes(spec.needle)) return null;
+  const guarded = spec.guardedSignature.test(content);
+  const patched = spec.patchedSignature.test(content);
+  if (!guarded && !patched) return null;
+  return {spec, guarded, patched, legacyPatched: false};
+}
+function applyRuntimePatchesToBody(_resourcePath, body) {
+  let content = body;
+  const matchedLabels = [];
+  const patchedLabels = [];
+  const alreadyPatchedLabels = [];
+  for (const spec of TARGET_SPECS) {
+    const match = inspectSpec(content, spec);
+    if (!match) continue;
+    matchedLabels.push(spec.label);
+    if (match.guarded) {
+      content = replaceContent(content, spec.guardedSignature, spec.applyReplacement);
+      patchedLabels.push(spec.label);
+    } else if (match.patched) {
+      alreadyPatchedLabels.push(spec.label);
+    }
+  }
+  return {content, matchedLabels, patchedLabels, alreadyPatchedLabels};
+}
+`;
+  const applyOfficialGpt56PatcherForVersion = (versionKey: string) =>
+    new Function(`${runtimePatcherSourceForVersion(officialGpt56PatcherSource, versionKey)}\nreturn applyRuntimePatchesToBody;`)() as (
+      resourcePath: string,
+      body: string,
+    ) => { content: string; patchedLabels: string[] };
+  const officialGpt56Body = "gpt56-list GPT56_LIST_DISABLED gpt56-selector GPT56_SELECTOR_DISABLED speed-needle SPEED_DISABLED";
+  const officialGpt56ThresholdResult = applyOfficialGpt56PatcherForVersion("26.707.41301+5103")(
+    "app://-/assets/demo.js",
+    officialGpt56Body,
+  );
+  assertContains(officialGpt56ThresholdResult.content, "GPT56_LIST_DISABLED", "expected build 5103 to use the official GPT-5.6 model list");
+  assertContains(officialGpt56ThresholdResult.content, "GPT56_SELECTOR_DISABLED", "expected build 5103 to use the official GPT-5.6 selector");
+  assertContains(officialGpt56ThresholdResult.content, "SPEED_ENABLED", "expected build 5103 to retain non-GPT runtime patches");
+  const officialGpt56LaterResult = applyOfficialGpt56PatcherForVersion("26.708.10000+5200")(
+    "app://-/assets/demo.js",
+    officialGpt56Body,
+  );
+  assertContains(officialGpt56LaterResult.content, "GPT56_LIST_DISABLED", "expected later builds to use the official GPT-5.6 model list");
+  assertContains(officialGpt56LaterResult.content, "GPT56_SELECTOR_DISABLED", "expected later builds to use the official GPT-5.6 selector");
+  const officialGpt56OlderResult = applyOfficialGpt56PatcherForVersion("26.707.31428+5059")(
+    "app://-/assets/demo.js",
+    officialGpt56Body,
+  );
+  assertContains(officialGpt56OlderResult.content, "GPT56_LIST_ENABLED", "expected pre-threshold builds to retain GPT-5.6 model-list compatibility");
+  assertContains(officialGpt56OlderResult.content, "GPT56_SELECTOR_ENABLED", "expected pre-threshold builds to retain GPT-5.6 selector compatibility");
+
   const nativePipeBody = "function dP(){return lP().info(`browser-use native pipe peer authorization enabled`,{safe:{mode:a?`dev`:`packaged`},sensitive:{}}),e=>{let t=fP(e);return t==null?{authorized:!1,reason:`missing-socket-file-descriptor`}:s.authorizeSocketPeer(t,a)}}";
   const nativePipeResult = applyRuntimePatchesToBody("webview/assets/browser-use-native-pipe-Demo.js", nativePipeBody);
   if (nativePipeResult.content !== nativePipeBody) {
