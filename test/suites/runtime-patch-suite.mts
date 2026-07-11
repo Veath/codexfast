@@ -449,6 +449,46 @@ export function runRuntimePatchSuite(): void {
     "expected 26.707 General settings patch to report its target",
   );
 
+  const generalSettings2670741301Body =
+    "function _a(){let e=(0,Q.c)(10),t=F(V),{platform:r}=j(),i=r!==`windows`,a=H(),o=L(n.preventSleepWhileRunning);if(!i)return null;let s;e[0]===Symbol.for(`react.memo_cache_sentinel`)?(s=(0,$.jsx)(R,{...W.preventSleepWhileRunning}),e[0]=s):s=e[0];let c;e[1]===Symbol.for(`react.memo_cache_sentinel`)?(c=(0,$.jsx)(R,{id:`settings.general.power.preventSleepWhileRunning.description`,defaultMessage:`Keep your computer awake while {appName} is running a task`,description:`Description for preventing sleep while a task runs`,values:{appName:f}}),e[1]=c):c=e[1];let l=o??!1,u;e[2]===t?u=e[3]:(u=e=>{I(t,n.preventSleepWhileRunning,e)},e[2]=t,e[3]=u);let d;e[4]===a?d=e[5]:(d=a.formatMessage(W.preventSleepWhileRunning),e[4]=a,e[5]=d);let p;return e[6]!==l||e[7]!==u||e[8]!==d?(p=(0,$.jsx)(U,{label:s,description:c,control:(0,$.jsx)(Bn,{checked:l,onChange:u,ariaLabel:d})}),e[6]=l,e[7]=u,e[8]=d,e[9]=p):p=e[9],p}settings.general.power.preventSleepWhileRunning.description";
+  const generalSettings2670741301Result = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-BBi3jMJr.js",
+    generalSettings2670741301Body,
+  );
+  assertContains(
+    generalSettings2670741301Result.content,
+    "n.disableAutomaticUpdates",
+    "expected build 5103 Settings to read the automatic-update setting",
+  );
+  assertContains(
+    generalSettings2670741301Result.content,
+    "I(codexfastSettingsState,n.disableAutomaticUpdates,codexfastNextValue)",
+    "expected build 5103 Settings to persist the automatic-update setting",
+  );
+  assertContains(
+    generalSettings2670741301Result.content,
+    "values:{appName:f}",
+    "expected build 5103 Settings to preserve app-name-aware prevent-sleep copy",
+  );
+  assertContains(
+    generalSettings2670741301Result.patchedLabels.join("\n"),
+    "Disable automatic updates setting",
+    "expected build 5103 Settings to report the target",
+  );
+  assertNotContains(
+    generalSettings2670741301Result.content,
+    "let o,s",
+    "expected the build 5103 replacement not to reintroduce minified local collisions",
+  );
+  new Function(generalSettings2670741301Result.content);
+  const generalSettings2670741301SecondPass = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-BBi3jMJr.js",
+    generalSettings2670741301Result.content,
+  );
+  if (generalSettings2670741301SecondPass.content !== generalSettings2670741301Result.content) {
+    fail("expected the build-5103 Settings patch to be idempotent");
+  }
+
   const speedBody = "settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;";
   const speedResult = applyRuntimePatchesToBody("webview/assets/general-settings-demo.js", speedBody);
   assertContains(speedResult.content, "{serviceTierSettings:r,setServiceTier:i}=fe();let o;", "expected runtime patch engine to keep patching matching Speed settings bodies");
