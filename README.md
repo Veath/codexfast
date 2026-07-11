@@ -9,14 +9,14 @@
 - **Fast settings** control in Settings
 - **Composer `/fast`** slash command
 - **Speed submenu** in the composer
-- **GPT-5.5 and GPT-5.6 model catalog** metadata for custom API users, including Sol, Terra, and Luna on the latest supported build
+- **GPT-5.5 and GPT-5.6 model catalog** compatibility for custom API users, including injected Sol/Terra/Luna metadata on older supported builds and the official GPT-5.6 path on current builds
 - **Disable automatic updates** switch in Settings > General
 
 ```bash
 npx codexfast launch
 ```
 
-Verified for `ChatGPT.app` / `Codex.app` `26.707.31428` (`build 5059`), `26.623.141536` (`build 4753`), `26.623.101652` (`build 4674`), `26.623.81905` (`build 4598`), `26.623.70822` (`build 4559`), `26.623.61825` (`build 4548`), `26.623.42026` (`build 4514`), `26.623.31921` (`build 4452`), `26.623.31443` (`build 4441`), `26.616.81150` (`build 4306`), `26.616.71553` (`build 4265`), `26.616.51431` (`build 4212`), `26.616.31447` (`build 4133`), `26.611.62324` (`build 4028`), `26.611.61753` (`build 4008`), `26.611.61049` (`build 3996`), `26.609.71450` (`build 3965`), `26.609.41114` (`build 3888`), `26.609.30741` (`build 3808`), `26.608.12217` (`build 3722`), `26.602.71036` (`build 3685`), `26.602.40724` (`build 3593`), `26.602.30954` (`build 3575`), `26.601.21317` (`build 3511`), `26.527.60818` (`build 3437`), `26.527.31326` (`build 3390`), `26.519.81530` (`build 3178`), `26.519.41501` (`build 3044`), `26.519.31651` (`build 3017`), `26.519.22136` (`build 3003`), `26.513.31313` (`build 2867`), `26.513.20950` (`build 2816`), `26.506.31421` (`build 2620`), `26.506.21252` (`build 2575`), `26.429.61741` (`build 2429`), `26.429.30905` (`build 2345`), `26.429.20946` (`build 2312`), `26.422.71525` (`build 2210`), `26.422.62136` (`builds 2180, 2176`), `26.422.30944` (`build 2080`), `26.422.21637` (`build 2056`), `26.417.41555` (`build 1858`), and `26.415.40636` (`build 1799`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
+Verified for `ChatGPT.app` / `Codex.app` `26.707.41301` (`build 5103`), `26.707.31428` (`build 5059`), `26.623.141536` (`build 4753`), `26.623.101652` (`build 4674`), `26.623.81905` (`build 4598`), `26.623.70822` (`build 4559`), `26.623.61825` (`build 4548`), `26.623.42026` (`build 4514`), `26.623.31921` (`build 4452`), `26.623.31443` (`build 4441`), `26.616.81150` (`build 4306`), `26.616.71553` (`build 4265`), `26.616.51431` (`build 4212`), `26.616.31447` (`build 4133`), `26.611.62324` (`build 4028`), `26.611.61753` (`build 4008`), `26.611.61049` (`build 3996`), `26.609.71450` (`build 3965`), `26.609.41114` (`build 3888`), `26.609.30741` (`build 3808`), `26.608.12217` (`build 3722`), `26.602.71036` (`build 3685`), `26.602.40724` (`build 3593`), `26.602.30954` (`build 3575`), `26.601.21317` (`build 3511`), `26.527.60818` (`build 3437`), `26.527.31326` (`build 3390`), `26.519.81530` (`build 3178`), `26.519.41501` (`build 3044`), `26.519.31651` (`build 3017`), `26.519.22136` (`build 3003`), `26.513.31313` (`build 2867`), `26.513.20950` (`build 2816`), `26.506.31421` (`build 2620`), `26.506.21252` (`build 2575`), `26.429.61741` (`build 2429`), `26.429.30905` (`build 2345`), `26.429.20946` (`build 2312`), `26.422.71525` (`build 2210`), `26.422.62136` (`builds 2180, 2176`), `26.422.30944` (`build 2080`), `26.422.21637` (`build 2056`), `26.417.41555` (`build 1858`), and `26.415.40636` (`build 1799`). Feature scope: [`docs/feature-scope.md`](./docs/feature-scope.md).
 
 ## How It Works
 
@@ -24,7 +24,9 @@ Verified for `ChatGPT.app` / `Codex.app` `26.707.31428` (`build 5059`), `26.623.
 
 `codexfast launch` starts Codex with a local Chrome DevTools Protocol endpoint, attaches through the browser-level CDP target before renderer JavaScript runs, intercepts matching renderer JavaScript responses for that launched session, and applies narrow patch rules in memory. Keep the `codexfast launch` process running while you use Codex; Settings and patched feature chunks can load lazily, so the runtime interceptor must stay attached after the first window appears.
 
-The Settings > General `Disable automatic updates` switch is stored in Codex desktop configuration as `[desktop].disableAutomaticUpdates`. `codexfast` injects a process-local main-process hook that reads the latest configuration before each Sparkle background update check and automatic forced install scheduling pass, so enabling the switch during a `codexfast launch` session suppresses later automatic update activity in that same session. Manual `Check for Updates` and update install actions remain available, and the injected Settings row uses locale-aware copy for common Codex app locales.
+The Settings > General `Disable automatic updates` switch is stored in Codex desktop configuration as `[desktop].disableAutomaticUpdates`. `codexfast` injects a process-local main-process hook that discovers updater and desktop-settings modules by source signature across `.vite/build/*.js`, then reads the latest configuration before each Sparkle background update check and automatic forced install scheduling pass. Enabling the switch during a `codexfast launch` session therefore suppresses later automatic update activity even when bundle chunk names move. Manual `Check for Updates` and update install actions remain available, and the injected Settings row uses locale-aware copy for common Codex app locales.
+
+`26.707.41301+5103` is the official GPT-5.6 threshold. That build and numerically later builds skip the GPT-5.6 model-list injection and query-selector widening only after they have been separately added to the strict exact-version/build whitelist; unknown future builds remain blocked.
 
 The launcher sends a lightweight browser-level CDP heartbeat, tries up to three bounded reconnects if the runtime patch session drops, and reports `Runtime patch session lost` instead of silently continuing unpatched. If reconnects are exhausted, `codexfast` closes the launched Codex process and exits non-zero so the session cannot keep running without runtime patching. If the launch process itself is killed externally, fully quit Codex and relaunch with `codexfast` before relying on patched lazy-loaded features.
 
@@ -75,6 +77,7 @@ The script matches code signatures in frontend build output, so it can break aft
 - `launch` is blocked unless the installed version/build is whitelisted
 - Runtime launch does not rewrite `app.asar`, `Info.plist`, the app bundle, backups, the app signature, or macOS privacy permissions
 - The automatic-update switch disables later background update checks and forced automatic install scheduling during the current `codexfast launch` session; manual update checks and installs remain available
+- Build `26.707.41301+5103` and later separately whitelisted builds use the official GPT-5.6 model list and selector instead of the compatibility injection
 
 ## Troubleshooting
 

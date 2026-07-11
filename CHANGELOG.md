@@ -6,6 +6,19 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added support for `ChatGPT.app` `26.707.41301` (`build 5103`) after direct installed-bundle inspection.
+
+### Changed
+
+- Use the official GPT-5.6 model list and selector on build 5103 and later supported builds instead of injecting GPT-5.6 entries or widening the selector.
+
+### Fixed
+
+- Discover Sparkle updater and desktop-settings schema modules by source signature across `.vite/build/*.js`, so automatic background checks and forced installs remain suppressed after chunk renames while manual updates stay available.
+- Added the build-5103 Settings > General automatic-update row target.
+
 ## [0.49.1] - 2026-07-10
 
 ### Fixed
