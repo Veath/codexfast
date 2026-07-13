@@ -6,6 +6,16 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.51.0] - 2026-07-13
+
+### Added
+
+- Added support for `ChatGPT.app` `26.707.61608` (`build 5200`) after direct installed-bundle inspection.
+
+### Fixed
+
+- Added the build-5200 Settings > General automatic-update row target for the shifted minified-local layout.
+
 ## [0.50.0] - 2026-07-11
 
 ### Added
