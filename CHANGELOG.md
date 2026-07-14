@@ -6,6 +6,10 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added support for `ChatGPT.app` `26.707.71524` (`build 5263`) after direct installed-bundle inspection, reusing the guarded `26.707` Fast and automatic-update target family while keeping GPT-5.6 and Plugins on official application paths.
+
 ## [0.51.0] - 2026-07-13
 
 ### Added
