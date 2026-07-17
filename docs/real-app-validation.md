@@ -8,6 +8,8 @@ Run these checks after any meaningful bundle change, runtime patch-signature upd
 
 Use these checks when validating `launch` behavior. Do not mark a build as real-app validated from regression tests alone.
 
+- For `26.715.21425+5488`, confirm the official Plugins/GPT-5.6 paths remain unpatched, `general-settings-B8bUS3xL.js` receives the row-local-`h` automatic-update target, and `.vite/build/window-all-closed-DXvqe7lL.js` receives the callback-aware Sparkle hook while manual update methods remain intact.
+
 - `npx codexfast launch` starts Codex when Codex is not already running
 - The launched session opens with runtime patches active
 - The launch output reports the required initial target labels for the current build before it reports `Runtime launch completed`; older builds include `Plugins access`, while `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, `26.608.12217`, `26.609.30741`, `26.609.41114`, `26.609.71450`, `26.611.61049`, `26.611.61753`, `26.611.62324`, `26.616.31447`, `26.616.51431`, `26.616.71553`, `26.616.81150`, `26.623.31443`, `26.623.31921`, `26.623.42026`, `26.623.61825`, `26.623.70822`, `26.623.81905`, `26.623.101652`, `26.623.141536`, `26.707.31428`, `26.707.41301`, `26.707.61608`, `26.707.71524`, `26.707.72221`, and `26.707.91948` do not require that legacy target because the old sidebar/page/detail gates are absent or Plugins is supported by the official app path

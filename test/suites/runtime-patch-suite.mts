@@ -86,8 +86,18 @@ export function runRuntimePatchSuite(): void {
   );
   assertContains(
     automaticUpdateHookSource,
-    "const shouldPatchAutomaticUpdates = automaticUpdateSignature.test(source);",
+    "const shouldPatchAutomaticUpdates = automaticUpdateSignature.test(source) || automaticUpdateCallbackSignature.test(source);",
     "expected updater discovery to be based on the real source signature",
+  );
+  assertContains(
+    automaticUpdateHookSource,
+    "automaticUpdateCallbackSignature",
+    "expected updater discovery to include the build-5488 callback-aware interval signature",
+  );
+  assertContains(
+    automaticUpdateHookSource,
+    "automaticDownloadConditionalGateSignature",
+    "expected updater discovery to include the build-5488 conditional automatic-download signature",
   );
   assertContains(
     automaticUpdateHookSource,
@@ -215,6 +225,46 @@ export function runRuntimePatchSuite(): void {
     "checkForUpdates:async()=>{u&&!this.isUpdateReady",
     "expected forced install guard to preserve manual update checks",
   );
+  const mainProcessUpdaterBodyWithConditionalCallback =
+    "initialize(){let f=()=>{try{d&&!this.isUpdateReady&&this.updateLifecycleState===`idle`&&this.setUpdateLifecycleState(`checking`),l.checkForUpdatesInBackground()}catch(e){this.isUpdateReady||this.setUpdateLifecycleState(`idle`)}};if(this.setAutomaticBackgroundDownloadsEnabledForMac=e=>{l.setAutomaticBackgroundDownloadsEnabled(e),e&&!t&&f()},this.updater={checkForUpdates:async()=>{d&&!this.isUpdateReady&&this.updateLifecycleState===`idle`&&this.setUpdateLifecycleState(`checking`),l.checkForUpdates()},installUpdatesIfAvailable:async()=>{l.installUpdatesIfAvailable()}},!t){let e=HV();e>0&&setInterval(f,e).unref(),f()}}scheduleForcedUpdateInstall(){this.forcedUpdateTimer&&=(clearTimeout(this.forcedUpdateTimer),null);let e=this.getRelaunchNotificationPolicy();if(!this.isUpdateReady){this.setRelaunchNotice(null);return}}";
+  const patchedMainProcessUpdaterWithConditionalCallback =
+    patchMainProcessAutomaticUpdateSource(mainProcessUpdaterBodyWithConditionalCallback);
+  assertContains(
+    patchedMainProcessUpdaterWithConditionalCallback,
+    "codexfastAutomaticUpdateCheck",
+    "expected build-5488 callback-aware updater to insert the dynamic automatic-update gate",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithConditionalCallback,
+    "e&&!t&&codexfastAutomaticUpdateCheck()",
+    "expected build-5488 automatic-download trigger to preserve the production-appcast condition",
+  );
+  assertNotContains(
+    patchedMainProcessUpdaterWithConditionalCallback,
+    "e&&!t&&f()",
+    "expected build-5488 automatic-download trigger not to bypass the dynamic config gate",
+  );
+  assertNotContains(
+    patchedMainProcessUpdaterWithConditionalCallback,
+    "setInterval(f,e)",
+    "expected build-5488 scheduled checks not to call the raw background callback",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithConditionalCallback,
+    "scheduleForcedUpdateInstall(){if(",
+    "expected build-5488 forced automatic install scheduling to check disableAutomaticUpdates first",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithConditionalCallback,
+    "checkForUpdates:async()=>{d&&!this.isUpdateReady",
+    "expected build-5488 updater patch to preserve manual update checks",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithConditionalCallback,
+    "installUpdatesIfAvailable:async()=>{l.installUpdatesIfAvailable()}",
+    "expected build-5488 updater patch to preserve manual update installs",
+  );
+  new Function(`class CodexfastUpdaterFixture{${patchedMainProcessUpdaterWithConditionalCallback}}`);
 
   const settingsSchemaBody =
     "localeOverride:K({agentAccess:`read-write`,default:null,description:`Explicit locale override`,key:`localeOverride`,schema:BS}),preventSleepWhileRunning:K({agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:RS}),keepRemoteControlAwakeWhilePluggedIn:K({agentAccess:`read-write`,default:!1,description:`Whether remote control keeps this computer awake while plugged in`,key:`keepRemoteControlAwakeWhilePluggedIn`,schema:RS})";
@@ -667,6 +717,51 @@ export function runRuntimePatchSuite(): void {
   );
   if (generalSettings2670791948SecondPass.content !== generalSettings2670791948Result.content) {
     fail("expected the build-5440 Settings patch to be idempotent");
+  }
+
+  const generalSettings2671521425Body =
+    "function sa(){let e=(0,Q.c)(10),t=n(m),{platform:r}=Ze(),i=r!==`windows`,a=R(),o=u(E.preventSleepWhileRunning);if(!i)return null;let s;e[0]===Symbol.for(`react.memo_cache_sentinel`)?(s=(0,$.jsx)(L,{...G.preventSleepWhileRunning}),e[0]=s):s=e[0];let l;e[1]===Symbol.for(`react.memo_cache_sentinel`)?(l=(0,$.jsx)(L,{id:`settings.general.power.preventSleepWhileRunning.description`,defaultMessage:`Keep your computer awake while {appName} is running a task`,description:`Description for preventing sleep while a task runs`,values:{appName:Vt}}),e[1]=l):l=e[1];let d=o??!1,f;e[2]===t?f=e[3]:(f=e=>{c(t,E.preventSleepWhileRunning,e)},e[2]=t,e[3]=f);let p;e[4]===a?p=e[5]:(p=a.formatMessage(G.preventSleepWhileRunning),e[4]=a,e[5]=p);let h;return e[6]!==d||e[7]!==f||e[8]!==p?(h=(0,$.jsx)(U,{label:s,description:l,control:(0,$.jsx)(V,{checked:d,onChange:f,ariaLabel:p})}),e[6]=d,e[7]=f,e[8]=p,e[9]=h):h=e[9],h}settings.general.power.preventSleepWhileRunning.description";
+  const generalSettings2671521425Result = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-B8bUS3xL.js",
+    generalSettings2671521425Body,
+  );
+  assertContains(
+    generalSettings2671521425Result.content,
+    "E.disableAutomaticUpdates",
+    "expected build 5488 Settings to read the automatic-update setting",
+  );
+  assertContains(
+    generalSettings2671521425Result.content,
+    "c(codexfastSettingsState,E.disableAutomaticUpdates,codexfastNextValue)",
+    "expected build 5488 Settings to persist the automatic-update setting",
+  );
+  assertContains(
+    generalSettings2671521425Result.content,
+    "values:{appName:Vt}",
+    "expected build 5488 Settings to preserve app-name-aware prevent-sleep copy",
+  );
+  assertContains(
+    generalSettings2671521425Result.content,
+    "codexfastCache=(0,Q.c)(17)",
+    "expected build 5488 Settings replacement to use collision-safe prefixed locals",
+  );
+  assertContains(
+    generalSettings2671521425Result.patchedLabels.join("\n"),
+    "Disable automatic updates setting",
+    "expected build 5488 Settings to report its target",
+  );
+  assertNotContains(
+    generalSettings2671521425Result.content,
+    "let h;return",
+    "expected build 5488 Settings patch to replace the original row local",
+  );
+  new Function(generalSettings2671521425Result.content);
+  const generalSettings2671521425SecondPass = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-B8bUS3xL.js",
+    generalSettings2671521425Result.content,
+  );
+  if (generalSettings2671521425SecondPass.content !== generalSettings2671521425Result.content) {
+    fail("expected the build-5488 Settings patch to be idempotent");
   }
 
   const speedBody = "settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;";
@@ -1588,6 +1683,7 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
     ["26.707.71524+5263", "5263"],
     ["26.707.72221+5307", "5307"],
     ["26.707.91948+5440", "5440"],
+    ["26.715.21425+5488", "5488"],
   ] as const) {
     const result = applyOfficialPluginsPatcherForVersion(versionKey)(
       "app://-/assets/demo.js",
@@ -1676,6 +1772,13 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
   assertContains(officialGpt56Build5440Result.content, "GPT56_LIST_DISABLED", "expected build 5440 to use the official GPT-5.6 model list");
   assertContains(officialGpt56Build5440Result.content, "GPT56_SELECTOR_DISABLED", "expected build 5440 to use the official GPT-5.6 selector");
   assertContains(officialGpt56Build5440Result.content, "SPEED_ENABLED", "expected build 5440 to retain non-GPT runtime patches");
+  const officialGpt56Build5488Result = applyOfficialGpt56PatcherForVersion("26.715.21425+5488")(
+    "app://-/assets/demo.js",
+    officialGpt56Body,
+  );
+  assertContains(officialGpt56Build5488Result.content, "GPT56_LIST_DISABLED", "expected build 5488 to use the official GPT-5.6 model list");
+  assertContains(officialGpt56Build5488Result.content, "GPT56_SELECTOR_DISABLED", "expected build 5488 to use the official GPT-5.6 selector");
+  assertContains(officialGpt56Build5488Result.content, "SPEED_ENABLED", "expected build 5488 to retain non-GPT runtime patches");
   const officialGpt56LaterResult = applyOfficialGpt56PatcherForVersion("26.708.10000+5200")(
     "app://-/assets/demo.js",
     officialGpt56Body,

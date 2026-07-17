@@ -48,6 +48,8 @@ If Fast writes `service_tier = "priority"` to `config.toml` but the UI still loo
 
 If `Disable automatic updates` is enabled but Codex still updates:
 
+- On build `26.715.21425+5488`, inspect `.vite/build/window-all-closed-DXvqe7lL.js`: the active updater uses a captured local callback inside a production-appcast condition, and both the interval path and `setAutomaticBackgroundDownloadsEnabledForMac` must route through the dynamic config check.
+
 1. Confirm `~/.codex/config.toml` contains `[desktop].disableAutomaticUpdates = true` or a supported legacy top-level value.
 2. Inspect the real extracted `.vite/build/*.js` modules by source signature for every automatic path that calls the raw background check function or schedules an already-downloaded update for forced installation. Current builds can move the active Sparkle manager between chunks such as `workspace-root-drop-handler-*.js` and `sqlite-*.js`. Newer bundles can call the background check through both the interval/immediate startup shape and `setAutomaticBackgroundDownloadsEnabledForMac`, and can also install a downloaded update through `scheduleForcedUpdateInstall()`.
 3. Confirm manual `checkForUpdates` and `installUpdatesIfAvailable` remain untouched; do not use `CODEX_SPARKLE_ENABLED=false` or another global updater disable as a shortcut.
@@ -95,6 +97,8 @@ Check:
 - Admin-side or upstream restrictions.
 
 ## `@chrome` reports `Browser is not available: extension`
+
+Build `26.715.21425+5488` also uses the official Plugins path and does not require the legacy `Plugins access` initial target or Plugins runtime target family.
 
 Relevant boundary:
 

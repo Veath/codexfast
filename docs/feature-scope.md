@@ -46,6 +46,8 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 ### Disable automatic updates setting
 
+- On `26.715.21425+5488`, the existing Fast global-tier behavior and composer `Intelligence` Speed path remain compatible, GPT-5.6 and Plugins use official application paths, and the automatic-update row plus callback-aware Sparkle hook require build-specific compatibility targets.
+
 - Adds a `Disable automatic updates` switch to Settings > General.
 - The injected Settings row uses locale-aware label and description copy for common Codex app locales, with English fallback.
 - The launcher injects a process-local main-process hook that discovers the desktop-settings schema and Sparkle updater by source signature across `.vite/build/*.js`, reads the latest `config.toml` before each background update check and automatic forced install scheduling pass, then skips those automatic paths when `[desktop].disableAutomaticUpdates = true`; a legacy top-level `disableAutomaticUpdates = true` is still accepted only when the desktop setting is absent.

@@ -6,6 +6,15 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added local compatibility for `ChatGPT.app` `26.715.21425` (`build 5488`) after direct installed-bundle inspection, retaining the official GPT-5.6 and Plugins paths.
+
+### Fixed
+
+- Added the build-5488 Settings > General automatic-update row target for the row-local-`h` bundle shape.
+- Added callback-aware Sparkle background-check interception for the new conditional `initializeMacSparkle()` interval and automatic-download paths while preserving manual update actions.
+
 ## [0.54.0] - 2026-07-16
 
 ### Added

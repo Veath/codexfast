@@ -98,6 +98,8 @@ Source layout:
 
 ## Update Rules
 
+- On `26.715.21425` build `5488`, GPT-5.6 and Plugins continue to use official app paths. Settings-side Fast is in `general-settings-B8bUS3xL.js`; the shared allowance and configured-tier fallback are in the `l46phxln` shared chunk; the request-tier helper is in the `b0wqjrxp` shared chunk; `/fast` and the Intelligence Speed gate are in the `unq8yzli` shared chunk. The automatic-update row uses `disable-automatic-updates-setting-26715-row-local-h`. The active Sparkle module moved to `.vite/build/window-all-closed-DXvqe7lL.js`, where background checks use a captured callback inside a production-appcast condition, so the launcher uses callback-aware source-signature interception while preserving manual update actions.
+
 - If a feature target moves to a new bundle file, update this document and the relevant bundle note together.
 - If a patch changes from "force enabled" to another strategy, record the new intent here.
 - Keep this file high-level. Put build-specific notes in `docs/bundle-notes/`.

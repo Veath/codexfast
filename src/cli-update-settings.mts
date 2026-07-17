@@ -4,8 +4,12 @@ import { dirname, join } from "node:path";
 
 const MAIN_PROCESS_AUTOMATIC_UPDATE_SIGNATURE =
   /let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(\);\1>0&&setInterval\(d,\1\)\.unref\(\),d\(\)/;
+const MAIN_PROCESS_AUTOMATIC_UPDATE_CALLBACK_SIGNATURE =
+  /let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(\);\1>0&&setInterval\(([A-Za-z_$][\w$]*),\1\)\.unref\(\),\3\(\)/;
 const MAIN_PROCESS_AUTOMATIC_DOWNLOAD_GATE_SIGNATURE =
   /this\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\w$]*)=>\{([A-Za-z_$][\w$]*\.setAutomaticBackgroundDownloadsEnabled\(\1\)),\1&&d\(\)\},this\.updater=/;
+const MAIN_PROCESS_AUTOMATIC_DOWNLOAD_CONDITIONAL_GATE_SIGNATURE =
+  /this\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\w$]*)=>\{([A-Za-z_$][\w$]*\.setAutomaticBackgroundDownloadsEnabled\(\1\)),\1&&!([A-Za-z_$][\w$]*)&&([A-Za-z_$][\w$]*)\(\)\},this\.updater=/;
 const MAIN_PROCESS_FORCED_UPDATE_SCHEDULE_SIGNATURE =
   /scheduleForcedUpdateInstall\(\)\{this\.forcedUpdateTimer&&=\(clearTimeout\(this\.forcedUpdateTimer\),null\);/;
 const MAIN_PROCESS_SETTINGS_SCHEMA_SIGNATURE =
@@ -101,15 +105,22 @@ export function isAutomaticUpdatesDisabledInConfig(env: NodeJS.ProcessEnv = proc
 }
 
 export function patchMainProcessAutomaticUpdateSource(source: string): string {
-  const patchedSource = source.replace(
+  let patchedSource = source.replace(
     MAIN_PROCESS_AUTOMATIC_UPDATE_SIGNATURE,
     (_match, intervalVar: string, readIntervalVar: string) =>
       `let ${intervalVar}=${readIntervalVar}(),${MAIN_PROCESS_AUTOMATIC_UPDATE_READER},codexfastAutomaticUpdatesDisabled=${MAIN_PROCESS_AUTOMATIC_UPDATE_DISABLED_CHECK},codexfastAutomaticUpdateCheck=()=>{if(codexfastAutomaticUpdatesDisabled())return;d()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`,
   );
   if (patchedSource === source) {
+    patchedSource = source.replace(
+      MAIN_PROCESS_AUTOMATIC_UPDATE_CALLBACK_SIGNATURE,
+      (_match, intervalVar: string, readIntervalVar: string, callbackVar: string) =>
+        `let ${intervalVar}=${readIntervalVar}(),${MAIN_PROCESS_AUTOMATIC_UPDATE_READER},codexfastAutomaticUpdatesDisabled=${MAIN_PROCESS_AUTOMATIC_UPDATE_DISABLED_CHECK},codexfastAutomaticUpdateCheck=()=>{if(codexfastAutomaticUpdatesDisabled())return;${callbackVar}()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`,
+    );
+  }
+  if (patchedSource === source) {
     return source;
   }
-  const patchedAutomaticDownloadGate = patchedSource.replace(
+  let patchedAutomaticDownloadGate = patchedSource.replace(
     MAIN_PROCESS_AUTOMATIC_DOWNLOAD_GATE_SIGNATURE,
     (
       _match,
@@ -117,6 +128,17 @@ export function patchMainProcessAutomaticUpdateSource(source: string): string {
       setAutomaticBackgroundDownloadsEnabledCall: string,
     ) =>
       `this.setAutomaticBackgroundDownloadsEnabledForMac=${enabledVar}=>{${setAutomaticBackgroundDownloadsEnabledCall},${enabledVar}&&codexfastAutomaticUpdateCheck()},this.updater=`,
+  );
+  patchedAutomaticDownloadGate = patchedAutomaticDownloadGate.replace(
+    MAIN_PROCESS_AUTOMATIC_DOWNLOAD_CONDITIONAL_GATE_SIGNATURE,
+    (
+      _match,
+      enabledVar: string,
+      setAutomaticBackgroundDownloadsEnabledCall: string,
+      productionAppcastVar: string,
+      _callbackVar: string,
+    ) =>
+      `this.setAutomaticBackgroundDownloadsEnabledForMac=${enabledVar}=>{${setAutomaticBackgroundDownloadsEnabledCall},${enabledVar}&&!${productionAppcastVar}&&codexfastAutomaticUpdateCheck()},this.updater=`,
   );
   return patchedAutomaticDownloadGate.replace(
     MAIN_PROCESS_FORCED_UPDATE_SCHEDULE_SIGNATURE,
@@ -138,7 +160,9 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "const fs = require(\"node:fs\");",
     "const originalJsLoader = Module._extensions[\".js\"];",
     "const automaticUpdateSignature = /let ([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\(\\);\\1>0&&setInterval\\(d,\\1\\)\\.unref\\(\\),d\\(\\)/;",
+    "const automaticUpdateCallbackSignature = /let ([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\(\\);\\1>0&&setInterval\\(([A-Za-z_$][\\w$]*),\\1\\)\\.unref\\(\\),\\3\\(\\)/;",
     "const automaticDownloadGateSignature = /this\\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\\w$]*)=>\\{([A-Za-z_$][\\w$]*\\.setAutomaticBackgroundDownloadsEnabled\\(\\1\\)),\\1&&d\\(\\)\\},this\\.updater=/;",
+    "const automaticDownloadConditionalGateSignature = /this\\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\\w$]*)=>\\{([A-Za-z_$][\\w$]*\\.setAutomaticBackgroundDownloadsEnabled\\(\\1\\)),\\1&&!([A-Za-z_$][\\w$]*)&&([A-Za-z_$][\\w$]*)\\(\\)\\},this\\.updater=/;",
     "const forcedUpdateScheduleSignature = /scheduleForcedUpdateInstall\\(\\)\\{this\\.forcedUpdateTimer&&=\\(clearTimeout\\(this\\.forcedUpdateTimer\\),null\\);/;",
     `const automaticUpdateReader = ${JSON.stringify(MAIN_PROCESS_AUTOMATIC_UPDATE_READER)};`,
     `const automaticUpdateDisabledCheck = ${JSON.stringify(MAIN_PROCESS_AUTOMATIC_UPDATE_DISABLED_CHECK)};`,
@@ -146,8 +170,14 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "function automaticUpdateReplacement(_match, intervalVar, readIntervalVar) {",
     "  return `let ${intervalVar}=${readIntervalVar}(),${automaticUpdateReader},codexfastAutomaticUpdatesDisabled=${automaticUpdateDisabledCheck},codexfastAutomaticUpdateCheck=()=>{if(codexfastAutomaticUpdatesDisabled())return;d()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`;",
     "}",
+    "function automaticUpdateCallbackReplacement(_match, intervalVar, readIntervalVar, callbackVar) {",
+    "  return `let ${intervalVar}=${readIntervalVar}(),${automaticUpdateReader},codexfastAutomaticUpdatesDisabled=${automaticUpdateDisabledCheck},codexfastAutomaticUpdateCheck=()=>{if(codexfastAutomaticUpdatesDisabled())return;${callbackVar}()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`;",
+    "}",
     "function automaticDownloadGateReplacement(_match, enabledVar, setAutomaticBackgroundDownloadsEnabledCall) {",
     "  return `this.setAutomaticBackgroundDownloadsEnabledForMac=${enabledVar}=>{${setAutomaticBackgroundDownloadsEnabledCall},${enabledVar}&&codexfastAutomaticUpdateCheck()},this.updater=`;",
+    "}",
+    "function automaticDownloadConditionalGateReplacement(_match, enabledVar, setAutomaticBackgroundDownloadsEnabledCall, productionAppcastVar) {",
+    "  return `this.setAutomaticBackgroundDownloadsEnabledForMac=${enabledVar}=>{${setAutomaticBackgroundDownloadsEnabledCall},${enabledVar}&&!${productionAppcastVar}&&codexfastAutomaticUpdateCheck()},this.updater=`;",
     "}",
     "const settingsSchemaSignature = /(preventSleepWhileRunning:([A-Za-z_$][\\w$]*)\\(\\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\\w$]*)\\}\\),)/;",
     "const settingsSchemaReplacement = \"$1disableAutomaticUpdates:$2({agentAccess:`read-write`,default:!1,description:`Whether automatic update checks and forced installs are disabled`,key:`disableAutomaticUpdates`,schema:$3}),\";",
@@ -156,13 +186,14 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "  if (viteBuildFilePattern.test(filename)) {",
     "    const source = fs.readFileSync(filename, \"utf8\");",
     "    const shouldPatchSettingsSchema = settingsSchemaSignature.test(source);",
-    "    const shouldPatchAutomaticUpdates = automaticUpdateSignature.test(source);",
+    "    const shouldPatchAutomaticUpdates = automaticUpdateSignature.test(source) || automaticUpdateCallbackSignature.test(source);",
     "    if (shouldPatchSettingsSchema || shouldPatchAutomaticUpdates) {",
     "      let patchedSource = source;",
     "      if (shouldPatchSettingsSchema) patchedSource = patchedSource.replace(settingsSchemaSignature, settingsSchemaReplacement);",
     "      if (shouldPatchAutomaticUpdates) {",
-    "        const nextSource = patchedSource.replace(automaticUpdateSignature, automaticUpdateReplacement);",
-    "        patchedSource = nextSource === patchedSource ? nextSource : nextSource.replace(automaticDownloadGateSignature, automaticDownloadGateReplacement).replace(forcedUpdateScheduleSignature, forcedUpdateScheduleReplacement);",
+    "        let nextSource = patchedSource.replace(automaticUpdateSignature, automaticUpdateReplacement);",
+    "        if (nextSource === patchedSource) nextSource = patchedSource.replace(automaticUpdateCallbackSignature, automaticUpdateCallbackReplacement);",
+    "        patchedSource = nextSource === patchedSource ? nextSource : nextSource.replace(automaticDownloadGateSignature, automaticDownloadGateReplacement).replace(automaticDownloadConditionalGateSignature, automaticDownloadConditionalGateReplacement).replace(forcedUpdateScheduleSignature, forcedUpdateScheduleReplacement);",
     "      }",
     "      module._compile(patchedSource, filename);",
     "      return;",

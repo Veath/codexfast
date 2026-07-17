@@ -518,6 +518,16 @@ function main(): void {
   assertNoLaunchCalls(nonRunningLaunch2670791948Output);
   assertNoBundleMutationTools(nonRunningLaunch2670791948Output);
 
+  const nonRunningLaunch2671521425App = join(tmpDir, "NonRunningLaunch2671521425.app");
+  const nonRunningLaunch2671521425Output = join(tmpDir, "non-running-launch-26715-21425-output.txt");
+  prepareFakeApp(nonRunningLaunch2671521425App, "26.715.21425", "5488");
+  runScriptCommand(nonRunningLaunch2671521425App, ["launch"], nonRunningLaunch2671521425Output, { CODEXFAST_TEST_ALLOW_NONZERO: "1" });
+  assertContains(readOutput(nonRunningLaunch2671521425Output), "Compatibility: supported", "expected build 5488 to pass the strict support gate", readOutput(nonRunningLaunch2671521425Output));
+  assertContains(readOutput(nonRunningLaunch2671521425Output), "Runtime launch failed: Codex executable not found:", "expected supported build 5488 fixture to fail only at its missing executable", readOutput(nonRunningLaunch2671521425Output));
+  assertContains(readOutput(nonRunningLaunch2671521425Output), "Contents/MacOS/ChatGPT", "expected supported build 5488 launch failure to list the ChatGPT executable fallback path", readOutput(nonRunningLaunch2671521425Output));
+  assertNoLaunchCalls(nonRunningLaunch2671521425Output);
+  assertNoBundleMutationTools(nonRunningLaunch2671521425Output);
+
   const launchPendingTargets26608App = join(tmpDir, "LaunchPendingTargets26608.app");
   const launchPendingTargets26608Output = join(tmpDir, "launch-pending-targets-26608-output.txt");
   prepareFakeApp(launchPendingTargets26608App, "26.608.12217", "3722");
@@ -817,6 +827,18 @@ function main(): void {
   assertNotContains(readOutput(launchPendingTargets2670791948Output), "Plugins access", "expected build 5440 missing-target output not to name Plugins access", readOutput(launchPendingTargets2670791948Output));
   assertNoLaunchCalls(launchPendingTargets2670791948Output);
   assertNoBundleMutationTools(launchPendingTargets2670791948Output);
+
+  const launchPendingTargets2671521425App = join(tmpDir, "LaunchPendingTargets2671521425.app");
+  const launchPendingTargets2671521425Output = join(tmpDir, "launch-pending-targets-26715-21425-output.txt");
+  prepareFakeApp(launchPendingTargets2671521425App, "26.715.21425", "5488");
+  runScriptCommand(launchPendingTargets2671521425App, ["launch"], launchPendingTargets2671521425Output, {
+    CODEXFAST_TEST_RUNTIME_LAUNCH_PENDING_TARGETS: "1",
+    CODEXFAST_TEST_ALLOW_NONZERO: "1",
+  });
+  assertContains(readOutput(launchPendingTargets2671521425Output), "Runtime patch interception did not observe required targets: none.", "expected build 5488 not to require the legacy Plugins access target", readOutput(launchPendingTargets2671521425Output));
+  assertNotContains(readOutput(launchPendingTargets2671521425Output), "Plugins access", "expected build 5488 missing-target output not to name Plugins access", readOutput(launchPendingTargets2671521425Output));
+  assertNoLaunchCalls(launchPendingTargets2671521425Output);
+  assertNoBundleMutationTools(launchPendingTargets2671521425Output);
 
   const missingPgrepLaunchApp = join(tmpDir, "MissingPgrepLaunch.app");
   const missingPgrepLaunchOutput = join(tmpDir, "missing-pgrep-launch-output.txt");
