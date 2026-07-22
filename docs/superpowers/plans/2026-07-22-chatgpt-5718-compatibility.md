@@ -222,6 +222,7 @@ Run this with `CODEXFAST_INSPECT_DIR` set to the temporary directory from Step 2
 CODEXFAST_INSPECT_DIR="$inspect_dir" pnpm exec tsx -e '
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
+import ts from "typescript";
 import { runtimePatcherSourceForVersion } from "./src/cli-runtime-launch.mts";
 
 const root = process.env.CODEXFAST_INSPECT_DIR;
@@ -243,7 +244,11 @@ for (const file of files) {
   const source = readFileSync(file, "utf8");
   const result = apply(`app://-/${relative(root, file)}`, source);
   if (result.content === source) continue;
-  new Function(result.content);
+  const parsed = ts.createSourceFile(file, result.content, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
+  const diagnostics = parsed.parseDiagnostics ?? [];
+  if (diagnostics.length > 0) {
+    throw new Error(`parse failure in ${relative(root, file)}: ${diagnostics.map((diagnostic) => diagnostic.messageText).join("; ")}`);
+  }
   result.patchedLabels.forEach((label) => labels.add(label));
   changed.push(relative(root, file));
 }
