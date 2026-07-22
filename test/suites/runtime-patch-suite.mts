@@ -1688,6 +1688,7 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
     ["26.715.52143+5591", "5591"],
     ["26.715.61943+5628", "5628"],
     ["26.715.70719+5650", "5650"],
+    ["26.715.72028+5706", "5706"],
   ] as const) {
     const result = applyOfficialPluginsPatcherForVersion(versionKey)(
       "app://-/assets/demo.js",
@@ -1811,6 +1812,13 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
   assertContains(officialGpt56Build5650Result.content, "GPT56_LIST_DISABLED", "expected build 5650 to use the official GPT-5.6 model list");
   assertContains(officialGpt56Build5650Result.content, "GPT56_SELECTOR_DISABLED", "expected build 5650 to use the official GPT-5.6 selector");
   assertContains(officialGpt56Build5650Result.content, "SPEED_ENABLED", "expected build 5650 to retain non-GPT runtime patches");
+  const officialGpt56Build5706Result = applyOfficialGpt56PatcherForVersion("26.715.72028+5706")(
+    "app://-/assets/demo.js",
+    officialGpt56Body,
+  );
+  assertContains(officialGpt56Build5706Result.content, "GPT56_LIST_DISABLED", "expected build 5706 to use the official GPT-5.6 model list");
+  assertContains(officialGpt56Build5706Result.content, "GPT56_SELECTOR_DISABLED", "expected build 5706 to use the official GPT-5.6 selector");
+  assertContains(officialGpt56Build5706Result.content, "SPEED_ENABLED", "expected build 5706 to retain non-GPT runtime patches");
   const officialGpt56LaterResult = applyOfficialGpt56PatcherForVersion("26.708.10000+5200")(
     "app://-/assets/demo.js",
     officialGpt56Body,
