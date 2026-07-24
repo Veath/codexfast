@@ -10,6 +10,7 @@ Expected behavior:
 - It starts Codex with a local CDP endpoint and applies runtime patches only to that launched session.
 - Keep the `codexfast launch` process running while you use Codex. Settings and Plugins load some chunks lazily, and those later requests still need the runtime interceptor.
 - During initial startup, the launcher connects to the browser-level CDP target, auto-attaches to renderer targets with `waitForDebuggerOnStart`, enables `Fetch` interception in the renderer session, and then lets the renderer continue. If a required target for the current build is still not observed, launch retries one renderer reload and then fails closed instead of repeatedly refreshing the app. Older builds require `Plugins access`; `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, `26.608.12217`, `26.609.30741`, `26.609.41114`, `26.609.71450`, `26.611.61049`, `26.611.61753`, `26.611.62324`, `26.616.31447`, `26.616.51431`, `26.616.71553`, `26.616.81150`, `26.623.31443`, `26.623.31921`, `26.623.42026`, `26.623.61825`, `26.623.70822`, `26.623.81905`, `26.623.101652`, `26.623.141536`, `26.707.31428`, `26.707.41301`, `26.707.61608`, `26.707.71524`, `26.707.72221`, `26.707.91948`, `26.715.31925`, `26.715.52143`, `26.715.61943`, `26.715.70719`, `26.715.72028`, `26.715.72359`, and `26.721.30844` do not require that legacy target because the old sidebar/page/detail gates are absent or Plugins is supported by the official app path.
+- `26.721.31836` also skips the legacy `Plugins access` initial target because Plugins uses the official app path.
 - The launcher sends a lightweight browser-level CDP heartbeat. If the runtime patch session drops, it reconnects at most three times and re-enables browser auto-attach. If reconnects are exhausted, it reports `Runtime patch session lost`, closes the launched Codex process, and exits non-zero so Codex does not keep running without runtime patching.
 - It does not modify `app.asar`, `Info.plist`, the app bundle, the app signature, backups, or macOS privacy permissions.
 - It removes the legacy launchd auto-repair watcher if an older codexfast version installed one.
@@ -55,6 +56,7 @@ If `Disable automatic updates` is enabled but Codex still updates:
 - On build `26.715.70719+5650`, the same callback-aware source-signature hook applies in `.vite/build/window-all-closed-CZr9g6FK.js`; the renderer Fast and automatic-update targets moved to new hashed assets without changing their guarded shapes.
 - On builds `26.715.72028+5706` and `26.715.72359+5718`, the same callback-aware source-signature hook applies in `.vite/build/window-all-closed-DoNbesKf.js`; renderer Fast and automatic-update targets moved to renamed assets without changing their guarded shapes.
 - On build `26.721.30844+5813`, the same callback-aware source-signature hook applies in `.vite/build/window-all-closed-BwlaNiSa.js`; renderer Fast, `/fast`, and Intelligence Speed targets consolidated into `app-initial-BTphDPeq.js`, while Settings Fast and the app-name-aware automatic-update row moved to `general-settings-3znNSOBs.js` without requiring new signatures.
+- On build `26.721.31836+5828`, the same callback-aware source-signature hook applies in `.vite/build/window-all-closed-Bz3ZcBls.js`; renderer Fast, `/fast`, and Intelligence Speed targets remain consolidated in `app-initial-C-fROkKo.js`, while Settings Fast and the app-name-aware automatic-update row moved to `general-settings-DaCT8Zmh.js` without requiring new signatures.
 
 1. Confirm `~/.codex/config.toml` contains `[desktop].disableAutomaticUpdates = true` or a supported legacy top-level value.
 2. Inspect the real extracted `.vite/build/*.js` modules by source signature for every automatic path that calls the raw background check function or schedules an already-downloaded update for forced installation. Current builds can move the active Sparkle manager between chunks such as `workspace-root-drop-handler-*.js` and `sqlite-*.js`. Newer bundles can call the background check through both the interval/immediate startup shape and `setAutomaticBackgroundDownloadsEnabledForMac`, and can also install a downloaded update through `scheduleForcedUpdateInstall()`.
@@ -90,6 +92,7 @@ Expected boundary:
 - `codexfast` removes the known custom-API Plugins gates for supported builds. On newer builds this can include sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, plugin detail app-connect content, install-modal content, and post-install app connect behavior.
 - It does not guarantee that every plugin, connector runtime, or app integration is available after those gates are patched.
 - On `26.623.31443` (`build 4441`), `26.623.31921` (`build 4452`), `26.623.42026` (`build 4514`), `26.623.61825` (`build 4548`), `26.623.70822` (`build 4559`), `26.623.81905` (`build 4598`), `26.623.101652` (`build 4674`), `26.623.141536` (`build 4753`), `26.707.31428` (`build 5059`), `26.707.41301` (`build 5103`), `26.707.61608` (`build 5200`), `26.707.71524` (`build 5263`), `26.707.72221` (`build 5307`), `26.707.91948` (`build 5440`), `26.715.31925` (`build 5551`), `26.715.52143` (`build 5591`), `26.715.61943` (`build 5628`), `26.715.70719` (`build 5650`), `26.715.72028` (`build 5706`), `26.715.72359` (`build 5718`), and `26.721.30844` (`build 5813`), codexfast skips Plugins runtime targets because Plugins is supported by the official app path for this repo's target use case. For those builds, inspect upstream plugin state or connector behavior before looking for codexfast Plugins patch misses.
+- On `26.721.31836` (`build 5828`), codexfast also skips Plugins runtime targets because Plugins is supported by the official app path for this repo's target use case.
 
 Check:
 
@@ -104,7 +107,7 @@ Check:
 
 ## `@chrome` reports `Browser is not available: extension`
 
-Builds `26.715.21425+5488`, `26.715.31925+5551`, `26.715.52143+5591`, `26.715.61943+5628`, `26.715.70719+5650`, `26.715.72028+5706`, `26.715.72359+5718`, and `26.721.30844+5813` use the official Plugins path and do not require the legacy `Plugins access` initial target or Plugins runtime target family.
+Builds `26.715.21425+5488`, `26.715.31925+5551`, `26.715.52143+5591`, `26.715.61943+5628`, `26.715.70719+5650`, `26.715.72028+5706`, `26.715.72359+5718`, `26.721.30844+5813`, and `26.721.31836+5828` use the official Plugins path and do not require the legacy `Plugins access` initial target or Plugins runtime target family.
 
 Relevant boundary:
 
