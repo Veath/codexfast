@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.67.0] - 2026-08-03
+
 ### Added
 
 - Added local compatibility for `ChatGPT.app` `26.727.51351` (`build 6119`) after direct installed-bundle inspection confirmed the build-6067 Fast and automatic-update target family remains compatible while GPT-5.6 and Plugins continue to use official application paths.
