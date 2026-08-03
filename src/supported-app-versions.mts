@@ -60,4 +60,5 @@ export const SUPPORTED_APP_VERSIONS: Record<string, string> = {
   "26.721.41059+5848": "ChatGPT.app 26.721.41059 build 5848",
   "26.721.81911+5973": "ChatGPT.app 26.721.81911 build 5973",
   "26.727.40816+6067": "ChatGPT.app 26.727.40816 build 6067",
+  "26.727.51351+6119": "ChatGPT.app 26.727.51351 build 6119",
 };
