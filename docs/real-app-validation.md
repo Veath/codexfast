@@ -23,6 +23,7 @@ Use these checks when validating `launch` behavior. Do not mark a build as real-
 - For `26.727.51351+6119`, confirm the official Plugins/GPT-5.6 paths remain unpatched, `app-initial-iBPGfcXU.js` receives the shared Fast, `/fast`, Intelligence Speed, and renderer settings-schema targets, `general-settings-BBCiVbba.js` receives Settings Fast plus the app-name-aware automatic-update row, and `.vite/build/window-all-closed-Coc41Tfs.js` receives the callback-aware Sparkle hook while manual update methods remain intact.
 - For `26.730.61309+6223`, confirm the official Plugins/GPT-5.6 paths remain unpatched, `app-initial-YjNFxVhk.js` receives the shared Fast, `/fast`, Intelligence Speed, and renderer settings-schema targets, `general-settings-DzOMKOoh.js` receives Settings Fast plus the app-name-aware automatic-update row, and `.vite/build/window-all-closed-DJDXIcEI.js` receives the callback-aware Sparkle hook while manual update methods remain intact.
 - For `26.730.61639+6234`, confirm the official Plugins/GPT-5.6 paths remain unpatched, `app-initial-CKNQDTeE.js` receives the shared Fast, `/fast`, Intelligence Speed, and renderer settings-schema targets, `general-settings-2iEePJwo.js` receives Settings Fast plus the app-name-aware automatic-update row, and `.vite/build/window-all-closed-DJDXIcEI.js` receives the callback-aware Sparkle hook while manual update methods remain intact.
+- For `26.803.41515+6321`, confirm the official Plugins/GPT-5.6 paths remain unpatched, `app-initial-Biw83Aiz.js` receives the shared Fast, `/fast`, Intelligence Speed, and renderer settings-schema targets, `general-settings-BseQIe_j.js` receives Settings Fast plus the app-name-aware automatic-update row, and `.vite/build/window-all-closed-9IR0zY5D.js` receives the nested callback-aware Sparkle hook while manual update methods remain intact.
 
 - `npx codexfast launch` starts Codex when Codex is not already running
 - The launched session opens with runtime patches active
@@ -30,6 +31,7 @@ Use these checks when validating `launch` behavior. Do not mark a build as real-
 - `26.715.72028`, `26.715.72359`, `26.721.30844`, `26.721.31836`, `26.721.41059`, `26.721.81911`, `26.727.40816`, and `26.727.51351` also skip the legacy `Plugins access` initial target because Plugins uses the official app path.
 - `26.730.61309` also skips the legacy `Plugins access` initial target because Plugins uses the official app path.
 - `26.730.61639` also skips the legacy `Plugins access` initial target because Plugins uses the official app path.
+- `26.803.41515` also skips the legacy `Plugins access` initial target because Plugins uses the official app path.
 - The `codexfast launch` process remains running while the launched Codex session is open
 - The runtime patch session heartbeat stays quiet during normal use, and no `Runtime patch session lost` message appears
 - If the runtime patch session is lost after reconnect attempts are exhausted, codexfast closes the launched Codex process and exits non-zero instead of leaving Codex running without runtime patching

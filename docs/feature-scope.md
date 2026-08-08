@@ -23,6 +23,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - On `26.707.31428`, `26.707.41301`, `26.707.61608`, `26.707.71524`, `26.707.72221`, `26.707.91948`, `26.715.31925`, `26.715.52143`, `26.715.61943`, `26.715.70719`, `26.715.72028`, `26.715.72359`, `26.721.30844`, `26.721.31836`, `26.721.41059`, `26.721.81911`, `26.727.40816`, and `26.727.51351`, the configured Settings tier is the single source of truth for existing conversations, so stored conversation-level and latest-turn service-tier state cannot restore Fast or Standard after the global setting changes.
 - `26.730.61309` retains the same configured-Settings-tier source-of-truth behavior.
 - `26.730.61639` retains the same configured-Settings-tier source-of-truth behavior.
+- `26.803.41515` retains the same configured-Settings-tier source-of-truth behavior.
 
 ### Composer `/fast` slash command
 
@@ -35,7 +36,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - On `26.415.40636` and `26.417.41555`, this is the `Add files and more / +` Speed submenu.
 - On `26.422.21637`, `26.422.30944`, `26.422.62136`, `26.422.71525`, `26.429.20946`, `26.429.30905`, `26.429.61741`, `26.506.21252`, `26.506.31421`, `26.513.20950`, `26.513.31313`, `26.519.22136`, `26.519.31651`, `26.519.41501`, `26.519.81530`, `26.527.31326`, `26.527.60818`, `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, `26.608.12217`, `26.609.30741`, `26.609.41114`, `26.609.71450`, `26.611.61049`, `26.611.61753`, `26.611.62324`, `26.616.31447`, `26.616.51431`, `26.616.71553`, `26.616.81150`, `26.623.31443`, `26.623.31921`, `26.623.42026`, `26.623.61825`, `26.623.70822`, `26.623.81905`, `26.623.101652`, `26.623.141536`, `26.707.31428`, `26.707.41301`, `26.707.61608`, `26.707.71524`, `26.707.72221`, `26.707.91948`, `26.715.31925`, `26.715.52143`, `26.715.61943`, and `26.715.70719`, this is the composer `Intelligence` dropdown Speed submenu.
 - On supported builds this menu should surface `Standard` and `Fast`.
-- `26.715.72028`, `26.715.72359`, `26.721.30844`, `26.721.31836`, `26.721.41059`, `26.721.81911`, `26.727.40816`, `26.727.51351`, `26.730.61309`, and `26.730.61639` continue to use the composer `Intelligence` dropdown Speed submenu.
+- `26.715.72028`, `26.715.72359`, `26.721.30844`, `26.721.31836`, `26.721.41059`, `26.721.81911`, `26.727.40816`, `26.727.51351`, `26.730.61309`, `26.730.61639`, and `26.803.41515` continue to use the composer `Intelligence` dropdown Speed submenu.
 
 ### Plugins sidebar access for custom API users
 
@@ -46,6 +47,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - On `26.623.31443`, `26.623.31921`, `26.623.42026`, `26.623.61825`, `26.623.70822`, `26.623.81905`, `26.623.101652`, `26.623.141536`, `26.707.31428`, `26.707.41301`, `26.707.61608`, `26.707.71524`, `26.707.72221`, `26.707.91948`, `26.715.31925`, `26.715.52143`, `26.715.61943`, `26.715.70719`, `26.715.72028`, `26.715.72359`, `26.721.30844`, `26.721.31836`, `26.721.41059`, `26.721.81911`, `26.727.40816`, and `26.727.51351`, Plugins is supported by the official app path for this repo's target use case, so `codexfast` skips Plugins runtime targets for those builds instead of applying catalog, install, mention, or app-connect patches.
 - `26.730.61309` also uses the official Plugins path and skips the Plugins runtime target family.
 - `26.730.61639` also uses the official Plugins path and skips the Plugins runtime target family.
+- `26.803.41515` also uses the official Plugins path and skips the Plugins runtime target family.
 - This does not guarantee that every plugin or connector flow is available. Plugin state, connector runtime behavior, or admin-side restrictions may still block a specific plugin.
 - This does not unlock the remote ChatGPT shared plugin marketplace; that catalog still requires ChatGPT authentication.
 
@@ -66,6 +68,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - On `26.727.51351+6119`, the build-6067 Fast global-tier behavior, composer `Intelligence` Speed path, automatic-update row, and callback-aware Sparkle hook remain compatible after renderer targets moved to `app-initial-iBPGfcXU.js` and `general-settings-BBCiVbba.js`, with the updater remaining in `.vite/build/window-all-closed-Coc41Tfs.js`; GPT-5.6 and Plugins use official application paths.
 - On `26.730.61309+6223`, the build-6119 Fast global-tier behavior, composer `Intelligence` Speed path, automatic-update row, and callback-aware Sparkle hook remain compatible after renderer targets moved to `app-initial-YjNFxVhk.js` and `general-settings-DzOMKOoh.js`, with the updater moving to `.vite/build/window-all-closed-DJDXIcEI.js`; GPT-5.6 and Plugins use official application paths.
 - On `26.730.61639+6234`, the build-6223 Fast global-tier behavior, composer `Intelligence` Speed path, automatic-update row, and callback-aware Sparkle hook remain compatible after renderer targets moved to `app-initial-CKNQDTeE.js` and `general-settings-2iEePJwo.js`, with the updater remaining in `.vite/build/window-all-closed-DJDXIcEI.js`; GPT-5.6 and Plugins use official application paths.
+- On `26.803.41515+6321`, the 26.730 Fast global-tier behavior, composer `Intelligence` Speed path, automatic-update row, renderer settings schema, and source-signature-discovered updater hook remain compatible in `app-initial-Biw83Aiz.js`, `general-settings-BseQIe_j.js`, and `.vite/build/window-all-closed-9IR0zY5D.js`. The updater's nested callback/interval shape is wrapped with the live automatic-update setting check; GPT-5.6 and Plugins use official application paths.
 
 - Adds a `Disable automatic updates` switch to Settings > General.
 - The injected Settings row uses locale-aware label and description copy for common Codex app locales, with English fallback.

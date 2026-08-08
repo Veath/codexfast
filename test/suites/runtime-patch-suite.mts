@@ -86,13 +86,18 @@ export function runRuntimePatchSuite(): void {
   );
   assertContains(
     automaticUpdateHookSource,
-    "const shouldPatchAutomaticUpdates = automaticUpdateSignature.test(source) || automaticUpdateCallbackSignature.test(source);",
+    "const shouldPatchAutomaticUpdates = automaticUpdateSignature.test(source) || automaticUpdateCallbackSignature.test(source) || automaticUpdateNestedCallbackSignature.test(source);",
     "expected updater discovery to be based on the real source signature",
   );
   assertContains(
     automaticUpdateHookSource,
     "automaticUpdateCallbackSignature",
     "expected updater discovery to include the build-5488 callback-aware interval signature",
+  );
+  assertContains(
+    automaticUpdateHookSource,
+    "automaticUpdateNestedCallbackSignature",
+    "expected updater discovery to include the 26.803 nested callback interval signature",
   );
   assertContains(
     automaticUpdateHookSource,
@@ -265,6 +270,42 @@ export function runRuntimePatchSuite(): void {
     "expected build-5488 updater patch to preserve manual update installs",
   );
   new Function(`class CodexfastUpdaterFixture{${patchedMainProcessUpdaterWithConditionalCallback}}`);
+
+  const mainProcessUpdaterBodyWithNestedCallback =
+    "initialize(){let f=async()=>{if(r==null)return;await f()},p=async(e=!0)=>{try{e&&await f(),c.checkForUpdatesInBackground()}catch(e){}};if(this.setAutomaticBackgroundDownloadsEnabledForMac=e=>{c.setAutomaticBackgroundDownloadsEnabled(e),e&&!t&&p()},this.updater={checkForUpdates:async()=>{c.checkForUpdates()},installUpdatesIfAvailable:async()=>{c.installUpdatesIfAvailable()}},!t){let e=CU();e>0&&setInterval(()=>void p(),e).unref(),p(!1)}}scheduleForcedUpdateInstall(){this.forcedUpdateTimer&&=(clearTimeout(this.forcedUpdateTimer),null);let e=this.getRelaunchNotificationPolicy();if(!this.isUpdateReady){this.setRelaunchNotice(null);return}}installForcedUpdate(){this.installUpdatesIfAvailable()}";
+  const patchedMainProcessUpdaterWithNestedCallback =
+    patchMainProcessAutomaticUpdateSource(mainProcessUpdaterBodyWithNestedCallback);
+  assertContains(
+    patchedMainProcessUpdaterWithNestedCallback,
+    "codexfastAutomaticUpdateCheck",
+    "expected the 26.803 nested updater callback to use the dynamic config gate",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithNestedCallback,
+    "setInterval(()=>void codexfastAutomaticUpdateCheck()",
+    "expected the 26.803 updater interval to call the gated callback",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithNestedCallback,
+    "e&&!t&&codexfastAutomaticUpdateCheck()",
+    "expected the 26.803 automatic-download trigger to use the dynamic config gate",
+  );
+  assertNotContains(
+    patchedMainProcessUpdaterWithNestedCallback,
+    "setInterval(()=>void p(),e)",
+    "expected the 26.803 updater interval not to call the raw background callback",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithNestedCallback,
+    "checkForUpdates:async()=>{c.checkForUpdates()}",
+    "expected the 26.803 updater patch to preserve manual update checks",
+  );
+  assertContains(
+    patchedMainProcessUpdaterWithNestedCallback,
+    "installForcedUpdate(){this.installUpdatesIfAvailable()}",
+    "expected the 26.803 updater patch to preserve manual forced-install dispatch",
+  );
+  new Function(`class CodexfastUpdaterFixture{${patchedMainProcessUpdaterWithNestedCallback}}`);
 
   const settingsSchemaBody =
     "localeOverride:K({agentAccess:`read-write`,default:null,description:`Explicit locale override`,key:`localeOverride`,schema:BS}),preventSleepWhileRunning:K({agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:RS}),keepRemoteControlAwakeWhilePluggedIn:K({agentAccess:`read-write`,default:!1,description:`Whether remote control keeps this computer awake while plugged in`,key:`keepRemoteControlAwakeWhilePluggedIn`,schema:RS})";

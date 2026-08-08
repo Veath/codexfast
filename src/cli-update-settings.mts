@@ -6,6 +6,8 @@ const MAIN_PROCESS_AUTOMATIC_UPDATE_SIGNATURE =
   /let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(\);\1>0&&setInterval\(d,\1\)\.unref\(\),d\(\)/;
 const MAIN_PROCESS_AUTOMATIC_UPDATE_CALLBACK_SIGNATURE =
   /let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(\);\1>0&&setInterval\(([A-Za-z_$][\w$]*),\1\)\.unref\(\),\3\(\)/;
+const MAIN_PROCESS_AUTOMATIC_UPDATE_NESTED_CALLBACK_SIGNATURE =
+  /if\(this\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\w$]*)=>\{([^]*?)\},this\.updater=([^]*?),!([A-Za-z_$][\w$]*)\)\{let ([A-Za-z_$][\w$]*)=([A-Za-z_$][\w$]*)\(\);[A-Za-z_$][\w$]*>0&&setInterval\(\(\)=>void ([A-Za-z_$][\w$]*)\(\),[A-Za-z_$][\w$]*\)\.unref\(\),[A-Za-z_$][\w$]*\(!1\)\}/;
 const MAIN_PROCESS_AUTOMATIC_DOWNLOAD_GATE_SIGNATURE =
   /this\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\w$]*)=>\{([A-Za-z_$][\w$]*\.setAutomaticBackgroundDownloadsEnabled\(\1\)),\1&&d\(\)\},this\.updater=/;
 const MAIN_PROCESS_AUTOMATIC_DOWNLOAD_CONDITIONAL_GATE_SIGNATURE =
@@ -118,6 +120,27 @@ export function patchMainProcessAutomaticUpdateSource(source: string): string {
     );
   }
   if (patchedSource === source) {
+    patchedSource = source.replace(
+      MAIN_PROCESS_AUTOMATIC_UPDATE_NESTED_CALLBACK_SIGNATURE,
+      (
+        _match,
+        enabledVar: string,
+        setterBody: string,
+        updaterBody: string,
+        productionAppcastVar: string,
+        intervalVar: string,
+        readIntervalVar: string,
+        callbackVar: string,
+      ) => {
+        const gatedSetterBody = setterBody.replace(
+          `${enabledVar}&&!${productionAppcastVar}&&${callbackVar}()`,
+          `${enabledVar}&&!${productionAppcastVar}&&codexfastAutomaticUpdateCheck()`,
+        );
+        return `if(this.setAutomaticBackgroundDownloadsEnabledForMac=${enabledVar}=>{${gatedSetterBody}},this.updater=${updaterBody},!${productionAppcastVar}){let ${intervalVar}=${readIntervalVar}(),${MAIN_PROCESS_AUTOMATIC_UPDATE_READER},codexfastAutomaticUpdatesDisabled=${MAIN_PROCESS_AUTOMATIC_UPDATE_DISABLED_CHECK},codexfastAutomaticUpdateCheck=()=>{if(codexfastAutomaticUpdatesDisabled())return;${callbackVar}(!1)};${intervalVar}>0&&setInterval(()=>void codexfastAutomaticUpdateCheck(),${intervalVar}).unref(),codexfastAutomaticUpdateCheck()}`;
+      },
+    );
+  }
+  if (patchedSource === source) {
     return source;
   }
   let patchedAutomaticDownloadGate = patchedSource.replace(
@@ -161,6 +184,7 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "const originalJsLoader = Module._extensions[\".js\"];",
     "const automaticUpdateSignature = /let ([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\(\\);\\1>0&&setInterval\\(d,\\1\\)\\.unref\\(\\),d\\(\\)/;",
     "const automaticUpdateCallbackSignature = /let ([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\(\\);\\1>0&&setInterval\\(([A-Za-z_$][\\w$]*),\\1\\)\\.unref\\(\\),\\3\\(\\)/;",
+    "const automaticUpdateNestedCallbackSignature = /if\\(this\\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\\w$]*)=>\\{([^]*?)\\},this\\.updater=([^]*?),!([A-Za-z_$][\\w$]*)\\)\\{let ([A-Za-z_$][\\w$]*)=([A-Za-z_$][\\w$]*)\\(\\);[A-Za-z_$][\\w$]*>0&&setInterval\\(\\(\\)=>void ([A-Za-z_$][\\w$]*)\\(\\),[A-Za-z_$][\\w$]*\\)\\.unref\\(\\),[A-Za-z_$][\\w$]*\\(!1\\)\\}/;",
     "const automaticDownloadGateSignature = /this\\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\\w$]*)=>\\{([A-Za-z_$][\\w$]*\\.setAutomaticBackgroundDownloadsEnabled\\(\\1\\)),\\1&&d\\(\\)\\},this\\.updater=/;",
     "const automaticDownloadConditionalGateSignature = /this\\.setAutomaticBackgroundDownloadsEnabledForMac=([A-Za-z_$][\\w$]*)=>\\{([A-Za-z_$][\\w$]*\\.setAutomaticBackgroundDownloadsEnabled\\(\\1\\)),\\1&&!([A-Za-z_$][\\w$]*)&&([A-Za-z_$][\\w$]*)\\(\\)\\},this\\.updater=/;",
     "const forcedUpdateScheduleSignature = /scheduleForcedUpdateInstall\\(\\)\\{this\\.forcedUpdateTimer&&=\\(clearTimeout\\(this\\.forcedUpdateTimer\\),null\\);/;",
@@ -172,6 +196,10 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "}",
     "function automaticUpdateCallbackReplacement(_match, intervalVar, readIntervalVar, callbackVar) {",
     "  return `let ${intervalVar}=${readIntervalVar}(),${automaticUpdateReader},codexfastAutomaticUpdatesDisabled=${automaticUpdateDisabledCheck},codexfastAutomaticUpdateCheck=()=>{if(codexfastAutomaticUpdatesDisabled())return;${callbackVar}()};${intervalVar}>0&&setInterval(codexfastAutomaticUpdateCheck,${intervalVar}).unref(),codexfastAutomaticUpdateCheck()`;",
+    "}",
+    "function automaticUpdateNestedCallbackReplacement(_match, enabledVar, setterBody, updaterBody, productionAppcastVar, intervalVar, readIntervalVar, callbackVar) {",
+    "  const gatedSetterBody = setterBody.replace(`${enabledVar}&&!${productionAppcastVar}&&${callbackVar}()`, `${enabledVar}&&!${productionAppcastVar}&&codexfastAutomaticUpdateCheck()`);",
+    "  return `if(this.setAutomaticBackgroundDownloadsEnabledForMac=${enabledVar}=>{${gatedSetterBody}},this.updater=${updaterBody},!${productionAppcastVar}){let ${intervalVar}=${readIntervalVar}(),${automaticUpdateReader},codexfastAutomaticUpdatesDisabled=${automaticUpdateDisabledCheck},codexfastAutomaticUpdateCheck=()=>{if(codexfastAutomaticUpdatesDisabled())return;${callbackVar}(!1)};${intervalVar}>0&&setInterval(()=>void codexfastAutomaticUpdateCheck(),${intervalVar}).unref(),codexfastAutomaticUpdateCheck()}`;",
     "}",
     "function automaticDownloadGateReplacement(_match, enabledVar, setAutomaticBackgroundDownloadsEnabledCall) {",
     "  return `this.setAutomaticBackgroundDownloadsEnabledForMac=${enabledVar}=>{${setAutomaticBackgroundDownloadsEnabledCall},${enabledVar}&&codexfastAutomaticUpdateCheck()},this.updater=`;",
@@ -186,13 +214,14 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "  if (viteBuildFilePattern.test(filename)) {",
     "    const source = fs.readFileSync(filename, \"utf8\");",
     "    const shouldPatchSettingsSchema = settingsSchemaSignature.test(source);",
-    "    const shouldPatchAutomaticUpdates = automaticUpdateSignature.test(source) || automaticUpdateCallbackSignature.test(source);",
+    "    const shouldPatchAutomaticUpdates = automaticUpdateSignature.test(source) || automaticUpdateCallbackSignature.test(source) || automaticUpdateNestedCallbackSignature.test(source);",
     "    if (shouldPatchSettingsSchema || shouldPatchAutomaticUpdates) {",
     "      let patchedSource = source;",
     "      if (shouldPatchSettingsSchema) patchedSource = patchedSource.replace(settingsSchemaSignature, settingsSchemaReplacement);",
     "      if (shouldPatchAutomaticUpdates) {",
     "        let nextSource = patchedSource.replace(automaticUpdateSignature, automaticUpdateReplacement);",
     "        if (nextSource === patchedSource) nextSource = patchedSource.replace(automaticUpdateCallbackSignature, automaticUpdateCallbackReplacement);",
+    "        if (nextSource === patchedSource) nextSource = patchedSource.replace(automaticUpdateNestedCallbackSignature, automaticUpdateNestedCallbackReplacement);",
     "        patchedSource = nextSource === patchedSource ? nextSource : nextSource.replace(automaticDownloadGateSignature, automaticDownloadGateReplacement).replace(automaticDownloadConditionalGateSignature, automaticDownloadConditionalGateReplacement).replace(forcedUpdateScheduleSignature, forcedUpdateScheduleReplacement);",
     "      }",
     "      module._compile(patchedSource, filename);",
