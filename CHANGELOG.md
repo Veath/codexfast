@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.70.0] - 2026-08-08
+
 ### Added
 
 - Added local compatibility for `ChatGPT.app` `26.803.41515` (`build 6321`). The renderer Fast and automatic-update targets remain compatible after chunk renames, while the main-process updater now uses a nested callback/interval shape handled by a new source-signature hook; GPT-5.6 and Plugins continue to use official application paths.
