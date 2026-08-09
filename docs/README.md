@@ -9,20 +9,22 @@ Use these docs for decisions, troubleshooting, and bundle adaptations that futur
 - [`feature-scope.md`](./feature-scope.md)
   - The current user-facing feature paths exposed by `codexfast`.
 - [`compatibility-matrix.md`](./compatibility-matrix.md)
-  - Verified `Codex.app` version/build pairs, support status, and supported feature paths.
-- [`patch-targets.md`](./patch-targets.md)
+  - Verified macOS `Codex.app` and Windows Store/MSIX version/build pairs, support status, and supported feature paths.
+- [`patch-targets.md`](https://github.com/Veath/codexfast/blob/main/docs/patch-targets.md)
   - High-level mapping from exposed features to the current runtime patch targets.
-- [`../src/`](../src/)
+- [`../src/`](https://github.com/Veath/codexfast/tree/main/src)
   - TypeScript source for the generated `bin/codexfast` entrypoint.
-- [`troubleshooting.md`](./troubleshooting.md)
+- [`troubleshooting.md`](https://github.com/Veath/codexfast/blob/main/docs/troubleshooting.md)
   - Common failure modes, expected boundaries, and recovery steps.
 - [`real-app-validation.md`](./real-app-validation.md)
-  - Manual smoke-test checklist for real installed `Codex.app` validation.
-- [`version-adaptation-playbook.md`](./version-adaptation-playbook.md)
+  - Manual smoke-test checklist for real installed macOS app and Windows Store/MSIX validation.
+- [`windows-experimental.md`](./windows-experimental.md)
+  - Experimental Store/MSIX launcher scope, validation commands, and Windows safety boundaries.
+- [`version-adaptation-playbook.md`](https://github.com/Veath/codexfast/blob/main/docs/version-adaptation-playbook.md)
   - Step-by-step flow for adapting `codexfast` to a new Codex build safely.
-- [`release-process.md`](./release-process.md)
+- [`release-process.md`](https://github.com/Veath/codexfast/blob/main/docs/release-process.md)
   - The repo's release checklist for version bumps, changelog updates, verification, commit, and package publish.
-- [`bundle-notes/`](./bundle-notes/)
+- [`bundle-notes/`](https://github.com/Veath/codexfast/tree/main/docs/bundle-notes)
   - Bundle-specific adaptation notes for inspected Codex builds.
 
 ## Writing Rules

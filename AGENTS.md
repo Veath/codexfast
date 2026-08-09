@@ -4,7 +4,7 @@ Repository guidance for `codexfast`.
 
 ## Project Scope
 
-- This repo ships a single-file macOS runtime launcher for `Codex.app`.
+- This repo ships a single-file runtime launcher for supported macOS `Codex.app` / `ChatGPT.app` builds and an experimental Windows Store/MSIX path for the official `OpenAI.Codex` package.
 - The published entrypoint is generated as [`bin/codexfast`](./bin/codexfast).
 - Maintain TypeScript source under [`src/`](./src/) and regenerate the entrypoint with [`scripts/build-codexfast.mts`](./scripts/build-codexfast.mts).
 - The main regression test is [`test/re-sign-flow.sh`](./test/re-sign-flow.sh).
@@ -17,6 +17,7 @@ Repository guidance for `codexfast`.
 - Read [`docs/patch-targets.md`](./docs/patch-targets.md) before changing regexes, target specs, or runtime patch mapping.
 - Read [`docs/troubleshooting.md`](./docs/troubleshooting.md) when the app fails to launch, a UI path breaks, `Plugins` remains partially unavailable, or repeated patch runs behave unexpectedly.
 - Read [`docs/real-app-validation.md`](./docs/real-app-validation.md) when claiming real installed-app compatibility.
+- Read [`docs/windows-experimental.md`](./docs/windows-experimental.md) before changing Windows package discovery, AUMID activation, platform-specific patch scope, or Windows compatibility claims.
 - Read [`docs/version-adaptation-playbook.md`](./docs/version-adaptation-playbook.md) when adapting to a new `Codex.app` build.
 - Read [`docs/release-process.md`](./docs/release-process.md) when preparing a version bump, release commit, or package publish.
 - Read the relevant file under [`docs/bundle-notes/`](./docs/bundle-notes/) when adapting to a Codex bundle or investigating a gate/signature change.
@@ -36,7 +37,7 @@ Repository guidance for `codexfast`.
 
 - Run `pnpm build:check`, `pnpm typecheck`, and `pnpm test` after changing runtime launch, patch targets, watcher cleanup, command dispatch, or generated CLI logic.
 - If package metadata changes, also check `package.json` and `bin/codexfast`.
-- Do not claim macOS app behavior is fixed unless the regression test passes and the real-world limitation is stated clearly.
+- Do not claim platform behavior is fixed unless the regression test passes and the remaining real-world limitation is stated clearly. Offline Windows MSIX validation is not a substitute for the Windows real-machine checklist.
 - Update the relevant files under `docs/` when compatibility knowledge, bundle notes, or release process knowledge changes.
 
 ## Commit Rules
@@ -55,7 +56,7 @@ Repository guidance for `codexfast`.
 
 Use this checklist for every future Codex bundle adaptation or patch-signature update.
 
-- Confirm the target `CFBundleShortVersionString` + `CFBundleVersion` pair has been validated before adding it to the strict whitelist.
+- Confirm the target macOS `CFBundleShortVersionString` + `CFBundleVersion` pair, or Windows MSIX identity version + architecture, has been validated before adding it to the strict platform-aware whitelist.
 - Confirm the current feature set still matches [`docs/feature-scope.md`](./docs/feature-scope.md).
 - Confirm the runtime patch mapping still matches [`docs/patch-targets.md`](./docs/patch-targets.md).
 - Confirm `pnpm test` still covers:
@@ -65,7 +66,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
   - the composer `/fast` slash command
   - the composer-side `Speed` menu, whether exposed through add-context or Intelligence UI
   - every Plugins gate required by the target build, including sidebar access, page content, plugin detail redirects, curated catalog visibility, install-button availability, install-modal content, plugin detail app-connect content, and post-install app connect where present
-  - the Settings-side automatic-update switch, settings schema target, and source-signature-discovered launcher main-process hook that skips background update checks and forced automatic install scheduling while preserving manual update actions after `.vite/build` chunk renames
+  - on macOS, the Settings-side automatic-update switch, settings schema target, and source-signature-discovered launcher main-process hook that skips background update checks and forced automatic install scheduling while preserving manual update actions after `.vite/build` chunk renames
   - the GPT-5.x model-list bridge plus GPT-5.5 and GPT-5.6 query selector injection targets on older builds, including the GPT-5.6 Sol/Terra/Luna allowlist, Max/Ultra effort filtering, and Luna's required Ultra exclusion
   - the official GPT-5.6 threshold so `26.707.41301+5103` and later separately whitelisted builds skip both GPT-5.6 model-list injection and query-selector widening
   - unsupported-version blocking before runtime launch
@@ -73,10 +74,11 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
 - Confirm runtime launch still:
   - requires Codex to be fully quit before launch
   - reports patched target labels on supported builds
-  - removes legacy auto-repair watcher files if they are present
-  - injects the automatic-update main-process hook so background checks and forced automatic install scheduling read `disableAutomaticUpdates` dynamically
-  - closes the launched Codex process if the runtime patch session is lost after reconnect attempts are exhausted
-  - leaves `app.asar`, `Info.plist`, and the app signature unchanged
+  - removes legacy auto-repair watcher files on macOS if they are present, without invoking `launchctl` on Windows
+  - injects the automatic-update main-process hook on macOS only, so background checks and forced automatic install scheduling read `disableAutomaticUpdates` dynamically
+  - fails closed within platform safety boundaries if the runtime patch session is lost after reconnect attempts are exhausted: macOS closes the launched process group, while Windows terminates only the verified launched process handle and confirms that no admitted-path process remains
+  - does not close Windows interception before a normal post-readiness authoritative-root exit is confirmed through bounded admitted-path polling, and fails nonzero without terminating snapshot-only residual PIDs when that path is not empty
+  - leaves `app.asar`, platform metadata (`Info.plist` or `AppxManifest.xml`), the installed application/package, and its signature unchanged
   - fails closed without modifying the app when interception does not complete
 - Do not ship a change that enables only part of the combined Fast feature set.
 - Do not describe Plugins as supported unless every Plugins gate required by that build still works cleanly.
@@ -92,6 +94,7 @@ Use this checklist for every future Codex bundle adaptation or patch-signature u
 
 ## Safety
 
-- Public `launch` should not modify a locally installed `/Applications/Codex.app`.
+- Public `launch` should not modify a locally installed macOS app bundle or Windows Store/MSIX package.
+- Windows activation must use a validated AUMID, loopback-only CDP arguments, and native handle-scoped cleanup with exact-path exit confirmation. Do not interpolate user-controlled paths, AUMIDs, arguments, or PIDs into shell source.
 - Do not reintroduce hidden app-bundle mutation paths. The hidden `repair` command is only a cleanup shim for old watcher files.
 - Prefer surgical diffs. Avoid unrelated refactors in the embedded Node patcher unless they directly support the requested fix.

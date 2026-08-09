@@ -24,10 +24,7 @@ import {
   createWatcherFlow,
   type WatcherFlowOptions,
 } from './cli-watcher.mts';
-import {
-  printLine,
-  run,
-} from './cli-utils.mts';
+import { printLine } from './cli-utils.mts';
 
 declare const __PATCHER_SOURCE__: string;
 declare const __PACKAGE_VERSION__: string;
@@ -35,7 +32,11 @@ declare const __SUPPORTED_APP_VERSIONS__: Record<string, string>;
 
 const SUPPORTED_APP_VERSIONS = __SUPPORTED_APP_VERSIONS__;
 const context = createCodexfastContext();
-const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS).join(', ');
+const supportedAppVersionKeys = Object.keys(SUPPORTED_APP_VERSIONS)
+  .filter((key) => context.platform === 'win32'
+    ? key.startsWith('win32:')
+    : !key.startsWith('win32:'))
+  .join(', ');
 const launchAgentFileName = 'com.codexfast.watcher.plist';
 
 function printActionHeader(action: string): void {
@@ -79,7 +80,14 @@ function runRuntimeLaunchCommand(): Promise<number> {
 function watcherFlowOptions(): WatcherFlowOptions {
   return {
     launchAgentFileName,
+    platform: context.platform,
   };
+}
+
+function clearInteractiveScreen(): void {
+  if (output.isTTY) {
+    output.write('\x1b[2J\x1b[H');
+  }
 }
 
 async function showMenu(): Promise<number> {
@@ -87,7 +95,7 @@ async function showMenu(): Promise<number> {
 
   try {
     while (true) {
-      run('clear', []);
+      clearInteractiveScreen();
       printLine('codexfast');
       printLine('');
       printLine('1) Launch Codex with runtime patches');

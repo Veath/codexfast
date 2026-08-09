@@ -1,15 +1,19 @@
 {
   "name": "codexfast",
   "version": "0.70.0",
-  "description": "Enable Fast mode, GPT-5.5/GPT-5.6, /fast, Speed menu, Plugins, and update controls in OpenAI Codex.app for custom API users on macOS.",
+  "description": "Enable Fast mode and related custom API features in OpenAI Codex desktop on macOS, with experimental Windows Store/MSIX runtime launch support.",
   "scripts": {
     "build": "tsx scripts/build-codexfast.mts",
     "build:check": "tsx scripts/build-codexfast.mts --check",
+    "build:check:distribution": "tsx scripts/build-codexfast.mts --check-distribution",
     "check:version-drift": "tsx scripts/check-supported-version-drift.mts",
     "inspect:bundle-targets": "tsx scripts/inspect-bundle-targets.mts",
-    "test": "pnpm build:check && pnpm check:version-drift && bash test/re-sign-flow.sh",
+    "test": "pnpm build:check && pnpm check:version-drift && pnpm test:build && bash test/re-sign-flow.sh",
+    "test:build": "tsx test/build-script-flow.mts",
+    "test:windows": "tsx test/windows-ci-flow.mts",
+    "test:windows:powershell": "tsx test/windows-powershell-flow.mts",
     "typecheck": "tsc --noEmit",
-    "prepack": "pnpm build:check"
+    "prepack": "tsx scripts/build-codexfast.mts && tsx scripts/build-codexfast.mts --check-distribution"
   },
   "packageManager": "pnpm@10.33.0",
   "bin": {
@@ -22,10 +26,16 @@
     "bin/codexfast",
     "LICENSE",
     "README.md",
-    "README.zh-CN.md"
+    "README.zh-CN.md",
+    "docs/README.md",
+    "docs/feature-scope.md",
+    "docs/compatibility-matrix.md",
+    "docs/real-app-validation.md",
+    "docs/windows-experimental.md"
   ],
   "os": [
-    "darwin"
+    "darwin",
+    "win32"
   ],
   "keywords": [
     "codexfast",
@@ -42,7 +52,12 @@
     "speed-menu",
     "custom-api",
     "electron-asar",
-    "macos"
+    "macos",
+    "windows",
+    "windows-store",
+    "msix",
+    "appx",
+    "aumid"
   ],
   "homepage": "https://github.com/Veath/codexfast",
   "repository": {

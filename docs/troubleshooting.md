@@ -8,19 +8,19 @@ Expected behavior:
 
 - `npx codexfast launch` is the public runtime path.
 - It starts Codex with a local CDP endpoint and applies runtime patches only to that launched session.
-- Keep the `codexfast launch` process running while you use Codex. Settings and Plugins load some chunks lazily, and those later requests still need the runtime interceptor.
-- During initial startup, the launcher connects to the browser-level CDP target, auto-attaches to renderer targets with `waitForDebuggerOnStart`, enables `Fetch` interception in the renderer session, and then lets the renderer continue. If a required target for the current build is still not observed, launch retries one renderer reload and then fails closed instead of repeatedly refreshing the app. Older builds require `Plugins access`; `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, `26.608.12217`, `26.609.30741`, `26.609.41114`, `26.609.71450`, `26.611.61049`, `26.611.61753`, `26.611.62324`, `26.616.31447`, `26.616.51431`, `26.616.71553`, `26.616.81150`, `26.623.31443`, `26.623.31921`, `26.623.42026`, `26.623.61825`, `26.623.70822`, `26.623.81905`, `26.623.101652`, `26.623.141536`, `26.707.31428`, `26.707.41301`, `26.707.61608`, `26.707.71524`, `26.707.72221`, `26.707.91948`, `26.715.31925`, `26.715.52143`, `26.715.61943`, `26.715.70719`, `26.715.72028`, `26.715.72359`, and `26.721.30844` do not require that legacy target because the old sidebar/page/detail gates are absent or Plugins is supported by the official app path.
+- Keep the `codexfast launch` process running while you use Codex. Settings and other claimed feature chunks can load lazily, and those later requests still need the runtime interceptor. Plugins patching remains a macOS-only claim for the builds documented below.
+- During initial startup, the launcher connects to the browser-level CDP target, auto-attaches to renderer targets with `waitForDebuggerOnStart`, enables `Fetch` interception in the renderer session, and then lets the renderer continue. If a required target for the current build is still not observed, launch retries one renderer reload and then fails closed instead of repeatedly refreshing the app. The experimental Windows profile requires the five startup-observable Fast request/composer labels; Settings Fast remains part of the complete six-label profile but can load lazily. On macOS, older builds require `Plugins access`; `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, `26.608.12217`, `26.609.30741`, `26.609.41114`, `26.609.71450`, `26.611.61049`, `26.611.61753`, `26.611.62324`, `26.616.31447`, `26.616.51431`, `26.616.71553`, `26.616.81150`, `26.623.31443`, `26.623.31921`, `26.623.42026`, `26.623.61825`, `26.623.70822`, `26.623.81905`, `26.623.101652`, `26.623.141536`, `26.707.31428`, `26.707.41301`, `26.707.61608`, `26.707.71524`, `26.707.72221`, `26.707.91948`, `26.715.31925`, `26.715.52143`, `26.715.61943`, `26.715.70719`, `26.715.72028`, `26.715.72359`, and `26.721.30844` do not require that legacy target because the old sidebar/page/detail gates are absent or Plugins is supported by the official app path.
 - `26.721.31836`, `26.721.41059`, `26.721.81911`, `26.727.40816`, and `26.727.51351` also skip the legacy `Plugins access` initial target because Plugins uses the official app path.
 - `26.730.61309` also skips the legacy `Plugins access` initial target because Plugins uses the official app path.
 - `26.730.61639` also skips the legacy `Plugins access` initial target because Plugins uses the official app path.
 - `26.803.41515` also skips the legacy `Plugins access` initial target because Plugins uses the official app path.
-- The launcher sends a lightweight browser-level CDP heartbeat. If the runtime patch session drops, it reconnects at most three times and re-enables browser auto-attach. If reconnects are exhausted, it reports `Runtime patch session lost`, closes the launched Codex process, and exits non-zero so Codex does not keep running without runtime patching.
-- It does not modify `app.asar`, `Info.plist`, the app bundle, the app signature, backups, or macOS privacy permissions.
-- It removes the legacy launchd auto-repair watcher if an older codexfast version installed one.
+- The launcher sends a lightweight browser-level CDP heartbeat. If the runtime patch session drops, it reconnects at most three times and re-enables browser auto-attach. If reconnects are exhausted, it reports `Runtime patch session lost` and exits non-zero. macOS closes the launched process group. Windows terminates only the native process handle whose PID/start-time/path identity can be revalidated, then requires an empty admitted-path snapshot; otherwise cleanup is reported as unconfirmed and the user must fully quit Codex manually.
+- It does not modify `app.asar`, platform metadata, the installed app/MSIX package, code signatures, backups, or macOS privacy permissions.
+- On macOS only, it removes the legacy launchd auto-repair watcher if an older codexfast version installed one.
 
 If launch is blocked:
 
-1. Fully quit any running `Codex.app` instance.
+1. Fully quit Codex. On macOS this means any running `Codex.app` / `ChatGPT.app`; on Windows, fully quit the admitted Store/MSIX package and any visible helper processes.
 2. Re-run `npx codexfast launch`.
 3. Use the detected version/build printed by launch when recording an unsupported build for adaptation.
 
@@ -52,6 +52,8 @@ If Fast writes `service_tier = "priority"` to `config.toml` but the UI still loo
 
 If `Disable automatic updates` is enabled but Codex still updates:
 
+This setting and the Sparkle hook are macOS-only. Windows Store/Windows update behavior is outside this feature.
+
 - On build `26.715.21425+5488`, inspect `.vite/build/window-all-closed-DXvqe7lL.js`: the active updater uses a captured local callback inside a production-appcast condition, and both the interval path and `setAutomaticBackgroundDownloadsEnabledForMac` must route through the dynamic config check.
 - On build `26.715.31925+5551`, the same callback-aware source-signature hook applies after the active module moved to `.vite/build/window-all-closed-CZr9g6FK.js`.
 - On build `26.715.52143+5591`, the same callback-aware source-signature hook applies in `.vite/build/window-all-closed-CZr9g6FK.js` after the renderer asset rename.
@@ -74,15 +76,15 @@ If `Disable automatic updates` is enabled but Codex still updates:
 
 If launch reports `Runtime patch session lost after 3 reconnect attempts`:
 
-1. Fully quit Codex and confirm no `Codex` main process remains.
+1. On macOS, confirm the launched process group closed. On Windows, read the cleanup result: success covers the verified root and admitted executable path only; an unconfirmed result requires a full manual quit, including any differently named helper.
 2. Re-run `npx codexfast launch`.
-3. Do not keep using any remaining Codex window as proof of runtime patch behavior; reconnects were exhausted, so codexfast deliberately closed the launched process instead of allowing an unpatched session to continue.
+3. Do not keep using any remaining Codex window as proof of runtime patch behavior; reconnects were exhausted, so runtime patching is no longer active.
 
 If Codex shows `Codex failed to start` with `ERR_FAILED` while runtime launch is being tested:
 
 1. Fully quit Codex and confirm no `Codex` main process remains.
 2. Re-run the latest `npx codexfast launch`.
-3. Confirm the failed launch did not change `Contents/Resources/app.asar`, `Info.plist`, the app signature, backups, or macOS privacy permissions.
+3. Confirm the failed launch did not change `app.asar`, platform metadata, the installed app/MSIX package, code signatures, backups, or macOS privacy permissions.
 4. If the failure persists on a supported build, inspect the CDP runtime asset URL shape. Current `26.513.20950` requests renderer JavaScript as `app://-/assets/*.js`, while older assumptions used `app://-/webview/assets/*.js`.
 5. Confirm the generated single-file CLI can run its embedded runtime patch engine; do not rely only on source-level `patch-engine` imports.
 
@@ -93,7 +95,7 @@ Older codexfast versions exposed `install-watcher` and installed a per-user laun
 - `~/Library/LaunchAgents/com.codexfast.watcher.plist`
 - `~/Library/Application Support/codexfast/codexfast-watcher.js`
 
-Current public `launch` removes those files before starting Codex. The old watcher-facing `repair` command is kept only as a compatibility cleanup path so an already-installed watcher can remove itself instead of re-applying legacy bundle patches.
+On macOS, current public `launch` removes those files before starting Codex. Windows does not run `launchctl` or watcher cleanup. The old watcher-facing `repair` command is kept only as a compatibility cleanup path so an already-installed watcher can remove itself instead of re-applying legacy bundle patches.
 
 ## `Plugins` is visible but plugin install or use still fails
 

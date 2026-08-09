@@ -7,9 +7,20 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 ## Delivery Modes
 
 - `launch` is the public runtime path. It starts Codex with a local CDP endpoint and applies the supported target patches in memory for that launched session only.
-- Runtime launch does not modify `app.asar`, `Info.plist`, the app bundle, or the app signature.
+- Runtime launch does not modify `app.asar`, application metadata, the installed app/MSIX package, or its code signature.
 - Legacy bundle patch commands and internal file-patch/restore flows have been removed.
-- If a user previously installed the launchd auto-repair watcher, `launch` removes the legacy watcher files before starting Codex.
+- On macOS, if a user previously installed the launchd auto-repair watcher, `launch` removes the legacy watcher files before starting Codex.
+
+## Platform Scope
+
+- macOS is the verified platform. Only exact `CFBundleShortVersionString` + `CFBundleVersion` pairs in the strict macOS whitelist can launch.
+- Windows support is experimental and limited to the official Microsoft Store/MSIX package named `OpenAI.Codex`. The npm package is installable on `win32` for validation, but installation does not imply that the installed package version is supported.
+- Windows launch obtains package and manifest metadata through the AppX PowerShell APIs, requires the exact Store package family/publisher/signature and verified `App` / `app/ChatGPT.exe` / `Windows.FullTrustApplication` entry, then applies renderer patches through a loopback-only CDP session. Node does not directly open the protected WindowsApps manifest, `app.asar`, or executable. Unknown identities and package versions fail closed.
+- Windows running detection and cleanup are package-path scoped. The launcher checks the exact admitted package executable rather than a broad image name, and accepts an activation PID only when Windows-native command-line parsing finds exactly one current-launcher CDP port argument, exactly one loopback-address argument, and no other `--remote-debugging-*` switch. Cleanup may open and terminate only the native process handle whose PID/start-time/path identity was returned by that activation attempt; it never issues a second broad or reusable-PID kill. When that identity is unavailable, bounded exact-path snapshots are diagnostic only, cleanup remains unconfirmed, and the user must fully quit any residual process manually. Successful confirmation covers the verified root and admitted executable path, not differently named helper executables. This path still requires real Windows validation.
+- The first Windows support claim must cover the entire combined Fast feature set: Settings Fast, `/fast`, the composer Speed menu, and the request path that sends `service_tier: "priority"`. Partial UI-only Fast support must not be shipped.
+- The macOS `Disable automatic updates` row and Sparkle main-process hook are not part of the Windows path. Windows Store/Windows update behavior remains unchanged.
+- Plugins and model-catalog behavior are not claimed for Windows until an exact Windows package version has been separately inspected and validated.
+- See [`windows-experimental.md`](./windows-experimental.md) for prerequisites, validation commands, and safety boundaries.
 
 ## Current Feature Set
 
@@ -53,6 +64,8 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 
 ### Disable automatic updates setting
 
+This feature is macOS-only. Windows launch must not inject the Settings row or the Sparkle main-process hook.
+
 - On `26.715.21425+5488`, the existing Fast global-tier behavior and composer `Intelligence` Speed path remain compatible, GPT-5.6 and Plugins use official application paths, and the automatic-update row plus callback-aware Sparkle hook require build-specific compatibility targets.
 - On `26.715.31925+5551`, the existing Fast global-tier behavior, composer `Intelligence` Speed path, automatic-update row, and callback-aware Sparkle hook remain compatible; GPT-5.6 and Plugins use official application paths.
 - On `26.715.52143+5591`, the build-5551 Fast global-tier behavior, composer `Intelligence` Speed path, automatic-update row, and callback-aware Sparkle hook remain compatible under renamed renderer assets; GPT-5.6 and Plugins use official application paths.
@@ -94,4 +107,6 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - `Plugins` support should not be described as available unless the sidebar/page gates still work cleanly on the target build.
 - `GPT-5.x` model-list support should not be described as provider support. It is only a UI catalog entry.
 - `Disable automatic updates` should be described as suppression for automatic background checks and forced install scheduling, not as a global updater removal.
+- Windows support should remain labeled experimental until the exact Store/MSIX package version completes [`real-app-validation.md`](./real-app-validation.md), including request-level priority service-tier evidence, identity-guarded activation-error and session-loss cleanup, and post-readiness root-exit exact-path confirmation.
+- A macOS whitelist entry never implicitly supports a Windows package with a similar numeric version.
 - Compatibility claims must also match `docs/compatibility-matrix.md` and the strict whitelist in `src/supported-app-versions.mts`.
