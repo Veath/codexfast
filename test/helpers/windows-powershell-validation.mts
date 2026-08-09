@@ -48,6 +48,7 @@ export function encodeWindowsPowerShellCommand(source: string): string {
 }
 
 export const windowsPowerShellValidationHarnessSource = String.raw`$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 2.0
 $edition = [string]$PSVersionTable.PSEdition
 if (
   $PSVersionTable.PSVersion.Major -ne 5 -or
@@ -87,7 +88,24 @@ if ($env:CODEXFAST_VALIDATION_COMPILE_CSHARP -eq '1') {
   if ($sourceAssignments.Count -ne 1) {
     throw "Expected exactly one C# source assignment, found $($sourceAssignments.Count)."
   }
-  $csharpSource = [string]$sourceAssignments[0].Right.Value
+  $sourceExpressions = @($sourceAssignments[0].Right.FindAll({
+    param($candidate)
+    return (
+      $candidate -is [System.Management.Automation.Language.StringConstantExpressionAst] -or
+      $candidate -is [System.Management.Automation.Language.ExpandableStringExpressionAst]
+    )
+  }, $true))
+  if ($sourceExpressions.Count -ne 1) {
+    throw "Expected exactly one C# source string, found $($sourceExpressions.Count)."
+  }
+  $sourceExpression = $sourceExpressions[0]
+  if (
+    $sourceExpression -is [System.Management.Automation.Language.ExpandableStringExpressionAst] -and
+    @($sourceExpression.NestedExpressions).Count -gt 0
+  ) {
+    throw 'The activation C# helper source must not contain PowerShell interpolation.'
+  }
+  $csharpSource = [string]$sourceExpression.Value
   if ([string]::IsNullOrWhiteSpace($csharpSource)) {
     throw 'The activation C# helper source is empty.'
   }

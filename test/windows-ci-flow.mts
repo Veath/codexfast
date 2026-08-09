@@ -211,7 +211,27 @@ async function runWindowsPortableSuite(): Promise<void> {
   );
   assert.match(
     windowsPowerShellValidationHarnessSource,
+    /Set-StrictMode -Version 2\.0/u,
+    "expected invalid AST property access to fail during validation",
+  );
+  assert.match(
+    windowsPowerShellValidationHarnessSource,
     /Add-Type -TypeDefinition \$csharpSource -Language CSharp/u,
+  );
+  assert.match(
+    windowsPowerShellValidationHarnessSource,
+    /\.Right\.FindAll\(/u,
+    "expected the validation harness to traverse the assignment statement block",
+  );
+  assert.doesNotMatch(
+    windowsPowerShellValidationHarnessSource,
+    /\$sourceAssignments\[0\]\.Right\.Value/u,
+    "expected the validation harness not to read a nonexistent statement-block value",
+  );
+  assert.match(
+    windowsPowerShellValidationHarnessSource,
+    /NestedExpressions/u,
+    "expected expandable C# source strings to reject PowerShell interpolation",
   );
   for (const unsafeActivationCommandLine of [
     '"--remote-debugging-port=45678 --remote-debugging-address=127.0.0.1"',
