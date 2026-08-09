@@ -1,10 +1,12 @@
 import { existsSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import type { CodexfastPlatform } from "./cli-context.mts";
 import { printExitBlock } from "./cli-output.mts";
 import { printLine, resolveCommand, run } from "./cli-utils.mts";
 
 export type WatcherFlowOptions = {
   launchAgentFileName: string;
+  platform?: CodexfastPlatform;
 };
 
 function userHomeDir(): string {
@@ -30,7 +32,7 @@ function launchctlDomain(): string {
 }
 
 export function createWatcherFlow(options: WatcherFlowOptions) {
-  const { launchAgentFileName } = options;
+  const { launchAgentFileName, platform = "darwin" } = options;
 
   const watcherPlistPath = (): string =>
     join(launchAgentsDir(), launchAgentFileName);
@@ -83,6 +85,9 @@ export function createWatcherFlow(options: WatcherFlowOptions) {
       reportRemoved?: boolean;
     } = {},
   ): boolean => {
+    if (platform !== "darwin") {
+      return true;
+    }
     const hadWatcherFiles =
       existsSync(watcherPlistPath()) || existsSync(watcherCliPath());
     if (!removeWatcherFiles({ quietLaunchctl: removeOptions.quietLaunchctl })) {

@@ -32,3 +32,45 @@ export function prepareFakeApp(options: {
   mkdirSync(resourcesDir, { recursive: true });
   writeInfoPlist(options.appDir, options.appVersion, options.appBuild);
 }
+
+export function prepareFakeWindowsMsixApp(options: {
+  appDir: string;
+  packageName?: string;
+  packageVersion?: string;
+  processorArchitecture?: string;
+  applicationId?: string;
+  executable?: string;
+  entryPoint?: string;
+}): void {
+  const packageName = options.packageName ?? "OpenAI.Codex";
+  const packageVersion = options.packageVersion ?? "26.803.5235.0";
+  const processorArchitecture = options.processorArchitecture ?? "x64";
+  const applicationId = options.applicationId ?? "App";
+  const executable = options.executable ?? "app\\ChatGPT.exe";
+  const entryPoint = options.entryPoint ?? "Windows.FullTrustApplication";
+  const resourcesDir = join(options.appDir, "app", "resources");
+  mkdirSync(resourcesDir, { recursive: true });
+  writeFileSync(join(resourcesDir, "app.asar"), "fake app.asar");
+  writeFileSync(
+    join(options.appDir, ...executable.replace(/\\/gu, "/").split("/")),
+    "fake executable",
+  );
+  writeFileSync(
+    join(options.appDir, "AppxManifest.xml"),
+    `<?xml version="1.0" encoding="utf-8"?>
+<Package xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10">
+  <Identity
+    Name="${packageName}"
+    Publisher="CN=OpenAI, O=OpenAI, L=San Francisco, S=California, C=US"
+    Version="${packageVersion}"
+    ProcessorArchitecture="${processorArchitecture}" />
+  <Properties>
+    <DisplayName>Codex</DisplayName>
+  </Properties>
+  <Applications>
+    <Application Id="${applicationId}" Executable="${executable}" EntryPoint="${entryPoint}" />
+  </Applications>
+</Package>
+`,
+  );
+}

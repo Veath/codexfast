@@ -1,7 +1,4 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import { randomBytes } from "node:crypto";
-import { existsSync } from "node:fs";
-import { join } from "node:path";
+import { createServer } from "node:net";
 import {
   CdpConnection,
   cdpCommandWithTimeout,
@@ -10,18 +7,18 @@ import {
 import type { CodexfastContext } from "./cli-context.mts";
 import { printExitBlock, printExitCode } from "./cli-output.mts";
 import {
+  getPlatformAdapter,
+  type RuntimeLaunchProcess,
+} from "./cli-platform.mts";
+import {
   applyRuntimePatchesToResponseBodyWithSource,
   isRuntimeJavaScriptResource,
   type RuntimePatchResult,
 } from "./cli-runtime-patcher.mts";
-import { childEnvWithAutomaticUpdateSetting } from "./cli-update-settings.mts";
 import {
   asError,
   debugRuntime,
   printLine,
-  resolveCommand,
-  run,
-  sleep,
 } from "./cli-utils.mts";
 
 type FetchHeader = {
@@ -58,9 +55,13 @@ type RuntimeFetchPatchOutcome = {
   sawJavaScript: boolean;
 };
 
-type CodexRunningCheck =
-  | { ok: true; running: boolean }
-  | { ok: false; message: string };
+type RuntimeLaunchProcessOutcome =
+  | { type: "process-exit"; exitCode: number }
+  | { type: "process-monitor-error"; error: Error };
+
+type RuntimePatchSessionStartOutcome =
+  | { type: "session-ready"; session: RuntimePatchSessionHandle }
+  | { type: "session-start-error"; error: Error };
 
 export type RuntimeLaunchOptions = {
   context: CodexfastContext;
@@ -71,9 +72,12 @@ export type RuntimeLaunchOptions = {
     quietLaunchctl?: boolean;
     reportRemoved?: boolean;
   }) => boolean;
+  allocateDebugPort?: () => Promise<number>;
 };
 
 const runtimePatchInitialTargetTimeoutMs = 45_000;
+const runtimePatchInitialCommandTimeoutMs = 5_000;
+const runtimePatchInitialHandlerDrainTimeoutMs = 5_000;
 const runtimePatchNoTargetIdleMs = 2_500;
 const runtimePatchSettleMs = 750;
 const runtimePatchInitialLoadSettleMs = 1_000;
@@ -81,7 +85,15 @@ const runtimePatchHeartbeatIntervalMs = 5_000;
 const runtimePatchHeartbeatTimeoutMs = 2_000;
 const runtimePatchReconnectMaxAttempts = 3;
 const runtimePatchReconnectDelayMs = 1_000;
+const runtimePatchReconnectInterceptionTimeoutMs = 5_000;
 const runtimePatchDefaultRequiredInitialLabels = ["Plugins access"];
+const runtimePatchWindowsRequiredInitialLabels = [
+  "Speed service tier allowance",
+  "Speed service tier request allowance",
+  "Speed service tier conversation fallback",
+  "Composer Intelligence Speed menu",
+  "Fast slash command",
+];
 const runtimePatchNoPluginsAccessRequiredVersionKeys = new Set([
   "26.601.21317+3511",
   "26.602.30954+3575",
@@ -167,11 +179,33 @@ const runtimePatchPluginTargetIdPrefixes = [
   "composer-plugin",
   "shared-plugin",
 ];
+const runtimePatchAutomaticUpdateTargetIdPrefixes = [
+  "disable-automatic-updates",
+];
+const runtimePatchModelTargetIdPrefixes = ["gpt"];
 const runtimePatchOfficialGpt56ThresholdVersionKey = "26.707.41301+5103";
 const runtimePatchOfficialGpt56TargetIds = new Set([
   "gpt5x-model-list-options",
   "gpt56-model-query-selector",
 ]);
+
+function waitForRuntimePatchReconnectDelay(signal: AbortSignal): Promise<void> {
+  if (signal.aborted) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, runtimePatchReconnectDelayMs);
+    const onAbort = (): void => {
+      clearTimeout(timeout);
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    };
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
 const runtimePatchRequiredInitialReloadMaxAttempts = 1;
 
 function compareNumericVersionKeys(left: string, right: string): number {
@@ -202,89 +236,37 @@ function usesOfficialGpt56(versionKey: string): boolean {
   ) >= 0;
 }
 
-function checkCodexRunning(): CodexRunningCheck {
-  if (process.env.CODEXFAST_TEST_CODEX_RUNNING === "1") {
-    return { ok: true, running: true };
-  }
-
-  const pgrepBin = resolveCommand("pgrep");
-  if (!pgrepBin) {
-    return {
-      ok: false,
-      message:
-        "Cannot determine whether Codex.app is running because pgrep was not found.",
+export function allocateLoopbackDebugPort(): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const server = createServer();
+    let settled = false;
+    const finish = (callback: () => void): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      callback();
     };
-  }
-
-  for (const processName of ["Codex", "ChatGPT"]) {
-    const result = run(pgrepBin, ["-x", processName]);
-    if (result.status === 0) {
-      return { ok: true, running: true };
-    }
-    if (result.status !== 1) {
-      return {
-        ok: false,
-        message: `Cannot determine whether Codex.app is running because pgrep failed with exit code ${result.status}.`,
-      };
-    }
-  }
-  return { ok: true, running: false };
-}
-
-function randomDebugPort(): number {
-  return 40_000 + (randomBytes(2).readUInt16BE(0) % 20_000);
-}
-
-function codexExecutablePathCandidates(context: CodexfastContext): string[] {
-  return [
-    join(context.paths.bundle, "Contents", "MacOS", "Codex"),
-    join(context.paths.bundle, "Contents", "MacOS", "ChatGPT"),
-  ];
-}
-
-function codexExecutablePath(context: CodexfastContext): string | null {
-  return codexExecutablePathCandidates(context).find((candidate) =>
-    existsSync(candidate)
-  ) ?? null;
-}
-
-function launchCodexProcess(
-  context: CodexfastContext,
-  debugPort: number,
-): ChildProcess {
-  const executable = codexExecutablePath(context);
-  if (!executable) {
-    throw new Error(
-      `Codex executable not found: tried ${codexExecutablePathCandidates(context).join(", ")}`,
-    );
-  }
-
-  const child = spawn(
-    executable,
-    [
-      `--remote-debugging-port=${debugPort}`,
-      "--remote-debugging-address=127.0.0.1",
-    ],
-    {
-      detached: true,
-      stdio: "ignore",
-      env: childEnvWithAutomaticUpdateSetting(),
-    },
-  );
-  child.on("error", () => undefined);
-  child.unref();
-  return child;
-}
-
-function terminateRuntimeLaunchProcess(child: ChildProcess): void {
-  if (!child.pid || child.killed) {
-    return;
-  }
-  try {
-    process.kill(-child.pid, "SIGTERM");
-  } catch {
-    child.kill();
-  }
+    server.unref();
+    server.once("error", (error) => finish(() => reject(error)));
+    server.listen({ host: "127.0.0.1", port: 0, exclusive: true }, () => {
+      const address = server.address();
+      if (!address || typeof address === "string" || address.port <= 0) {
+        server.close(() => {
+          finish(() => reject(new Error("Failed to reserve a loopback CDP port.")));
+        });
+        return;
+      }
+      const port = address.port;
+      server.close((error) => {
+        if (error) {
+          finish(() => reject(error));
+          return;
+        }
+        finish(() => resolve(port));
+      });
+    });
+  });
 }
 
 function responseHeadersForFulfill(
@@ -389,8 +371,24 @@ function runtimePatchSessionLostMessage(error: Error): string {
   return `Runtime patch session lost after ${runtimePatchReconnectMaxAttempts} reconnect attempts: ${error.message}`;
 }
 
-function printRuntimePatchSessionLost(error: Error): void {
+function printRuntimePatchSessionLost(
+  error: Error,
+  platform: CodexfastContext["platform"] = "darwin",
+  windowsAdmittedPathCleanupConfirmed = false,
+): void {
   printLine(error.message);
+  if (platform === "win32") {
+    printLine(windowsAdmittedPathCleanupConfirmed
+      ? "The verified launched Codex process exited and no admitted-path Codex process remains."
+      : "Fail-closed cleanup could not be confirmed. Fully quit Codex manually before relaunching.");
+    if (windowsAdmittedPathCleanupConfirmed) {
+      printLine(
+        "Differently named Codex helper processes are outside this experimental cleanup check; fully quit any remaining Codex helpers before relaunching.",
+      );
+    }
+    printLine("Relaunch with codexfast to start a patched session.");
+    return;
+  }
   printLine(
     "Codex.app will be closed because runtime patching is no longer active.",
   );
@@ -408,6 +406,24 @@ function printRuntimeLaunchReady(patchedLabels: string[]): void {
   printLine("Runtime launch completed.");
   printLine("Keep this codexfast launch process running while you use Codex.");
   printLine("Quit Codex to end the runtime patch session.");
+}
+
+function confirmRuntimeLaunchExit(
+  platformAdapter: ReturnType<typeof getPlatformAdapter>,
+  launched: RuntimeLaunchProcess,
+): boolean {
+  launched.stopMonitoring();
+  const confirmation = platformAdapter.confirmRuntimeLaunchProcessExited(
+    launched,
+  );
+  if (confirmation.ok) {
+    return true;
+  }
+  printLine(confirmation.message);
+  printLine(
+    "Fail-closed cleanup could not be confirmed. Fully quit Codex manually before retrying.",
+  );
+  return false;
 }
 
 function waitForRuntimeInitialPageLoad(cdp: CdpConnection): Promise<void> {
@@ -442,7 +458,11 @@ function missingRuntimePatchRequiredInitialLabels(
 
 function runtimePatchRequiredInitialLabelsForVersion(
   versionKey: string,
+  platform: CodexfastContext["platform"] = "darwin",
 ): string[] {
+  if (platform === "win32") {
+    return runtimePatchWindowsRequiredInitialLabels;
+  }
   if (runtimePatchNoPluginsAccessRequiredVersionKeys.has(versionKey)) {
     return [];
   }
@@ -452,23 +472,37 @@ function runtimePatchRequiredInitialLabelsForVersion(
 export function runtimePatcherSourceForVersion(
   patcherSource: string,
   versionKey: string,
+  platform: CodexfastContext["platform"] = "darwin",
 ): string {
-  const skipPluginTargets = runtimePatchNoPluginTargetsVersionKeys.has(versionKey);
+  const skipPluginTargets =
+    platform === "win32" ||
+    runtimePatchNoPluginTargetsVersionKeys.has(versionKey);
+  const skipAutomaticUpdateTargets = platform === "win32";
+  const skipModelTargets = platform === "win32";
   const skipOfficialGpt56Targets = usesOfficialGpt56(versionKey);
-  if (!skipPluginTargets && !skipOfficialGpt56Targets) {
+  if (
+    !skipPluginTargets &&
+    !skipAutomaticUpdateTargets &&
+    !skipModelTargets &&
+    !skipOfficialGpt56Targets
+  ) {
     return patcherSource;
   }
 
-  const skippedPrefixes = JSON.stringify(
-    skipPluginTargets ? runtimePatchPluginTargetIdPrefixes : [],
-  );
+  const skippedPrefixes = JSON.stringify([
+    ...(skipPluginTargets ? runtimePatchPluginTargetIdPrefixes : []),
+    ...(skipAutomaticUpdateTargets
+      ? runtimePatchAutomaticUpdateTargetIdPrefixes
+      : []),
+    ...(skipModelTargets ? runtimePatchModelTargetIdPrefixes : []),
+  ]);
   const skippedIds = JSON.stringify(
     skipOfficialGpt56Targets ? [...runtimePatchOfficialGpt56TargetIds] : [],
   );
   return `${patcherSource}
-const __codexfastPluginTargetIdPrefixes = ${skippedPrefixes};
+const __codexfastSkippedTargetIdPrefixes = ${skippedPrefixes};
 const __codexfastSkippedTargetIds = new Set(${skippedIds});
-const __codexfastShouldSkipTarget = (spec) => __codexfastSkippedTargetIds.has(spec.id) || __codexfastPluginTargetIdPrefixes.some((prefix) => spec.id.startsWith(prefix));
+const __codexfastShouldSkipTarget = (spec) => __codexfastSkippedTargetIds.has(spec.id) || __codexfastSkippedTargetIdPrefixes.some((prefix) => spec.id.startsWith(prefix));
 applyRuntimePatchesToBody = function(_resourcePath, body) {
   let content = body;
   const matchedLabels = [];
@@ -545,12 +579,13 @@ async function enableRuntimePatchAutoAttach(cdp: CdpConnection): Promise<void> {
   debugRuntime("Target.setAutoAttach ok");
 }
 
-async function startRuntimePatchSession(
+export async function startRuntimePatchSession(
   debugPort: number,
   patcherSource: string,
   requiredInitialLabels: string[],
+  signal?: AbortSignal,
 ): Promise<RuntimePatchSessionHandle> {
-  let cdp = await waitForRuntimeBrowserConnection(debugPort);
+  let cdp = await waitForRuntimeBrowserConnection(debugPort, signal);
   const observedLabels = new Set<string>();
   const pausedRequestHandlers = new Set<Promise<void>>();
   const attachedPageSessions = new Set<string>();
@@ -561,6 +596,11 @@ async function startRuntimePatchSession(
   let initialCompleted = false;
   let closed = false;
   let reconnecting = false;
+  let resolveReconnectInterceptionReady: (() => void) | null = null;
+  let rejectReconnectInterceptionReady: ((error: Error) => void) | null = null;
+  let reconnectInterceptionTasks: Set<Promise<void>> | null = null;
+  let reconnectInterceptionError: Error | null = null;
+  const reconnectController = new AbortController();
   let connectionGeneration = 0;
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   let resolveLost: (error: Error) => void = () => undefined;
@@ -569,6 +609,14 @@ async function startRuntimePatchSession(
   const lost = new Promise<Error>((resolve) => {
     resolveLost = resolve;
   });
+  const abortSessionStart = (): void => {
+    failSession(new Error("Runtime patch session start aborted."));
+    cdp.close();
+  };
+  signal?.addEventListener("abort", abortSessionStart, { once: true });
+  if (signal?.aborted) {
+    abortSessionStart();
+  }
 
   const stopHeartbeat = (): void => {
     if (heartbeatTimer) {
@@ -583,6 +631,7 @@ async function startRuntimePatchSession(
     }
     closed = true;
     stopHeartbeat();
+    reconnectController.abort();
     cdp.close();
     resolveLost(error);
   };
@@ -605,24 +654,123 @@ async function startRuntimePatchSession(
         return;
       }
       if (attempt > 1) {
-        await sleep(runtimePatchReconnectDelayMs);
+        await waitForRuntimePatchReconnectDelay(reconnectController.signal);
+      }
+      if (closed) {
+        reconnecting = false;
+        return;
       }
       printLine(
         `Runtime patch session reconnecting (${attempt}/${runtimePatchReconnectMaxAttempts})...`,
       );
       try {
-        const nextCdp = await waitForRuntimeBrowserConnection(debugPort);
+        const nextCdp = await waitForRuntimeBrowserConnection(
+          debugPort,
+          reconnectController.signal,
+        );
+        if (closed || reconnectController.signal.aborted) {
+          nextCdp.close();
+          reconnecting = false;
+          return;
+        }
         connectionGeneration += 1;
         cdp = nextCdp;
+        reconnectInterceptionError = null;
+        reconnectInterceptionTasks = new Set<Promise<void>>();
+        attachedPageSessions.clear();
+        activePageSessionId = null;
+        let reconnectInterceptionSettled = false;
+        const reconnectInterceptionReady = new Promise<void>(
+          (resolve, reject) => {
+            resolveReconnectInterceptionReady = () => {
+              if (reconnectInterceptionSettled) {
+                return;
+              }
+              reconnectInterceptionSettled = true;
+              resolve();
+            };
+            rejectReconnectInterceptionReady = (error: Error) => {
+              if (reconnectInterceptionSettled) {
+                return;
+              }
+              reconnectInterceptionSettled = true;
+              reject(error);
+            };
+          },
+        );
+        void reconnectInterceptionReady.catch(() => undefined);
+        const abortReconnectInterception = (): void => {
+          rejectReconnectInterceptionReady?.(
+            new Error("Runtime patch session reconnect aborted."),
+          );
+        };
+        reconnectController.signal.addEventListener(
+          "abort",
+          abortReconnectInterception,
+          { once: true },
+        );
+        if (reconnectController.signal.aborted) {
+          abortReconnectInterception();
+        }
+        const clearReconnectInterceptionAttempt = (): void => {
+          reconnectController.signal.removeEventListener(
+            "abort",
+            abortReconnectInterception,
+          );
+          resolveReconnectInterceptionReady = null;
+          rejectReconnectInterceptionReady = null;
+        };
         registerRuntimeFetchHandler(connectionGeneration);
         registerRuntimeTargetHandler(connectionGeneration);
-        await enableRuntimePatchAutoAttach(cdp);
+        try {
+          await cdpCommandWithTimeout(
+            enableRuntimePatchAutoAttach(cdp),
+            runtimePatchReconnectInterceptionTimeoutMs,
+            "Timed out enabling renderer auto-attach after CDP reconnect.",
+          );
+          await cdpCommandWithTimeout(
+            reconnectInterceptionReady,
+            runtimePatchReconnectInterceptionTimeoutMs,
+            "Timed out waiting for renderer interception after CDP reconnect.",
+          );
+          while ((reconnectInterceptionTasks?.size ?? 0) > 0) {
+            const observedTasks = [...(reconnectInterceptionTasks ?? [])];
+            reconnectInterceptionTasks?.clear();
+            await Promise.all(observedTasks);
+          }
+          if (reconnectInterceptionError) {
+            throw reconnectInterceptionError;
+          }
+          if (nextCdp.isClosed()) {
+            throw new Error(
+              "CDP WebSocket connection closed while restoring renderer interception.",
+            );
+          }
+        } finally {
+          clearReconnectInterceptionAttempt();
+        }
+        if (closed) {
+          nextCdp.close();
+          reconnectInterceptionTasks = null;
+          reconnecting = false;
+          return;
+        }
         printLine("Runtime patch session reconnected.");
+        reconnectInterceptionTasks = null;
         reconnecting = false;
         return;
       } catch (error) {
-        lastError = asError(error);
+        // A renderer setup failure closes the reconnect CDP connection. That
+        // close can reject an earlier, still-pending command such as
+        // Target.setAutoAttach with a generic WebSocket-closed error. Preserve
+        // the renderer failure that caused the close for this attempt.
+        lastError = reconnectInterceptionTasks !== null &&
+            reconnectInterceptionError
+          ? reconnectInterceptionError
+          : asError(error);
         cdp.close();
+        reconnectInterceptionTasks = null;
+        reconnectInterceptionError = null;
       }
     }
 
@@ -636,6 +784,12 @@ async function startRuntimePatchSession(
     }
     if (!initialCompleted) {
       failSession(error);
+      return;
+    }
+    if (reconnecting) {
+      reconnectInterceptionError ??= error;
+      rejectReconnectInterceptionReady?.(error);
+      cdp.close();
       return;
     }
     void reconnectRuntimePatchSession(error);
@@ -683,7 +837,7 @@ async function startRuntimePatchSession(
 
   const registerRuntimeTargetHandler = (generation: number): void => {
     const attachedCdp = cdp;
-    attachedCdp.on("Target.attachedToTarget", async (params: unknown) => {
+    attachedCdp.on("Target.attachedToTarget", (params: unknown) => {
       if (closed || generation !== connectionGeneration) {
         return;
       }
@@ -695,7 +849,7 @@ async function startRuntimePatchSession(
       }
       if (targetType !== "page" && !targetUrl.startsWith("app://")) {
         if (attached.waitingForDebugger) {
-          await attachedCdp.send(
+          return attachedCdp.send(
             "Runtime.runIfWaitingForDebugger",
             undefined,
             attached.sessionId,
@@ -709,19 +863,36 @@ async function startRuntimePatchSession(
       debugRuntime(
         `attached target type=${targetType} url=${targetUrl || "<pending>"} session=${attached.sessionId}`,
       );
-      await enableRuntimePatchInterception(attachedCdp, {
-        sessionId: attached.sessionId,
-        waitForInitialLoad: false,
-        reload: !attached.waitingForDebugger,
-      });
-      if (attached.waitingForDebugger) {
-        await attachedCdp.send(
-          "Runtime.runIfWaitingForDebugger",
-          undefined,
-          attached.sessionId,
+      const setupTask = (async (): Promise<void> => {
+        await enableRuntimePatchInterception(attachedCdp, {
+          sessionId: attached.sessionId,
+          waitForInitialLoad: false,
+          reload: !attached.waitingForDebugger,
+        });
+        if (attached.waitingForDebugger) {
+          await attachedCdp.send(
+            "Runtime.runIfWaitingForDebugger",
+            undefined,
+            attached.sessionId,
+          );
+          debugRuntime("Runtime.runIfWaitingForDebugger ok");
+        }
+      })();
+      if (
+        reconnecting &&
+        generation === connectionGeneration &&
+        reconnectInterceptionTasks
+      ) {
+        const boundedSetupTask = cdpCommandWithTimeout(
+          setupTask,
+          runtimePatchReconnectInterceptionTimeoutMs,
+          `Timed out restoring renderer interception for session ${attached.sessionId} after CDP reconnect.`,
         );
-        debugRuntime("Runtime.runIfWaitingForDebugger ok");
+        reconnectInterceptionTasks.add(boundedSetupTask);
+        resolveReconnectInterceptionReady?.();
+        return boundedSetupTask;
       }
+      return setupTask;
     });
     attachedCdp.on("Target.detachedFromTarget", (params: unknown) => {
       const detached = params as { sessionId?: string };
@@ -797,9 +968,15 @@ async function startRuntimePatchSession(
         clearSessionTimers();
         void (async () => {
           try {
-            while (pausedRequestHandlers.size > 0) {
-              await Promise.all([...pausedRequestHandlers]);
-            }
+            await cdpCommandWithTimeout(
+              (async (): Promise<void> => {
+                while (pausedRequestHandlers.size > 0) {
+                  await Promise.all([...pausedRequestHandlers]);
+                }
+              })(),
+              runtimePatchInitialHandlerDrainTimeoutMs,
+              "Timed out waiting for paused runtime fetch handlers during initial runtime patch setup.",
+            );
           } catch (error) {
             fail(asError(error));
             return;
@@ -931,7 +1108,11 @@ async function startRuntimePatchSession(
     registerRuntimeTargetHandler(connectionGeneration);
 
     try {
-      await enableRuntimePatchAutoAttach(cdp);
+      await cdpCommandWithTimeout(
+        enableRuntimePatchAutoAttach(cdp),
+        runtimePatchInitialCommandTimeoutMs,
+        "Timed out enabling renderer auto-attach during initial runtime patch setup.",
+      );
     } catch (error) {
       failSession(asError(error));
     }
@@ -944,6 +1125,8 @@ async function startRuntimePatchSession(
       close: () => {
         closed = true;
         stopHeartbeat();
+        reconnectController.abort();
+        signal?.removeEventListener("abort", abortSessionStart);
         cdp.close();
       },
       lost,
@@ -952,6 +1135,8 @@ async function startRuntimePatchSession(
     if (!keepSessionOpen) {
       closed = true;
       stopHeartbeat();
+      reconnectController.abort();
+      signal?.removeEventListener("abort", abortSessionStart);
       cdp.close();
     }
   }
@@ -961,28 +1146,14 @@ function waitForRuntimePatchSession(
   debugPort: number,
   patcherSource: string,
   requiredInitialLabels: string[],
+  signal?: AbortSignal,
 ): Promise<RuntimePatchSessionHandle> {
   return startRuntimePatchSession(
     debugPort,
     patcherSource,
     requiredInitialLabels,
+    signal,
   );
-}
-
-function waitForRuntimeLaunchProcessExit(child: ChildProcess): Promise<number> {
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (exitCode: number): void => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      resolve(exitCode);
-    };
-
-    child.once("error", () => finish(1));
-    child.once("exit", (code) => finish(code ?? 0));
-  });
 }
 
 export async function runRuntimeLaunch(
@@ -994,13 +1165,19 @@ export async function runRuntimeLaunch(
     printActionHeader,
     removeLegacyWatcherFiles,
     supportedAppVersionKeys,
+    allocateDebugPort = allocateLoopbackDebugPort,
   } = options;
+  const platformAdapter = getPlatformAdapter(context.platform);
 
   printActionHeader("launch");
 
   if (!context.metadata.supported) {
-    printLine("Runtime launch is blocked for this Codex.app version.");
-    printLine(`Supported versions: ${supportedAppVersionKeys}`);
+    printLine(context.platform === "win32"
+      ? "Runtime launch is blocked for this Codex Windows package version and architecture."
+      : "Runtime launch is blocked for this Codex.app version.");
+    printLine(context.platform === "win32"
+      ? `Offline-validated experimental candidates: ${supportedAppVersionKeys}`
+      : `Supported versions: ${supportedAppVersionKeys}`);
     return printExitBlock(1).exitCode;
   }
 
@@ -1011,20 +1188,25 @@ export async function runRuntimeLaunch(
     return printExitBlock(1).exitCode;
   }
 
-  const runningCheck = checkCodexRunning();
+  const runningCheck = platformAdapter.checkCodexRunning(context);
   if (!runningCheck.ok) {
     printLine(runningCheck.message);
     return printExitBlock(1).exitCode;
   }
 
   if (runningCheck.running) {
-    printLine(
-      "Codex.app is already running. Quit Codex.app before using runtime launch.",
-    );
+    printLine(context.platform === "win32"
+      ? "Codex is already running. Fully quit Codex before using runtime launch."
+      : "Codex.app is already running. Quit Codex.app before using runtime launch.");
     return printExitBlock(1).exitCode;
   }
 
-  if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS === "1") {
+  const exercisePlatformLaunch =
+    process.env.CODEXFAST_TEST_RUNTIME_PLATFORM_LAUNCH === "1";
+  if (
+    process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS === "1" &&
+    !exercisePlatformLaunch
+  ) {
     printRuntimeLaunchReady(["Speed setting"]);
     if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SESSION_LOST === "1") {
       printRuntimePatchSessionLost(
@@ -1033,6 +1215,7 @@ export async function runRuntimeLaunch(
             new Error("simulated CDP heartbeat failure"),
           ),
         ),
+        context.platform,
       );
       return printExitBlock(1).exitCode;
     }
@@ -1042,6 +1225,7 @@ export async function runRuntimeLaunch(
   if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_PENDING_TARGETS === "1") {
     const requiredInitialLabels = runtimePatchRequiredInitialLabelsForVersion(
       context.metadata.versionKey,
+      context.platform,
     );
     const missingRequiredTargets = requiredInitialLabels.length > 0
       ? requiredInitialLabels.join(", ")
@@ -1055,36 +1239,147 @@ export async function runRuntimeLaunch(
     return printExitBlock(1).exitCode;
   }
 
-  let child: ChildProcess | null = null;
+  let launched: RuntimeLaunchProcess | null = null;
   let session: RuntimePatchSessionHandle | null = null;
+  let processExitedBeforeSession = false;
   try {
-    const debugPort = randomDebugPort();
-    child = launchCodexProcess(context, debugPort);
-    const childExit = waitForRuntimeLaunchProcessExit(child);
-    session = await waitForRuntimePatchSession(
+    const debugPort = await allocateDebugPort();
+    launched = platformAdapter.launchCodexProcess(context, debugPort);
+    const processOutcome = launched.exited.then<
+      RuntimeLaunchProcessOutcome,
+      RuntimeLaunchProcessOutcome
+    >(
+      (exitCode) => ({ type: "process-exit", exitCode }),
+      (error: unknown) => ({
+        type: "process-monitor-error",
+        error: asError(error),
+      }),
+    );
+    if (
+      exercisePlatformLaunch &&
+      process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SUCCESS === "1"
+    ) {
+      printRuntimeLaunchReady(["Speed setting"]);
+      if (process.env.CODEXFAST_TEST_RUNTIME_LAUNCH_SESSION_LOST === "1") {
+        launched.stopMonitoring();
+        const termination = platformAdapter.terminateRuntimeLaunchProcess(
+          launched,
+        );
+        if (!termination.ok) {
+          printLine(termination.message);
+        }
+        printRuntimePatchSessionLost(
+          new Error(
+            runtimePatchSessionLostMessage(
+              new Error("simulated CDP heartbeat failure"),
+            ),
+          ),
+          context.platform,
+          termination.ok,
+        );
+        return printExitBlock(1).exitCode;
+      }
+      if (
+        process.env
+          .CODEXFAST_TEST_RUNTIME_PROCESS_EXIT_AFTER_SESSION_READY === "1"
+      ) {
+        const readyProcessOutcome = await processOutcome;
+        if (readyProcessOutcome.type === "process-monitor-error") {
+          throw readyProcessOutcome.error;
+        }
+        if (!confirmRuntimeLaunchExit(platformAdapter, launched)) {
+          return printExitBlock(1).exitCode;
+        }
+        printExitCode(readyProcessOutcome.exitCode);
+        return readyProcessOutcome.exitCode;
+      }
+      return printExitCode(0).exitCode;
+    }
+    const sessionStartController = new AbortController();
+    const sessionStartOutcome = waitForRuntimePatchSession(
       debugPort,
       runtimePatcherSourceForVersion(
         patcherSource,
         context.metadata.versionKey,
+        context.platform,
       ),
-      runtimePatchRequiredInitialLabelsForVersion(context.metadata.versionKey),
+      runtimePatchRequiredInitialLabelsForVersion(
+        context.metadata.versionKey,
+        context.platform,
+      ),
+      sessionStartController.signal,
+    ).then<
+      RuntimePatchSessionStartOutcome,
+      RuntimePatchSessionStartOutcome
+    >(
+      (startedSession) => ({
+        type: "session-ready",
+        session: startedSession,
+      }),
+      (error: unknown) => ({
+        type: "session-start-error",
+        error: asError(error),
+      }),
     );
+    const startupOutcome = await Promise.race([
+      processOutcome,
+      sessionStartOutcome,
+    ]);
+    if (startupOutcome.type !== "session-ready") {
+      sessionStartController.abort();
+      const settledSessionStart = await sessionStartOutcome;
+      if (settledSessionStart.type === "session-ready") {
+        settledSessionStart.session.close();
+      }
+      if (startupOutcome.type === "process-exit") {
+        processExitedBeforeSession = true;
+        throw new Error(
+          context.platform === "win32"
+            ? "Codex exited before runtime patching was established (original Windows exit code unavailable)."
+            : `Codex exited before runtime patching was established (exit code ${String(startupOutcome.exitCode)}).`,
+        );
+      }
+      throw startupOutcome.error;
+    }
+    session = startupOutcome.session;
     printRuntimeLaunchReady(session.patchedLabels);
     const outcome = await Promise.race([
-      childExit.then((exitCode) => ({ type: "child-exit" as const, exitCode })),
+      processOutcome,
       session.lost.then((error) => ({ type: "session-lost" as const, error })),
     ]);
+    if (outcome.type === "process-monitor-error") {
+      throw outcome.error;
+    }
     if (outcome.type === "session-lost") {
       session.close();
       session = null;
-      if (child && !child.killed) {
-        terminateRuntimeLaunchProcess(child);
+      let windowsAdmittedPathCleanupConfirmed = false;
+      if (launched) {
+        launched.stopMonitoring();
+        const termination = platformAdapter.terminateRuntimeLaunchProcess(
+          launched,
+        );
+        windowsAdmittedPathCleanupConfirmed = termination.ok;
+        if (!termination.ok) {
+          printLine(termination.message);
+        }
       }
-      printRuntimePatchSessionLost(outcome.error);
+      printRuntimePatchSessionLost(
+        outcome.error,
+        context.platform,
+        windowsAdmittedPathCleanupConfirmed,
+      );
       return printExitBlock(1).exitCode;
     }
+    const processExitConfirmed = confirmRuntimeLaunchExit(
+      platformAdapter,
+      launched,
+    );
     session.close();
     session = null;
+    if (!processExitConfirmed) {
+      return printExitBlock(1).exitCode;
+    }
     printExitCode(outcome.exitCode);
     return outcome.exitCode;
   } catch (error) {
@@ -1092,10 +1387,26 @@ export async function runRuntimeLaunch(
       session.close();
       session = null;
     }
-    if (child && !child.killed) {
-      terminateRuntimeLaunchProcess(child);
+    if (
+      launched &&
+      (!processExitedBeforeSession || context.platform === "win32")
+    ) {
+      launched.stopMonitoring();
+      const termination = platformAdapter.terminateRuntimeLaunchProcess(
+        launched,
+      );
+      if (!termination.ok) {
+        printLine(termination.message);
+        if (context.platform === "win32") {
+          printLine(
+            "Fail-closed cleanup could not be confirmed. Fully quit Codex manually before retrying.",
+          );
+        }
+      }
     }
     printLine(`Runtime launch failed: ${asError(error).message}`);
+  } finally {
+    launched?.stopMonitoring();
   }
 
   return printExitBlock(1).exitCode;

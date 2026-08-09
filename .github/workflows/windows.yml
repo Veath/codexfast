@@ -1,0 +1,112 @@
+name: Windows CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package_manager: pnpm
+            install_command: pnpm install --frozen-lockfile
+            run_command: pnpm
+          - package_manager: npm
+            install_command: npm install --ignore-scripts --no-package-lock
+            run_command: npm run
+
+    name: Windows (${{ matrix.package_manager }})
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Set up pnpm
+        if: matrix.package_manager == 'pnpm'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+
+      - name: Install dependencies
+        shell: pwsh
+        run: ${{ matrix.install_command }}
+
+      - name: Typecheck
+        shell: pwsh
+        run: ${{ matrix.run_command }} typecheck
+
+      - name: Check committed generated CLI
+        shell: pwsh
+        run: ${{ matrix.run_command }} build:check
+
+      - name: Check committed distribution bytes
+        shell: pwsh
+        run: ${{ matrix.run_command }} build:check:distribution
+
+      - name: Build generated CLI
+        shell: pwsh
+        run: ${{ matrix.run_command }} build
+
+      - name: Check rebuilt generated CLI
+        shell: pwsh
+        run: ${{ matrix.run_command }} build:check
+
+      - name: Check rebuilt distribution bytes
+        shell: pwsh
+        run: ${{ matrix.run_command }} build:check:distribution
+
+      - name: Check generated CLI drift
+        shell: pwsh
+        run: git diff --exit-code -- bin/codexfast
+
+      - name: Smoke-test generated CLI entrypoint
+        shell: pwsh
+        run: |
+          node .\bin\codexfast version
+          node .\bin\codexfast help
+
+      - name: Check supported-version documentation drift
+        shell: pwsh
+        run: ${{ matrix.run_command }} check:version-drift
+
+      # The full test command retains the legacy Bash compatibility entrypoint.
+      # This Windows suite is intentionally shell-independent.
+      - name: Run Windows portable tests
+        shell: pwsh
+        run: ${{ matrix.run_command }} test:windows
+
+      - name: Validate fixed PowerShell with Windows PowerShell 5.1
+        shell: powershell
+        run: ${{ matrix.run_command }} test:windows:powershell
+
+  full-regression:
+    name: Full runtime regression
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.0
+          run_install: false
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run full runtime and platform regression suite
+        run: pnpm test

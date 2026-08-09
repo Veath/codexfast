@@ -14,6 +14,8 @@ import {
 } from "./helpers/script-harness.mts";
 import { runGeneratedCliSuite } from "./suites/generated-cli-suite.mts";
 import { runRuntimePatchSuite } from "./suites/runtime-patch-suite.mts";
+import { runRuntimeSessionSuite } from "./suites/runtime-session-suite.mts";
+import { runWindowsPlatformSuite } from "./suites/windows-platform-suite.mts";
 
 const rootDir = resolve(process.env.CODEXFAST_TEST_ROOT ?? process.cwd());
 const tmpDir = mkdtempSync(join(tmpdir(), "codexfast-test."));
@@ -98,9 +100,11 @@ function assertOutputOrder(
   }
 }
 
-function main(): void {
+async function main(): Promise<void> {
   runGeneratedCliSuite(rootDir);
   runRuntimePatchSuite();
+  await runRuntimeSessionSuite();
+  await runWindowsPlatformSuite({ rootDir, tmpDir });
   setupStubs();
 
   const helpOutput = join(tmpDir, "help-output.txt");
@@ -1172,8 +1176,10 @@ function main(): void {
 
   const missingPgrepLaunchApp = join(tmpDir, "MissingPgrepLaunch.app");
   const missingPgrepLaunchOutput = join(tmpDir, "missing-pgrep-launch-output.txt");
+  const missingPgrepBin = join(tmpDir, "missing-pgrep-bin");
+  mkdirSync(missingPgrepBin, { recursive: true });
   prepareFakeApp(missingPgrepLaunchApp, "26.519.22136", "3003");
-  runScriptCommand(missingPgrepLaunchApp, ["launch"], missingPgrepLaunchOutput, { CODEXFAST_TEST_ALLOW_NONZERO: "1", PATH: stubBin });
+  runScriptCommand(missingPgrepLaunchApp, ["launch"], missingPgrepLaunchOutput, { CODEXFAST_TEST_ALLOW_NONZERO: "1", PATH: missingPgrepBin });
   assertContains(readOutput(missingPgrepLaunchOutput), "Action: launch", "expected launch to print an action header", readOutput(missingPgrepLaunchOutput));
   assertContains(readOutput(missingPgrepLaunchOutput), "Compatibility: supported", "expected supported launch to print compatibility", readOutput(missingPgrepLaunchOutput));
   assertContains(readOutput(missingPgrepLaunchOutput), "Cannot determine whether Codex.app is running because pgrep was not found.", "expected launch to fail closed when pgrep is unavailable", readOutput(missingPgrepLaunchOutput));
@@ -1196,7 +1202,7 @@ function main(): void {
 }
 
 try {
-  main();
+  await main();
 } finally {
   rmSync(tmpDir, { recursive: true, force: true });
 }

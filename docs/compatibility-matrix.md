@@ -1,8 +1,17 @@
 # Compatibility Matrix
 
-This file tracks verified `Codex.app` builds for `codexfast`.
+This file tracks platform-specific Codex desktop compatibility for `codexfast`.
 
-## Fields
+## Platform Status
+
+| Platform | Distribution | Status | Compatibility boundary |
+| --- | --- | --- | --- |
+| macOS | `/Applications/Codex.app` or `/Applications/ChatGPT.app` | `supported` for the exact rows below | Exact `CFBundleShortVersionString` + `CFBundleVersion` pair |
+| Windows | Official Microsoft Store/MSIX package named `OpenAI.Codex` | `experimental` | Exact MSIX identity version plus real Windows validation; macOS rows do not carry over |
+
+The npm package is installable on Windows for validation. That packaging change is not a compatibility claim: Windows launch remains blocked unless the exact package version is present in the platform-aware whitelist.
+
+## macOS Fields
 
 - `Version`: `CFBundleShortVersionString`
 - `Build`: `CFBundleVersion`
@@ -11,7 +20,7 @@ This file tracks verified `Codex.app` builds for `codexfast`.
 - `Verified`: date of direct verification
 - `Notes`: short reason or limitation
 
-## Matrix
+## macOS Matrix
 
 | Version | Build | Status | Features | Verified | Notes |
 | --- | --- | --- | --- | --- | --- |
@@ -81,9 +90,31 @@ This file tracks verified `Codex.app` builds for `codexfast`.
 | `26.730.61639` | `6234` | `supported` | Settings Fast, `/fast`, Intelligence Speed menu, official GPT-5.6, official Plugins support, Disable automatic updates | `2026-08-05` | Verified by direct installed-bundle inspection, version-filtered extracted-bundle patching, JavaScript parse checks, and regression coverage against `/Applications/ChatGPT.app` with bundle id `com.openai.codex`. Existing Fast and automatic-update signatures match `app-initial-CKNQDTeE.js` and `general-settings-2iEePJwo.js`, and the callback-aware Sparkle hook remains in `.vite/build/window-all-closed-DJDXIcEI.js`. Installed bundle hashes remained unchanged and the signature remained valid. ChatGPT was running and was not disturbed, so a fresh real runtime launch was not performed. |
 | `26.803.41515` | `6321` | `supported` | Settings Fast, `/fast`, Intelligence Speed menu, official GPT-5.6, official Plugins support, Disable automatic updates | `2026-08-08` | Verified by direct read-only inspection of `/Applications/ChatGPT.app` with bundle id `com.openai.codex`, extracted-bundle patching, JavaScript parse checks, and regression coverage. Renderer targets match `app-initial-Biw83Aiz.js` and `general-settings-BseQIe_j.js`; main-process schema copies match `child-process-snapshot-worker.js`, `src-Cz_uUmVl.js`, and `worker.js`. The active updater in `window-all-closed-9IR0zY5D.js` uses a nested callback/interval signature handled by the new source-signature hook. GPT-5.6 and Plugins use official app paths. Installed bundle files were not modified. |
 
+## Windows Store/MSIX Matrix
+
+No exact Windows package version is currently marked `supported`. The x64 package below has passed offline bundle patching and parse validation only; Windows work remains experimental until an exact `OpenAI.Codex` package version completes the real-machine checklist in [`real-app-validation.md`](./real-app-validation.md).
+
+When a Windows row is added, use these fields:
+
+- `Package`: AppX package name; currently expected to be `OpenAI.Codex`
+- `Version`: exact MSIX identity/package version
+- `Architecture`: validated package architecture such as `x64` or `arm64`
+- `Application ID / AUMID`: exact package family and manifest application identity used for activation
+- `Status`: `investigating`, `offline-validated`, `supported`, or `unsupported`
+- `Features`: only features actually validated on Windows; the first support claim requires the complete Fast chain
+- `Validation date`: most recent validation date for the row's current status; an `offline-validated` date does not imply real Windows verification
+- `Notes`: inspection source, launch result, request-tier evidence, cleanup result, and limitations
+
+| Package | Version | Architecture | Application ID / AUMID | Status | Features | Validation date | Notes |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `OpenAI.Codex` | `26.803.5235.0` | `x64` | Package family `OpenAI.Codex_2p2nqsd0c76g0`; application ID `App`; AUMID `OpenAI.Codex_2p2nqsd0c76g0!App` | `offline-validated` | Complete Fast patch set matched offline; no runtime feature claim | `2026-08-09` | Strict compatibility key `win32:x64:26.803.5235+0` admits this exact package to the experimental launcher for real-machine validation; it is not yet a support claim. Admission also requires publisher ID `2p2nqsd0c76g0`, signature kind `Store`, manifest executable `app/ChatGPT.exe`, and entry point `Windows.FullTrustApplication`. Official x64 MSIX SHA-256 `f28ad0e94b75e3273c1e8ab87fdef15a2395fb9126260e8b623ce73dad348558`. Direct offline bundle inspection matched all six required Fast labels, applied the Windows-filtered patches, and passed JavaScript parse checks. AppX API discovery, AUMID activation, activation PID/start-time/path verification, CDP attachment, real UI behavior, `service_tier: "priority"`, identity-guarded cleanup, and package integrity remain unverified on Windows. arm64 is not validated. Automatic-update control is out of scope. |
+
 ## Update Rules
 
 - Add a row only after direct bundle inspection and regression updates.
 - If a build is not whitelisted yet, mark it `investigating` or `unsupported`.
 - When support status changes, update both this file and the whitelist in `src/supported-app-versions.mts`.
 - Numeric GPT-5.6 threshold behavior does not relax the whitelist: every later supported build still requires its own exact version/build row and whitelist entry.
+- Keep macOS and Windows whitelist entries platform-specific. Never infer Windows support from a matching or similar macOS version number.
+- A Windows row may be `investigating` while metadata is being collected and `offline-validated` after package/manifest inspection, complete required-target patching, and JavaScript parse checks. It may be `supported` only after AppX identity/API discovery, AUMID/CDP launch, complete Fast-chain behavior, request-level priority service-tier evidence, identity-guarded activation-error and session-loss cleanup, post-readiness root-exit exact-path confirmation, and installed-package integrity checks pass on a real Windows machine.
+- Windows support is Store/MSIX-only, and the macOS automatic-update feature must not be listed in a Windows row.

@@ -6,6 +6,27 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+### Added
+
+- Added an experimental Windows runtime-launch path for the official Microsoft Store/MSIX package named `OpenAI.Codex`, including AppX API package/manifest discovery, exact Store package-family/publisher/signature/entry-point admission, AUMID activation with loopback CDP arguments, and fail-closed exact-version gating.
+- Added Windows Store/MSIX validation commands, complete Fast-chain acceptance requirements, activation PID/start-time/executable-path verification, identity-guarded activation-error and session-loss cleanup checks, and installed-package safety boundaries.
+- Recorded the official x64 `OpenAI.Codex` MSIX `26.803.5235.0` as offline-validated after manifest inspection, all six required Fast patches, and JavaScript parse checks. Its `win32:x64:26.803.5235+0` key admits experimental launch validation, but real Windows AUMID/CDP launch, UI/request E2E, cleanup, integrity, and arm64 remain unverified.
+
+### Changed
+
+- Allowed the npm package to install on `win32` so real Windows validation can run through the normal `npx codexfast launch` entrypoint. Installation does not imply compatibility with an unlisted Windows package version.
+- Kept the macOS automatic-update Settings row and Sparkle main-process hook out of the Windows path; Store/Windows update behavior remains unchanged.
+- Avoided direct Node reads of protected WindowsApps manifest files by obtaining manifest metadata through `Get-AppxPackageManifest`; cleanup never broadens to image-name termination when process identity cannot be revalidated.
+- Scoped Windows running detection to the admitted package's exact executable path instead of the broad `ChatGPT.exe` image name. Activation failures without a verified authoritative PID now use short-interval bounded snapshots only for residual-process diagnostics; snapshot-only identities are never terminated, empty snapshots remain cleanup-unconfirmed, and the user must fully quit any residual Codex process manually.
+- Hardened Windows runtime lifecycle handling with immediate process-monitor rejection handlers, cancellable asynchronous CIM polling, startup process/session races that fail closed, OS-allocated loopback CDP ports, strict same-host/same-port WebSocket validation, and removal of the published `running=false` test bypass.
+- Rejected activation PIDs that predate the current COM activation attempt or whose Windows-native parsed command line does not contain exactly one selected CDP port argument, exactly one loopback-address argument, and no other `--remote-debugging-*` switch. Session-loss cleanup now terminates the exact native verified process handle instead of issuing a second PID-based kill, waits for the guarded root process to exit, and requires a bounded exact-path confirmation snapshot to be empty before reporting cleanup success; differently named helper executables remain outside that confirmation.
+- Cancelled in-flight CDP reconnect delays, HTTP requests, and WebSocket handshakes when a runtime session closes, kept Windows early-root-exit startup failures on the verified cleanup/admitted-path confirmation path, treated monitored PID/start-time/path drift as cleanup-unconfirmed instead of a clean exit, and required read-only admitted-path confirmation before accepting a normal authoritative-root disappearance after session readiness.
+- Added Windows npm/pnpm CI, Windows PowerShell 5.1 AST/C# compilation checks, generated-entrypoint smoke tests, and a full runtime/platform regression job.
+
+### Known Limitations
+
+- Windows support remains experimental and Store/MSIX-only. No exact Windows package version is considered supported until it completes real Windows AUMID/CDP launch, the full Settings Fast + `/fast` + Speed + priority request path, session-loss cleanup, and package-integrity validation.
+
 ## [0.70.0] - 2026-08-08
 
 ### Added

@@ -1,22 +1,45 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { SUPPORTED_APP_VERSIONS } from "../src/supported-app-versions.mts";
 
 type VersionBuild = {
   key: string;
+  platform: "darwin" | "win32";
+  architecture: string | null;
   version: string;
   build: string;
+  displayVersion: string;
 };
 
-const rootDir = resolve(new URL("..", import.meta.url).pathname);
+const rootDir = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const sourceVersions = Object.keys(SUPPORTED_APP_VERSIONS).map(parseVersionKey);
 
 function parseVersionKey(key: string): VersionBuild {
+  const windowsMatch = /^win32:([^:]+):([^+]+)\+([^+]+)$/u.exec(key);
+  if (windowsMatch) {
+    const [, architecture, version, build] = windowsMatch;
+    return {
+      key,
+      platform: "win32",
+      architecture: architecture.toLowerCase(),
+      version,
+      build,
+      displayVersion: `${version}.${build}`,
+    };
+  }
   const [version, build] = key.split("+");
   if (!version || !build) {
     throw new Error(`Invalid supported version key: ${key}`);
   }
-  return { key, version, build };
+  return {
+    key,
+    platform: "darwin",
+    architecture: null,
+    version,
+    build,
+    displayVersion: version,
+  };
 }
 
 function readRepoFile(path: string): string {
@@ -26,10 +49,30 @@ function readRepoFile(path: string): string {
 function parseCompatibilityMatrixKeys(markdown: string): Set<string> {
   const keys = new Set<string>();
   for (const line of markdown.split(/\r?\n/)) {
-    const match = line.match(/^\| `([^`]+)` \| `([^`]+)` \| `supported` \|/);
-    if (match) {
-      keys.add(`${match[1]}+${match[2]}`);
+    const macMatch = line.match(
+      /^\| `([^`]+)` \| `([^`]+)` \| `supported` \|/u,
+    );
+    if (macMatch) {
+      keys.add(`${macMatch[1]}+${macMatch[2]}`);
+      continue;
     }
+    const windowsMatch = line.match(
+      /^\| `OpenAI\.Codex` \| `([^`]+)` \| `([^`]+)` \| .* \| `(offline-validated|supported)` \|/u,
+    );
+    if (!windowsMatch) {
+      continue;
+    }
+    const packageVersion = /^(\d+(?:\.\d+){2})\.(\d+)$/u.exec(
+      windowsMatch[1],
+    );
+    if (!packageVersion) {
+      throw new Error(
+        `Invalid Windows package version in compatibility matrix: ${windowsMatch[1]}`,
+      );
+    }
+    keys.add(
+      `win32:${windowsMatch[2].toLowerCase()}:${packageVersion[1]}+${packageVersion[2]}`,
+    );
   }
   return keys;
 }
@@ -51,9 +94,14 @@ function assertSetEquals(name: string, actual: Set<string>, expected: Set<string
 
 function assertReadmeMentions(path: string, versions: VersionBuild[]): void {
   const content = readRepoFile(path);
-  for (const { key, version, build } of versions) {
-    if (!content.includes(version) || !content.includes(build)) {
-      console.error(`${path} does not mention supported build ${key}`);
+  for (const entry of versions) {
+    const mentionsVersion = content.includes(entry.displayVersion);
+    const mentionsBuild = entry.platform === "win32" ||
+      content.includes(entry.build);
+    const mentionsArchitecture = entry.architecture == null ||
+      content.toLowerCase().includes(entry.architecture);
+    if (!mentionsVersion || !mentionsBuild || !mentionsArchitecture) {
+      console.error(`${path} does not mention whitelisted build ${entry.key}`);
       process.exitCode = 1;
     }
   }
