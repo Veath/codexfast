@@ -32,3 +32,9 @@ export function assertDistributionEntrypoint(source: string): void {
     throw new Error("bin/codexfast must use LF line endings only.");
   }
 }
+
+export function finalizeDistributionEntrypoint(source: string): string {
+  const normalized = normalizeLineEndings(source);
+  assertDistributionEntrypoint(normalized);
+  return normalized;
+}

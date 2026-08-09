@@ -5,6 +5,7 @@ import { posix, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   assertDistributionEntrypoint,
+  finalizeDistributionEntrypoint,
   inlineSupportedAppVersions,
   normalizeLineEndings,
 } from "../../scripts/build-codexfast-utils.mts";
@@ -178,6 +179,13 @@ export function runBuildScriptSuite(): void {
     normalizeLineEndings("first\r\nsecond\rthird\n"),
     "first\nsecond\nthird\n",
     "expected generated-file checks to ignore checkout line-ending differences",
+  );
+  assert.equal(
+    finalizeDistributionEntrypoint(
+      "#!/usr/bin/env node\r\nconsole.log('portable');\r\n",
+    ),
+    "#!/usr/bin/env node\nconsole.log('portable');\n",
+    "expected generated distribution bytes to use LF after a CRLF checkout",
   );
 
   assert.doesNotThrow(() =>
