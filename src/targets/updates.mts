@@ -4,7 +4,7 @@ const SETTINGS_SCHEMA_NEEDLE = "preventSleepWhileRunning";
 const GENERAL_SETTINGS_NEEDLE = "settings.general.power.preventSleepWhileRunning.description";
 
 const SETTINGS_SCHEMA_GUARDED_SIGNATURE =
-  /(preventSleepWhileRunning:([A-Za-z_$][\w$]*)\(\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\w$]*)\}\),)/;
+  /(preventSleepWhileRunning:([A-Za-z_$][\w$]*)\(\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\w$]*)\}\),)(?!disableAutomaticUpdates:)/;
 const SETTINGS_SCHEMA_PATCHED_SIGNATURE =
   /disableAutomaticUpdates:[A-Za-z_$][\w$]*\(\{agentAccess:`read-write`,default:!1,description:`Whether automatic update checks and forced installs are disabled`,key:`disableAutomaticUpdates`,schema:[A-Za-z_$][\w$]*\}\)/;
 

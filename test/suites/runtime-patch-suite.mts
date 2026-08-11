@@ -122,11 +122,19 @@ export function runRuntimePatchSuite(): void {
 
   const mainProcessSettingsSchemaBody =
     "localeOverride:K({agentAccess:`read-write`,default:null,description:`Explicit locale override`,key:`localeOverride`,schema:BS}),preventSleepWhileRunning:K({agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:RS}),keepRemoteControlAwakeWhilePluggedIn:K({agentAccess:`read-write`,default:!1,description:`Whether remote control keeps this computer awake while plugged in`,key:`keepRemoteControlAwakeWhilePluggedIn`,schema:RS})";
+  const patchedMainProcessSettingsSchema =
+    patchMainProcessSettingsSchemaSource(mainProcessSettingsSchemaBody);
   assertContains(
-    patchMainProcessSettingsSchemaSource(mainProcessSettingsSchemaBody),
+    patchedMainProcessSettingsSchema,
     "disableAutomaticUpdates:K({agentAccess:`read-write`,default:!1,description:`Whether automatic update checks and forced installs are disabled`,key:`disableAutomaticUpdates`,schema:RS})",
     "expected main-process settings schema patch to let the backend persist disableAutomaticUpdates",
   );
+  if (
+    patchMainProcessSettingsSchemaSource(patchedMainProcessSettingsSchema) !==
+      patchedMainProcessSettingsSchema
+  ) {
+    fail("expected repeated main-process settings schema patching to remain idempotent");
+  }
 
   const mainProcessUpdaterBody =
     "this.updater={checkForUpdates:async()=>{c.checkForUpdates()},installUpdatesIfAvailable:async()=>{c.installUpdatesIfAvailable()}};let f=JB();f>0&&setInterval(d,f).unref(),d()}resolveMacSparkleFeedUrl(){return n.o(`codexSparkleFeedUrl`)}";
@@ -323,6 +331,13 @@ export function runRuntimePatchSuite(): void {
     "Disable automatic updates schema",
     "expected settings schema patch to report its target",
   );
+  const repeatedSettingsSchemaResult = applyRuntimePatchesToBody(
+    ".vite/build/src-UHYOvFd-.js",
+    settingsSchemaResult.content,
+  );
+  if (repeatedSettingsSchemaResult.content !== settingsSchemaResult.content) {
+    fail("expected repeated runtime settings schema patching to remain idempotent");
+  }
 
   const generalSettingsBody =
     "function Kr(){let e=(0,$.c)(10),t=a(s),{platform:n}=Ee(),r=n!==`windows`,i=N(),o=z(j.preventSleepWhileRunning);if(!r)return null;let c,l;e[0]===Symbol.for(`react.memo_cache_sentinel`)?(c=(0,Z.jsx)(P,{...G.preventSleepWhileRunning}),l=(0,Z.jsx)(P,{id:`settings.general.power.preventSleepWhileRunning.description`,defaultMessage:`Keep your computer awake while Codex is running a chat`,description:`Description for preventing sleep while a chat runs`}),e[0]=c,e[1]=l):(c=e[0],l=e[1]);let u=o??!1,d;e[2]===t?d=e[3]:(d=e=>{B(t,j.preventSleepWhileRunning,e)},e[2]=t,e[3]=d);let f;e[4]===i?f=e[5]:(f=i.formatMessage(G.preventSleepWhileRunning),e[4]=i,e[5]=f);let p;return e[6]!==u||e[7]!==d||e[8]!==f?(p=(0,Z.jsx)(J,{label:c,description:l,control:(0,Z.jsx)(q,{checked:u,onChange:d,ariaLabel:f})}),e[6]=u,e[7]=d,e[8]=f,e[9]=p):p=e[9],p}";

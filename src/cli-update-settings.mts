@@ -15,7 +15,7 @@ const MAIN_PROCESS_AUTOMATIC_DOWNLOAD_CONDITIONAL_GATE_SIGNATURE =
 const MAIN_PROCESS_FORCED_UPDATE_SCHEDULE_SIGNATURE =
   /scheduleForcedUpdateInstall\(\)\{this\.forcedUpdateTimer&&=\(clearTimeout\(this\.forcedUpdateTimer\),null\);/;
 const MAIN_PROCESS_SETTINGS_SCHEMA_SIGNATURE =
-  /(preventSleepWhileRunning:([A-Za-z_$][\w$]*)\(\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\w$]*)\}\),)/;
+  /(preventSleepWhileRunning:([A-Za-z_$][\w$]*)\(\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\w$]*)\}\),)(?!disableAutomaticUpdates:)/;
 const MAIN_PROCESS_SETTINGS_SCHEMA_REPLACEMENT =
   "$1disableAutomaticUpdates:$2({agentAccess:`read-write`,default:!1,description:`Whether automatic update checks and forced installs are disabled`,key:`disableAutomaticUpdates`,schema:$3}),";
 const MAIN_PROCESS_AUTOMATIC_UPDATE_READER_EXPRESSION =
@@ -207,7 +207,7 @@ export function createMainProcessAutomaticUpdateHookSource(): string {
     "function automaticDownloadConditionalGateReplacement(_match, enabledVar, setAutomaticBackgroundDownloadsEnabledCall, productionAppcastVar) {",
     "  return `this.setAutomaticBackgroundDownloadsEnabledForMac=${enabledVar}=>{${setAutomaticBackgroundDownloadsEnabledCall},${enabledVar}&&!${productionAppcastVar}&&codexfastAutomaticUpdateCheck()},this.updater=`;",
     "}",
-    "const settingsSchemaSignature = /(preventSleepWhileRunning:([A-Za-z_$][\\w$]*)\\(\\{agentAccess:`read-write`,default:!1,description:`Whether the machine stays awake while Codex is running`,key:`preventSleepWhileRunning`,schema:([A-Za-z_$][\\w$]*)\\}\\),)/;",
+    `const settingsSchemaSignature = ${MAIN_PROCESS_SETTINGS_SCHEMA_SIGNATURE.toString()};`,
     "const settingsSchemaReplacement = \"$1disableAutomaticUpdates:$2({agentAccess:`read-write`,default:!1,description:`Whether automatic update checks and forced installs are disabled`,key:`disableAutomaticUpdates`,schema:$3}),\";",
     "const viteBuildFilePattern = /[\\\\/]\\.vite[\\\\/]build[\\\\/][^\\\\/]+\\.js$/;",
     "Module._extensions[\".js\"] = function codexfastMainProcessHook(module, filename) {",
