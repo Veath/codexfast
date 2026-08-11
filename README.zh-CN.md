@@ -16,6 +16,41 @@
 npx codexfast launch
 ```
 
+## Custom API 的 OAuth 登录模式
+
+这种配置可以替代 `codexfast`，在使用 custom API 的同时保留 Codex 全部能力。
+
+启动 custom API 服务，然后使用任意 ChatGPT 账户（包括免费账户）登录 Codex CLI 或 Codex.app，并将以下内容写入 `~/.codex/config.toml`：
+
+```toml
+model = "gpt-5.6-sol" # 或者是 gpt-5.6-terra、gpt-5.6-luna，你也可以使用任何我们支持的模型
+model_provider = "custom"
+
+# 无需确认是否执行操作，危险指令，初次接触 Codex 不建议开启，移除 # 号即可开启
+# approval_policy = "never"
+
+# 沙箱模式超高权限，危险指令，初次接触 Codex 不建议开启，移除 # 号即可开启
+# sandbox_mode = "danger-full-access"
+
+model_reasoning_effort = "xhigh"
+plan_mode_reasoning_effort = "xhigh"
+
+experimental_realtime_webrtc_call_base_url = "http://127.0.0.1:8317/v1" # Codex App 语音聊天功能需要使用 WebRTC，若不使用语音聊天功能，可不配置此项
+experimental_realtime_ws_base_url = "http://127.0.0.1:8317/v1" # Codex App 语音聊天功能需要使用 WebRTC，若不使用语音聊天功能，可不配置此项
+
+[model_providers.custom]
+base_url = "http://127.0.0.1:8317/v1"
+experimental_bearer_token = "sk-dummy" # 这里修改为你在 CLIProxyAPI 中为 Codex 创建的 API Key
+name = "OpenAI"
+wire_api = "responses"
+requires_openai_auth = true
+supports_websockets = true # 按需要选择是否开启 WebSockets
+```
+
+设置 `requires_openai_auth = true` 后，Codex 仍通过官方 ChatGPT OAuth 流程保持登录，同时将模型请求发送到配置的 custom provider。这样不会触发纯 API 登录模式下的能力裁剪；只要当前 Codex build 和 custom API 服务支持对应请求路径，官方 Codex 功能都可以继续使用。
+
+此模式不需要手动修改 `~/.codex/auth.json`。
+
 最新完成本地验证的版本：`ChatGPT.app` / `Codex.app` `26.803.61601`（`build 6396`）。
 
 另已验证支持 `ChatGPT.app` / `Codex.app` `26.803.41515`（`build 6321`）、`26.730.61639`（`build 6234`）和 `26.730.61309`（`build 6223`）。

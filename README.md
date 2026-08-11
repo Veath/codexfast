@@ -16,6 +16,41 @@
 npx codexfast launch
 ```
 
+## OAuth Login Mode for Custom API
+
+This configuration can replace `codexfast`, preserving the full Codex feature set while using a custom API.
+
+Start the custom API service, sign in to Codex CLI or Codex.app with any ChatGPT account, and add the following to `~/.codex/config.toml`:
+
+```toml
+model = "gpt-5.6-sol" # Or gpt-5.6-terra, gpt-5.6-luna, or any other supported model
+model_provider = "custom"
+
+# Execute commands without confirmation. Dangerous; not recommended for new Codex users. Remove # to enable.
+# approval_policy = "never"
+
+# Grant the sandbox unrestricted access. Dangerous; not recommended for new Codex users. Remove # to enable.
+# sandbox_mode = "danger-full-access"
+
+model_reasoning_effort = "xhigh"
+plan_mode_reasoning_effort = "xhigh"
+
+experimental_realtime_webrtc_call_base_url = "http://127.0.0.1:8317/v1" # Codex.app voice chat requires WebRTC; omit this if voice chat is not needed
+experimental_realtime_ws_base_url = "http://127.0.0.1:8317/v1" # Codex.app voice chat requires WebRTC; omit this if voice chat is not needed
+
+[model_providers.custom]
+base_url = "http://127.0.0.1:8317/v1"
+experimental_bearer_token = "sk-dummy" # Replace with the API key created for Codex in CLIProxyAPI
+name = "OpenAI"
+wire_api = "responses"
+requires_openai_auth = true
+supports_websockets = true # Enable WebSockets as needed
+```
+
+With `requires_openai_auth = true`, Codex stays authenticated through the official ChatGPT OAuth flow while model requests are sent to the configured custom provider. This avoids the capability restrictions of pure API login mode, so the official Codex feature set remains available when the current Codex build and custom API service support the corresponding request path.
+
+No manual edit to `~/.codex/auth.json` is needed for this mode.
+
 Latest verified local build: `ChatGPT.app` / `Codex.app` `26.803.61601` (`build 6396`).
 
 Also verified for `ChatGPT.app` / `Codex.app` `26.803.41515` (`build 6321`), `26.730.61639` (`build 6234`), and `26.730.61309` (`build 6223`).
