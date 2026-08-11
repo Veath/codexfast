@@ -2,25 +2,11 @@
 
 [中文说明](./README.zh-CN.md)
 
-**A macOS runtime launcher for OpenAI `Codex.app` that re-enables hidden custom API features on verified compatible builds without modifying the installed app bundle.**
-
-`codexfast` launches Codex with temporary runtime patches for the current session. It keeps the original `app.asar`, `Info.plist`, app bundle, and app signature untouched.
-
-- **Fast settings** control in Settings
-- **Composer `/fast`** slash command
-- **Speed submenu** in the composer
-- **GPT-5.5 and GPT-5.6 model catalog** compatibility for custom API users, including injected Sol/Terra/Luna metadata on older supported builds and the official GPT-5.6 path on current builds
-- **Disable automatic updates** switch in Settings > General
-
-```bash
-npx codexfast launch
-```
-
 ## OAuth Login Mode for Custom API
 
 This configuration can replace `codexfast`, preserving the full Codex feature set while using a custom API.
 
-Start the custom API service, sign in to Codex CLI or Codex.app with any ChatGPT account, and add the following to `~/.codex/config.toml`:
+Sign in to Codex CLI or Codex.app with any ChatGPT account, and add the following to `~/.codex/config.toml`:
 
 ```toml
 model = "gpt-5.6-sol" # Or gpt-5.6-terra, gpt-5.6-luna, or any other supported model
@@ -50,6 +36,20 @@ supports_websockets = true # Enable WebSockets as needed
 With `requires_openai_auth = true`, Codex stays authenticated through the official ChatGPT OAuth flow while model requests are sent to the configured custom provider. This avoids the capability restrictions of pure API login mode, so the official Codex feature set remains available when the current Codex build and custom API service support the corresponding request path.
 
 No manual edit to `~/.codex/auth.json` is needed for this mode.
+
+**A macOS runtime launcher for OpenAI `Codex.app` that re-enables hidden custom API features on verified compatible builds without modifying the installed app bundle.**
+
+`codexfast` launches Codex with temporary runtime patches for the current session. It keeps the original `app.asar`, `Info.plist`, app bundle, and app signature untouched.
+
+- **Fast settings** control in Settings
+- **Composer `/fast`** slash command
+- **Speed submenu** in the composer
+- **GPT-5.5 and GPT-5.6 model catalog** compatibility for custom API users, including injected Sol/Terra/Luna metadata on older supported builds and the official GPT-5.6 path on current builds
+- **Disable automatic updates** switch in Settings > General
+
+```bash
+npx codexfast launch
+```
 
 Latest verified local build: `ChatGPT.app` / `Codex.app` `26.803.61601` (`build 6396`).
 
