@@ -37,6 +37,8 @@ With `requires_openai_auth = true`, Codex stays authenticated through the offici
 
 No manual edit to `~/.codex/auth.json` is needed for this mode.
 
+---
+
 **A macOS runtime launcher for OpenAI `Codex.app` that re-enables hidden custom API features on verified compatible builds without modifying the installed app bundle.**
 
 `codexfast` launches Codex with temporary runtime patches for the current session. It keeps the original `app.asar`, `Info.plist`, app bundle, and app signature untouched.

@@ -37,6 +37,8 @@ supports_websockets = true # 按需要选择是否开启 WebSockets
 
 此模式不需要手动修改 `~/.codex/auth.json`。
 
+---
+
 **一个面向 OpenAI `Codex.app` 的 macOS runtime launcher，用于在已验证兼容的版本上临时启用 custom API 用户需要的隐藏能力，并且不修改已安装 app bundle。**
 
 `codexfast` 会启动一个带 runtime patch 的 Codex 会话。它不会修改原始 `app.asar`、`Info.plist`、app bundle 或 app 签名。
