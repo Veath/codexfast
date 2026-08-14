@@ -53,9 +53,9 @@ No manual edit to `~/.codex/auth.json` is needed for this mode.
 npx codexfast launch
 ```
 
-Latest verified local build: `ChatGPT.app` / `Codex.app` `26.803.61601` (`build 6396`).
+Latest verified local build: `ChatGPT.app` / `Codex.app` `26.810.41047` (`build 6570`).
 
-Also verified for `ChatGPT.app` / `Codex.app` `26.803.41515` (`build 6321`), `26.730.61639` (`build 6234`), and `26.730.61309` (`build 6223`).
+Also verified for `ChatGPT.app` / `Codex.app` `26.803.61601` (`build 6396`), `26.803.41515` (`build 6321`), `26.730.61639` (`build 6234`), and `26.730.61309` (`build 6223`).
 
 Also verified for `ChatGPT.app` / `Codex.app` `26.727.51351` (`build 6119`), `26.727.40816` (`build 6067`), `26.721.81911` (`build 5973`), `26.721.41059` (`build 5848`), `26.721.31836` (`build 5828`), `26.721.30844` (`build 5813`), `26.715.72359` (`build 5718`), and `26.715.72028` (`build 5706`).
 
