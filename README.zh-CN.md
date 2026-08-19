@@ -53,9 +53,9 @@ supports_websockets = true # 按需要选择是否开启 WebSockets
 npx codexfast launch
 ```
 
-最新完成本地验证的版本：`ChatGPT.app` / `Codex.app` `26.810.41047`（`build 6570`）。
+最新完成本地验证的版本：`ChatGPT.app` / `Codex.app` `26.814.41407`（`build 6720`）。该版本保留 runtime automatic-update hook 和 settings schema，但 renderer 不提供可注入的 `Disable automatic updates` 设置行。
 
-另已验证支持 `ChatGPT.app` / `Codex.app` `26.803.61601`（`build 6396`）、`26.803.41515`（`build 6321`）、`26.730.61639`（`build 6234`）和 `26.730.61309`（`build 6223`）。
+另已验证支持 `ChatGPT.app` / `Codex.app` `26.810.52044`（`build 6662`）、`26.810.41047`（`build 6570`）、`26.803.61601`（`build 6396`）、`26.803.41515`（`build 6321`）、`26.730.61639`（`build 6234`）和 `26.730.61309`（`build 6223`）。
 
 另已验证支持 `ChatGPT.app` / `Codex.app` `26.727.51351`（`build 6119`）、`26.727.40816`（`build 6067`）、`26.721.81911`（`build 5973`）、`26.721.41059`（`build 5848`）、`26.721.31836`（`build 5828`）、`26.721.30844`（`build 5813`）、`26.715.72359`（`build 5718`）和 `26.715.72028`（`build 5706`）。
 

@@ -28,6 +28,10 @@ const SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_GUARDED_SIGNATURE =
   /(async function [A-Za-z_$][\w$]*\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)\{let ([A-Za-z_$][\w$]*)=await [A-Za-z_$][\w$]*\(\2,\3\);if\(\4!==`chatgpt`\)return)!1(;let [A-Za-z_$][\w$]*=await [A-Za-z_$][\w$]*\(\3,\{priority:`critical`\}\);return \2\.query\.setData\([A-Za-z_$][\w$]*,\{authMethod:\4,hostId:\3\},[A-Za-z_$][\w$]*\),[A-Za-z_$][\w$]*\.requirements\?\.featureRequirements\?\.fast_mode!==!1\})/;
 const SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_PATCHED_SIGNATURE =
   /(async function [A-Za-z_$][\w$]*\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)\{let ([A-Za-z_$][\w$]*)=await [A-Za-z_$][\w$]*\(\2,\3\);if\(\4!==`chatgpt`\)return)!0(;let [A-Za-z_$][\w$]*=await [A-Za-z_$][\w$]*\(\3,\{priority:`critical`\}\);return \2\.query\.setData\([A-Za-z_$][\w$]*,\{authMethod:\4,hostId:\3\},[A-Za-z_$][\w$]*\),[A-Za-z_$][\w$]*\.requirements\?\.featureRequirements\?\.fast_mode!==!1\})/;
+const SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_26810_GUARDED_SIGNATURE =
+  /(async function [A-Za-z_$][\w$]*\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)\{let ([A-Za-z_$][\w$]*)=await [A-Za-z_$][\w$]*\(\2,\3\);if\(\4!==`chatgpt`\)return)!1(;let [A-Za-z_$][\w$]*=await [A-Za-z_$][\w$]*\(\2,\3,\{priority:`critical`\}\);return \2\.query\.setData\([A-Za-z_$][\w$]*,\{authMethod:\4,hostId:\3\},[A-Za-z_$][\w$]*\),[A-Za-z_$][\w$]*\.requirements\?\.featureRequirements\?\.fast_mode!==!1\})/;
+const SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_26810_PATCHED_SIGNATURE =
+  /(async function [A-Za-z_$][\w$]*\(([A-Za-z_$][\w$]*),([A-Za-z_$][\w$]*)\)\{let ([A-Za-z_$][\w$]*)=await [A-Za-z_$][\w$]*\(\2,\3\);if\(\4!==`chatgpt`\)return)!0(;let [A-Za-z_$][\w$]*=await [A-Za-z_$][\w$]*\(\2,\3,\{priority:`critical`\}\);return \2\.query\.setData\([A-Za-z_$][\w$]*,\{authMethod:\4,hostId:\3\},[A-Za-z_$][\w$]*\),[A-Za-z_$][\w$]*\.requirements\?\.featureRequirements\?\.fast_mode!==!1\})/;
 const SERVICE_TIER_CONVERSATION_FALLBACK_GUARDED_SIGNATURE =
   /(let [^;]+,[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*!=null&&[A-Za-z_$][\w$]*\?\.serviceTier(?:!==void 0|!=null)\?[^;]+;[A-Za-z_$][\w$]*=[A-Za-z_$][\w$]*!=null&&\([A-Za-z_$][\w$]*\?\.serviceTier(?:!==void 0|!=null)\|\|[A-Za-z_$][\w$]*\?\.params\.serviceTier(?:!==void 0|!=null)\)\?[^,]+:[A-Za-z_$][\w$]*\([^,]+,[A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*\),)/;
 const SERVICE_TIER_CONVERSATION_FALLBACK_PATCHED_SIGNATURE =
@@ -196,6 +200,14 @@ export const SPEED_TARGET_SPECS = defineTargetSpecs(
     needle: SERVICE_TIER_REQUEST_ALLOWANCE_NEEDLE,
     guardedSignature: SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_GUARDED_SIGNATURE,
     patchedSignature: SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_PATCHED_SIGNATURE,
+    applyReplacement: "$1!0$5",
+  },
+  {
+    id: "speed-service-tier-request-allowance-26810",
+    label: "Speed service tier request allowance",
+    needle: SERVICE_TIER_REQUEST_ALLOWANCE_NEEDLE,
+    guardedSignature: SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_26810_GUARDED_SIGNATURE,
+    patchedSignature: SERVICE_TIER_REQUEST_ALLOWANCE_HELPER_26810_PATCHED_SIGNATURE,
     applyReplacement: "$1!0$5",
   },
   {

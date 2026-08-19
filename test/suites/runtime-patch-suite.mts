@@ -878,6 +878,27 @@ export function runRuntimePatchSuite(): void {
     "expected 26.707 request service tier allowance patch to report its target",
   );
 
+  const serviceTierRequestAllowance26810Body = "Failed to read service tier for request;async function YHr(e,t){let n=await KHr(e,t);if(n!==`chatgpt`)return!1;let r=await N2t(e,t,{priority:`critical`});return e.query.setData(rx,{authMethod:n,hostId:t},r),r.requirements?.featureRequirements?.fast_mode!==!1}";
+  const serviceTierRequestAllowance26810Result = applyRuntimePatchesToBody(
+    "webview/assets/app-initial-BCLYDefw.js",
+    serviceTierRequestAllowance26810Body,
+  );
+  assertContains(
+    serviceTierRequestAllowance26810Result.content,
+    "if(n!==`chatgpt`)return!0",
+    "expected 26.810 request service tier helper to allow non-ChatGPT custom providers while preserving ChatGPT fast_mode checks",
+  );
+  assertNotContains(
+    serviceTierRequestAllowance26810Result.content,
+    "if(n!==`chatgpt`)return!1",
+    "expected 26.810 request service tier helper not to block custom providers before reading settings",
+  );
+  assertContains(
+    serviceTierRequestAllowance26810Result.patchedLabels.join("\n"),
+    "Speed service tier request allowance",
+    "expected 26.810 request service tier allowance patch to report its target",
+  );
+
   const serviceTierConversationFallback26608Body = "serviceTierForRequest;function F(e){let r=(0,A.c)(29),a=e===void 0?null:e,d=n(i),f=k(a),{modelSettings:h}=E(a),_;r[0]===f.hostId?_=r[1]:(_={hostId:f.hostId},r[0]=f.hostId,r[1]=_);let{data:x,isLoading:S}=O(_),C=t(o,a),w=t(g,a),D=M(f.hostId),P=N(f.hostId,D.activeProfileForWrite),F;r[2]===f.hostId?F=r[3]:(F={hostId:f.hostId},r[2]=f.hostId,r[3]=F);let{isServiceTierAllowed:I}=j(F),L,R,z,B,V;if(r[4]!==a||r[5]!==S||r[6]!==I||r[7]!==C||r[8]!==w||r[9]!==x?.models||r[10]!==h.isLoading||r[11]!==h.model||r[12]!==d||r[13]!==P||r[14]!==D.isLoading||r[15]!==D.serviceTier){let e=T(x?.models,h.model),t=a!=null&&C?.serviceTier!==void 0?C.serviceTier:a!=null&&w?.params.serviceTier!==void 0?w.params.serviceTier:D.serviceTier;z=a!=null&&(C?.serviceTier!==void 0||w?.params.serviceTier!==void 0)?I?t:null:l(e,t,I),R=z==null?null:m(e,z);let n=c(z??null);L=h.isLoading||S||D.isLoading,B=async(e,t)=>{let r=s(e)!==D.serviceTier,i=a!=null&&e!==C?.serviceTier;try{i&&await p(`update-thread-settings-for-next-turn`,{conversationId:a,threadSettings:{serviceTier:e}}),r&&await P(e)}catch(e){let t=e;v.error(`Failed to set service tier`,{safe:{},sensitive:{error:t}});return}if(r||i){let r=c(e);if(n===r)return;b(d,y,{previousServiceTier:n,serviceTier:r,source:t})}},V=u(e),r[4]=a,r[5]=S,r[6]=I,r[7]=C,r[8]=w,r[9]=x?.models,r[10]=h.isLoading,r[11]=h.model,r[12]=d,r[13]=P,r[14]=D.isLoading,r[15]=D.serviceTier,r[16]=L,r[17]=R,r[18]=z,r[19]=B,r[20]=V}else L=r[16],R=r[17],z=r[18],B=r[19],V=r[20];let H;r[21]!==L||r[22]!==R||r[23]!==z||r[24]!==V?(H={availableOptions:V,isLoading:L,selectedServiceTier:R,serviceTierForRequest:z},r[21]=L,r[22]=R,r[23]=z,r[24]=V,r[25]=H):H=r[25];let U;return r[26]!==B||r[27]!==H?(U={serviceTierSettings:H,setServiceTier:B},r[26]=B,r[27]=H,r[28]=U):U=r[28],U}";
   const serviceTierConversationFallback26608Result = applyRuntimePatchesToBody("webview/assets/use-service-tier-settings-26608.js", serviceTierConversationFallback26608Body);
   assertContains(serviceTierConversationFallback26608Result.content, "t=a!=null&&C?.serviceTier!=null&&C.serviceTier!==`standard`?C.serviceTier:D.serviceTier", "expected explicit next-turn Fast state to be preserved without letting stale Standard override Settings Fast");
@@ -1757,6 +1778,8 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
     ["26.803.41515+6321", "6321"],
     ["26.803.61601+6396", "6396"],
     ["26.810.41047+6570", "6570"],
+    ["26.810.52044+6662", "6662"],
+    ["26.814.41407+6720", "6720"],
   ] as const) {
     const result = applyOfficialPluginsPatcherForVersion(versionKey)(
       "app://-/assets/demo.js",
