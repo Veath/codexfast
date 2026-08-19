@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## [Unreleased]
 
+## [0.73.0] - 2026-08-19
+
 ### Added
 
 - Added local compatibility for `ChatGPT.app` `26.814.41407` (`build 6720`). Its extracted `app.asar` contents are byte-for-byte identical to build 6662, so it reuses the same Fast request-helper signature and official GPT-5.6/Plugins paths without widening any patch target.
