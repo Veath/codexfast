@@ -4,7 +4,11 @@ All notable changes to `codexfast` will be documented in this file.
 
 This project follows a simple release-oriented changelog format.
 
-## [Unreleased]
+## [0.74.0] - 2026-08-21
+
+### Added
+
+- Added local compatibility for `ChatGPT.app` `26.818.31338` (`build 6892`) after read-only installed-bundle inspection confirmed the existing Settings Fast, shared service-tier, request-helper, configured-tier fallback, `/fast`, settings-schema, and source-signature updater targets remain compatible. GPT-5.6 and Plugins continue to use official application paths, and the renderer still has no `Disable automatic updates` row.
 
 ## [0.73.0] - 2026-08-19
 

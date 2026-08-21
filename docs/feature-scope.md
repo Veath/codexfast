@@ -28,6 +28,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - `26.810.41047` retains the same configured-Settings-tier source-of-truth behavior.
 - `26.810.52044` retains the same configured-Settings-tier source-of-truth behavior and adds a request-helper signature for custom-provider Fast sends.
 - `26.814.41407` has the same extracted `app.asar` contents as `26.810.52044` and reuses that request-helper signature.
+- `26.818.31338` retains the same configured-Settings-tier source-of-truth behavior and three-argument request-helper signature under renamed renderer assets.
 
 ### Composer `/fast` slash command
 
@@ -40,7 +41,7 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - On `26.415.40636` and `26.417.41555`, this is the `Add files and more / +` Speed submenu.
 - On `26.422.21637`, `26.422.30944`, `26.422.62136`, `26.422.71525`, `26.429.20946`, `26.429.30905`, `26.429.61741`, `26.506.21252`, `26.506.31421`, `26.513.20950`, `26.513.31313`, `26.519.22136`, `26.519.31651`, `26.519.41501`, `26.519.81530`, `26.527.31326`, `26.527.60818`, `26.601.21317`, `26.602.30954`, `26.602.40724`, `26.602.71036`, `26.608.12217`, `26.609.30741`, `26.609.41114`, `26.609.71450`, `26.611.61049`, `26.611.61753`, `26.611.62324`, `26.616.31447`, `26.616.51431`, `26.616.71553`, `26.616.81150`, `26.623.31443`, `26.623.31921`, `26.623.42026`, `26.623.61825`, `26.623.70822`, `26.623.81905`, `26.623.101652`, `26.623.141536`, `26.707.31428`, `26.707.41301`, `26.707.61608`, `26.707.71524`, `26.707.72221`, `26.707.91948`, `26.715.31925`, `26.715.52143`, `26.715.61943`, and `26.715.70719`, this is the composer `Intelligence` dropdown Speed submenu.
 - On supported builds this menu should surface `Standard` and `Fast`.
-- `26.715.72028`, `26.715.72359`, `26.721.30844`, `26.721.31836`, `26.721.41059`, `26.721.81911`, `26.727.40816`, `26.727.51351`, `26.730.61309`, `26.730.61639`, `26.803.41515`, `26.803.61601`, `26.810.41047`, `26.810.52044`, and `26.814.41407` continue to use the composer `Intelligence` dropdown Speed submenu.
+- `26.715.72028`, `26.715.72359`, `26.721.30844`, `26.721.31836`, `26.721.41059`, `26.721.81911`, `26.727.40816`, `26.727.51351`, `26.730.61309`, `26.730.61639`, `26.803.41515`, `26.803.61601`, `26.810.41047`, `26.810.52044`, `26.814.41407`, and `26.818.31338` continue to use the composer `Intelligence` dropdown Speed submenu.
 
 ### Plugins sidebar access for custom API users
 
@@ -56,7 +57,8 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - `26.810.41047` also uses the official Plugins path and skips the Plugins runtime target family.
 - `26.810.52044` also uses the official Plugins path and skips the Plugins runtime target family.
 - `26.814.41407` also uses the official Plugins path and skips the Plugins runtime target family.
-- `26.810.52044` and `26.814.41407` retain the main-process automatic-update schema and runtime hook, but their renderer no longer contains the `Disable automatic updates` row.
+- `26.818.31338` also uses the official Plugins path and skips the Plugins runtime target family.
+- `26.810.52044`, `26.814.41407`, and `26.818.31338` retain the main-process automatic-update schema and runtime hook, but their renderer no longer contains the `Disable automatic updates` row.
 - This does not guarantee that every plugin or connector flow is available. Plugin state, connector runtime behavior, or admin-side restrictions may still block a specific plugin.
 - This does not unlock the remote ChatGPT shared plugin marketplace; that catalog still requires ChatGPT authentication.
 
@@ -82,9 +84,10 @@ Use it when you need a quick answer to "what does this repo actually enable?" be
 - On `26.810.41047+6570`, the existing Fast global-tier behavior, composer `Intelligence` Speed path, automatic-update row, renderer settings schema, and source-signature updater hook remain compatible after renderer and `.vite/build` chunk renames. The Intelligence Speed component is driven directly by available service-tier options without the historical availability gate. Renderer targets are in `app-initial-iMhn6nFd.js` and `general-settings-mYHA2JS4.js`; main-process schema copies remain in `child-process-snapshot-worker.js`, `src-BlUt09P1.js`, and `worker.js`; the active updater is `.vite/build/window-all-closed-B4DXN-uV.js`. GPT-5.6 and Plugins use official application paths.
 - On `26.810.52044+6662`, the Fast allowance, new three-argument request-tier helper, configured-tier fallback, `/fast`, and renderer settings schema targets are in `app-initial-BCLYDefw.js`; Settings Fast is in `general-settings-yzMrcfmm.js`. The renderer has no `disableAutomaticUpdates` row, but main-process schema copies remain in `child-process-snapshot-worker.js`, `src-DY9Aq019.js`, and `worker.js`; the active updater is `.vite/build/window-all-closed-DqXEFZQJ.js`. The Intelligence Speed component remains driven directly by available options, and GPT-5.6 and Plugins use official application paths.
 - On `26.814.41407+6720`, the extracted `app.asar` contents are identical to `26.810.52044+6662`, so the same target files, request-helper signature, update behavior, and official GPT-5.6/Plugins paths apply without new patch regexes.
+- On `26.818.31338+6892`, the Fast allowance, three-argument request-tier helper, configured-tier fallback, `/fast`, and renderer settings schema targets are in `app-initial-B2RlNf_b.js`; Settings Fast is in `general-settings-DOzsH83_.js`. Main-process schema copies are in `src-Bqg9CB1K.js` and `worker.js`, and the active updater is `.vite/build/window-all-closed-BazhJdtt.js`. The composer Intelligence Speed menu is driven directly by service-tier availability and available options; GPT-5.6 and Plugins use official application paths.
 
 - Adds a `Disable automatic updates` switch to Settings > General.
-- On `26.810.52044` and `26.814.41407`, the packaged renderer no longer contains this switch; the main-process schema and runtime hook remain supported, but no Settings row is injected for those builds.
+- On `26.810.52044`, `26.814.41407`, and `26.818.31338`, the packaged renderer no longer contains this switch; the main-process schema and runtime hook remain supported, but no Settings row is injected for those builds.
 - The injected Settings row uses locale-aware label and description copy for common Codex app locales, with English fallback.
 - The launcher injects a process-local main-process hook that discovers the desktop-settings schema and Sparkle updater by source signature across `.vite/build/*.js`, reads the latest `config.toml` before each background update check and automatic forced install scheduling pass, then skips those automatic paths when `[desktop].disableAutomaticUpdates = true`; a legacy top-level `disableAutomaticUpdates = true` is still accepted only when the desktop setting is absent.
 - Manual `Check for Updates` and update install actions remain available because the updater is still initialized.
