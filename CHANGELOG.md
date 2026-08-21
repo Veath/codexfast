@@ -6,6 +6,8 @@ This project follows a simple release-oriented changelog format.
 
 ## Unreleased
 
+## [0.74.1] - 2026-08-21
+
 ### Fixed
 
 - Restored the `Disable automatic updates` Settings row on `ChatGPT.app` `26.818.31338` (`build 6892`) by matching its renamed `Ka` General Settings function with collision-safe runtime locals.
