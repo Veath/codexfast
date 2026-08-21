@@ -820,6 +820,56 @@ export function runRuntimePatchSuite(): void {
     fail("expected the build-5488 Settings patch to be idempotent");
   }
 
+  const generalSettings26818Body =
+    "function Ka(){let e=(0,Q.c)(10),t=H(s),{platform:n}=en(),i=n!==`windows`,a=W(),o=G(V.preventSleepWhileRunning);if(!i)return null;let c;e[0]===Symbol.for(`react.memo_cache_sentinel`)?(c=(0,$.jsx)(U,{...B.preventSleepWhileRunning}),e[0]=c):c=e[0];let l;e[1]===Symbol.for(`react.memo_cache_sentinel`)?(l=(0,$.jsx)(U,{id:`settings.general.power.preventSleepWhileRunning.description`,defaultMessage:`Keep your computer awake while {appName} is running a task`,description:`Description for preventing sleep while a task runs`,values:{appName:$e}}),e[1]=l):l=e[1];let u=o??!1,d;e[2]===t?d=e[3]:(d=e=>{r(t,V.preventSleepWhileRunning,e)},e[2]=t,e[3]=d);let f;e[4]===a?f=e[5]:(f=a.formatMessage(B.preventSleepWhileRunning),e[4]=a,e[5]=f);let p;return e[6]!==u||e[7]!==d||e[8]!==f?(p=(0,$.jsx)(z,{label:c,description:l,control:(0,$.jsx)(at,{checked:u,onChange:d,ariaLabel:f})}),e[6]=u,e[7]=d,e[8]=f,e[9]=p):p=e[9],p}settings.general.power.preventSleepWhileRunning.description";
+  const generalSettings26818Result = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-DOzsH83_.js",
+    generalSettings26818Body,
+  );
+  assertContains(
+    generalSettings26818Result.content,
+    "codexfastDisableAutomaticUpdates=G(V.disableAutomaticUpdates)",
+    "expected 26.818 General settings patch to read disableAutomaticUpdates from the new Ka shape",
+  );
+  assertContains(
+    generalSettings26818Result.content,
+    "r(codexfastSettingsState,V.disableAutomaticUpdates,codexfastNextValue)",
+    "expected 26.818 General settings patch to persist disableAutomaticUpdates through the captured writer",
+  );
+  assertContains(
+    generalSettings26818Result.content,
+    "codexfastCache=(0,Q.c)(17)",
+    "expected 26.818 General settings patch to expand the React memo cache",
+  );
+  assertContains(
+    generalSettings26818Result.content,
+    "codexfastUpdateRow",
+    "expected 26.818 General settings patch to append the automatic-update row",
+  );
+  assertNotContains(
+    generalSettings26818Result.content,
+    "let codexfastPreventSleepRow;return codexfastCache[6]",
+    "expected 26.818 General settings patch to continue past the prevent-sleep row before returning the combined fragment",
+  );
+  assertNotContains(
+    generalSettings26818Result.content,
+    "let o,s",
+    "expected 26.818 General settings patch not to copy colliding minified locals",
+  );
+  assertContains(
+    generalSettings26818Result.patchedLabels.join("\n"),
+    "Disable automatic updates setting",
+    "expected 26.818 General settings patch to report the target",
+  );
+  new Function(generalSettings26818Result.content);
+  const generalSettings26818SecondPass = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-DOzsH83_.js",
+    generalSettings26818Result.content,
+  );
+  if (generalSettings26818SecondPass.content !== generalSettings26818Result.content) {
+    fail("expected the build-6892 Settings patch to be idempotent");
+  }
+
   const speedBody = "settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;";
   const speedResult = applyRuntimePatchesToBody("webview/assets/general-settings-demo.js", speedBody);
   assertContains(speedResult.content, "{serviceTierSettings:r,setServiceTier:i}=fe();let o;", "expected runtime patch engine to keep patching matching Speed settings bodies");
