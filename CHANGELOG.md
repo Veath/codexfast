@@ -6,6 +6,12 @@ This project follows a simple release-oriented changelog format.
 
 ## Unreleased
 
+## [0.75.0] - 2026-08-24
+
+### Added
+
+- Added local compatibility for `ChatGPT.app` `26.818.41509` (`build 6962`). The renamed renderer and `.vite/build` chunks retain the existing Fast, `/fast`, Settings update-row, settings-schema, and source-signature updater paths; GPT-5.6 and Plugins remain on official application paths.
+
 ## [0.74.1] - 2026-08-21
 
 ### Fixed

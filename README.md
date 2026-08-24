@@ -53,7 +53,9 @@ No manual edit to `~/.codex/auth.json` is needed for this mode.
 npx codexfast launch
 ```
 
-Latest verified local build: `ChatGPT.app` / `Codex.app` `26.818.31338` (`build 6892`). Its renamed General Settings module now receives the dedicated runtime patch that restores the renderer `Disable automatic updates` row while retaining the runtime automatic-update hook and settings schema.
+Latest verified local build: `ChatGPT.app` / `Codex.app` `26.818.41509` (`build 6962`). Its renamed renderer and `.vite/build` chunks retain the existing Fast, `/fast`, Settings update-row, settings-schema, and source-signature updater compatibility; GPT-5.6 and Plugins remain on official app paths.
+
+Also verified for `ChatGPT.app` / `Codex.app` `26.818.31338` (`build 6892`), whose renamed General Settings module receives the dedicated runtime patch that restores the renderer `Disable automatic updates` row while retaining the runtime automatic-update hook and settings schema.
 
 Also verified for `ChatGPT.app` / `Codex.app` `26.814.41407` (`build 6720`), `26.810.52044` (`build 6662`), `26.810.41047` (`build 6570`), `26.803.61601` (`build 6396`), `26.803.41515` (`build 6321`), `26.730.61639` (`build 6234`), and `26.730.61309` (`build 6223`).
 

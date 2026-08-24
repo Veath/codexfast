@@ -1831,6 +1831,7 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
     ["26.810.52044+6662", "6662"],
     ["26.814.41407+6720", "6720"],
     ["26.818.31338+6892", "6892"],
+    ["26.818.41509+6962", "6962"],
   ] as const) {
     const result = applyOfficialPluginsPatcherForVersion(versionKey)(
       "app://-/assets/demo.js",
