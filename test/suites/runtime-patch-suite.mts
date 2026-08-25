@@ -1135,6 +1135,14 @@ export function runRuntimePatchSuite(): void {
   assertNotContains(pluginPostInstallAppConnect2661671553Result.content, "M({apps:s.appsNeedingAuth", "expected 26.616.71553 post-install app connect patch not to pass an empty backend app auth list into the install session");
   assertContains(pluginPostInstallAppConnect2661671553Result.patchedLabels.join("\n"), "Plugin post-install app connect", "expected 26.616.71553 post-install app connect patch to report app connect target");
 
+  const composerPluginMentions26818Body = "composer.atMentionList.pluginsLoading;additionalMarketplaceKinds:[`shared-with-me`];additionalMarketplaceKinds:[`shared-with-me`]";
+  const composerPluginMentions26818Result = applyRuntimePatchesToBody("webview/assets/app-initial-q5My48Y-.js", composerPluginMentions26818Body);
+  assertNotContains(composerPluginMentions26818Result.content, "additionalMarketplaceKinds:[`shared-with-me`]", "expected build 7019 Composer plugin mention patch to remove every shared marketplace kind gate in one pass");
+  const composerPluginMentions26818Repeated = applyRuntimePatchesToBody("webview/assets/app-initial-q5My48Y-.js", composerPluginMentions26818Result.content);
+  if (composerPluginMentions26818Repeated.content !== composerPluginMentions26818Result.content) {
+    fail("expected build 7019 Composer plugin mention patch to be idempotent");
+  }
+
   const sharedMarketplacePrefetch26601Body = "additionalMarketplaceKinds;return D(e,I,{enabled:z,additionalMarketplaceKinds:[`shared-with-me`]}),E({enabled:z,hostId:e,marketplaceKind:`shared-with-me`}),E({enabled:z,hostId:e,marketplaceKind:`workspace-directory`}),null";
   const sharedMarketplacePrefetch26601Result = applyRuntimePatchesToBody("webview/assets/app-prefetch-impl-26601.js", sharedMarketplacePrefetch26601Body);
   assertContains(sharedMarketplacePrefetch26601Result.content, "additionalMarketplaceKinds:[]}),E({enabled:!1,hostId:e,marketplaceKind:`shared-with-me`})", "expected 26.601 shared marketplace prefetch patch to skip the remote shared plugin catalog");
@@ -1832,6 +1840,7 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
     ["26.814.41407+6720", "6720"],
     ["26.818.31338+6892", "6892"],
     ["26.818.41509+6962", "6962"],
+    ["26.818.61809+7019", "7019"],
   ] as const) {
     const result = applyOfficialPluginsPatcherForVersion(versionKey)(
       "app://-/assets/demo.js",
@@ -2025,6 +2034,13 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
   assertContains(officialGpt56Build6234Result.content, "GPT56_LIST_DISABLED", "expected build 6234 to use the official GPT-5.6 model list");
   assertContains(officialGpt56Build6234Result.content, "GPT56_SELECTOR_DISABLED", "expected build 6234 to use the official GPT-5.6 selector");
   assertContains(officialGpt56Build6234Result.content, "SPEED_ENABLED", "expected build 6234 to retain non-GPT runtime patches");
+  const officialGpt56Build7019Result = applyOfficialGpt56PatcherForVersion("26.818.61809+7019")(
+    "app://-/assets/demo.js",
+    officialGpt56Body,
+  );
+  assertContains(officialGpt56Build7019Result.content, "GPT56_LIST_DISABLED", "expected build 7019 to use the official GPT-5.6 model list");
+  assertContains(officialGpt56Build7019Result.content, "GPT56_SELECTOR_DISABLED", "expected build 7019 to use the official GPT-5.6 selector");
+  assertContains(officialGpt56Build7019Result.content, "SPEED_ENABLED", "expected build 7019 to retain non-GPT runtime patches");
   const officialGpt56LaterResult = applyOfficialGpt56PatcherForVersion("26.708.10000+5200")(
     "app://-/assets/demo.js",
     officialGpt56Body,

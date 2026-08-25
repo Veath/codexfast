@@ -104,13 +104,13 @@ const PLUGIN_POST_INSTALL_APP_CONNECT_AUTO_OPEN_PATCHED_SIGNATURE =
 const PLUGIN_POST_INSTALL_APP_CONNECT_AUTO_OPEN_WITH_CALLBACK_GUARDED_SIGNATURE =
   /(connectingAppId:)([A-Za-z_$][\w$]*)\.appsNeedingAuth\.length===1&&([A-Za-z_$][\w$]*)\.length===0&&\(\2\.authPolicy===`ON_INSTALL`\|\|[A-Za-z_$][\w$]*!=null\)\?\2\.appsNeedingAuth\[0\]\?\.id:void 0/;
 const COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE =
-  /(additionalMarketplaceKinds:)\[`shared-with-me`\]/;
+  /(additionalMarketplaceKinds:)\[`shared-with-me`\]/g;
 const COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE =
-  /(additionalMarketplaceKinds:)\[\]/;
+  /(additionalMarketplaceKinds:)\[\]/g;
 const COMPOSER_PLUGIN_MENTIONS_GUARDED_SIGNATURE_FLAGGED =
-  /(additionalMarketplaceKinds:)([A-Za-z_$][\w$]*)\?\[`shared-with-me`\]:\[\]/;
+  /(additionalMarketplaceKinds:)([A-Za-z_$][\w$]*)\?\[`shared-with-me`\]:\[\]/g;
 const COMPOSER_PLUGIN_MENTIONS_PATCHED_SIGNATURE_FLAGGED =
-  /(additionalMarketplaceKinds:)([A-Za-z_$][\w$]*)\?\[\]:\[\]/;
+  /(additionalMarketplaceKinds:)([A-Za-z_$][\w$]*)\?\[\]:\[\]/g;
 const SHARED_PLUGIN_PREFETCH_GUARDED_SIGNATURE =
   /(\{enabled:)([A-Za-z_$][\w$]*)(,additionalMarketplaceKinds:)\[`shared-with-me`\](\}\),[A-Za-z_$][\w$]*\(\{enabled:)\2(,hostId:[A-Za-z_$][\w$]*,marketplaceKind:`shared-with-me`\}\),)/;
 const SHARED_PLUGIN_PREFETCH_PATCHED_SIGNATURE =

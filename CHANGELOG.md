@@ -4,7 +4,15 @@ All notable changes to `codexfast` will be documented in this file.
 
 This project follows a simple release-oriented changelog format.
 
-## Unreleased
+## [0.76.0] - 2026-08-25
+
+### Added
+
+- Added local compatibility for `ChatGPT.app` `26.818.61809` (`build 7019`). Existing Fast, `/fast`, Settings update-row, settings schema, and source-signature updater paths remain compatible; GPT-5.6 and Plugins use official application paths.
+
+### Fixed
+
+- Made the Composer Plugins marketplace-kind target replace all matching gates in one runtime pass, preserving idempotency when the latest bundle contains multiple mention-list consumers.
 
 ## [0.75.0] - 2026-08-24
 
