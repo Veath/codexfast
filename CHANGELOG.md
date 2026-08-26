@@ -4,6 +4,16 @@ All notable changes to `codexfast` will be documented in this file.
 
 This project follows a simple release-oriented changelog format.
 
+## [0.77.0] - 2026-08-26
+
+### Added
+
+- Added local compatibility for `ChatGPT.app` `26.820.60940` (`build 7119`). Existing Fast, `/fast`, settings-schema, and source-signature updater paths remain compatible; GPT-5.6 and Plugins use official application paths.
+
+### Fixed
+
+- Generalized the `26.818+` automatic-update Settings row component capture so renamed minified row locals remain patchable.
+
 ## [0.76.0] - 2026-08-25
 
 ### Added

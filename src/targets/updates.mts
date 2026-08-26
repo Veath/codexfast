@@ -64,7 +64,7 @@ const GENERAL_SETTINGS_REPLACEMENT_26818 = (
   const messagesNamespace = capture(/\{\.\.\.([A-Za-z_$][\w$]*)\.preventSleepWhileRunning\}/, "messages namespace");
   const appNameValue = capture(/values:\{appName:([A-Za-z_$][\w$]*)\}/, "app name");
   const settingsWrite = capture(/\{([A-Za-z_$][\w$]*)\([A-Za-z_$][\w$]*,[A-Za-z_$][\w$]*\.preventSleepWhileRunning,e\)\}/, "settings writer");
-  const rowComponent = capture(/\?\(p=\(0,[A-Za-z_$][\w$]*\.jsx\)\(([A-Za-z_$][\w$]*),\{label:/, "row component");
+  const rowComponent = capture(/\?\([A-Za-z_$][\w$]*=\(0,[A-Za-z_$][\w$]*\.jsx\)\(([A-Za-z_$][\w$]*),\{label:/, "row component");
   const toggleComponent = capture(/control:\(0,[A-Za-z_$][\w$]*\.jsx\)\(([A-Za-z_$][\w$]*),\{checked:/, "toggle component");
 
   return [
