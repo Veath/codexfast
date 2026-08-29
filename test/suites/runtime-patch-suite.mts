@@ -900,6 +900,36 @@ export function runRuntimePatchSuite(): void {
     fail("expected the build-7119 Settings patch to be idempotent");
   }
 
+  const generalSettings26825Body =
+    "function Ko(){let e=(0,Q.c)(10),t=A(C),{platform:n}=je(),r=n!==`windows`,i=U(),a=G(B.preventSleepWhileRunning);if(!r)return null;let o;e[0]===Symbol.for(`react.memo_cache_sentinel`)?(o=(0,$.jsx)(K,{...u.preventSleepWhileRunning}),e[0]=o):o=e[0];let s;e[1]===Symbol.for(`react.memo_cache_sentinel`)?(s=(0,$.jsx)(K,{id:`settings.general.power.preventSleepWhileRunning.description`,defaultMessage:`Keep your computer awake while {appName} is running a task`,description:`Description for preventing sleep while a task runs`,values:{appName:Ae}}),e[1]=s):s=e[1];let c=a??!1,l;e[2]===t?l=e[3]:(l=e=>{W(t,B.preventSleepWhileRunning,e)},e[2]=t,e[3]=l);let d;e[4]===i?d=e[5]:(d=i.formatMessage(u.preventSleepWhileRunning),e[4]=i,e[5]=d);let f;return e[6]!==c||e[7]!==l||e[8]!==d?(f=(0,$.jsx)(K,{label:o,description:s,control:(0,$.jsx)(fr,{checked:c,onChange:l,ariaLabel:d})}),e[6]=c,e[7]=l,e[8]=d,e[9]=f):f=e[9],f}settings.general.power.preventSleepWhileRunning.description";
+  const generalSettings26825Result = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-C_w8yarq.js",
+    generalSettings26825Body,
+  );
+  assertContains(
+    generalSettings26825Result.content,
+    "codexfastDisableAutomaticUpdates=G(B.disableAutomaticUpdates)",
+    "expected build 7345 General settings patch to read disableAutomaticUpdates",
+  );
+  assertContains(
+    generalSettings26825Result.content,
+    "W(codexfastSettingsState,B.disableAutomaticUpdates,codexfastNextValue)",
+    "expected build 7345 General settings patch to persist disableAutomaticUpdates",
+  );
+  assertContains(
+    generalSettings26825Result.content,
+    "codexfastUpdateRow=(0,$.jsx)(K,",
+    "expected build 7345 General settings patch to reuse the current row component",
+  );
+  new Function(generalSettings26825Result.content);
+  const generalSettings26825SecondPass = applyRuntimePatchesToBody(
+    "webview/assets/general-settings-C_w8yarq.js",
+    generalSettings26825Result.content,
+  );
+  if (generalSettings26825SecondPass.content !== generalSettings26825Result.content) {
+    fail("expected the build-7345 Settings patch to be idempotent");
+  }
+
   const speedBody = "settings.agent.speed.label;n=se(),{serviceTierSettings:r,setServiceTier:i}=fe();if(!n)return null;let o;";
   const speedResult = applyRuntimePatchesToBody("webview/assets/general-settings-demo.js", speedBody);
   assertContains(speedResult.content, "{serviceTierSettings:r,setServiceTier:i}=fe();let o;", "expected runtime patch engine to keep patching matching Speed settings bodies");
@@ -1872,6 +1902,7 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
     ["26.818.41509+6962", "6962"],
     ["26.818.61809+7019", "7019"],
     ["26.820.60940+7119", "7119"],
+    ["26.825.41651+7345", "7345"],
   ] as const) {
     const result = applyOfficialPluginsPatcherForVersion(versionKey)(
       "app://-/assets/demo.js",
@@ -2079,6 +2110,13 @@ function applyRuntimePatchesToBody(_resourcePath, body) {
   assertContains(officialGpt56Build7119Result.content, "GPT56_LIST_DISABLED", "expected build 7119 to use the official GPT-5.6 model list");
   assertContains(officialGpt56Build7119Result.content, "GPT56_SELECTOR_DISABLED", "expected build 7119 to use the official GPT-5.6 selector");
   assertContains(officialGpt56Build7119Result.content, "SPEED_ENABLED", "expected build 7119 to retain non-GPT runtime patches");
+  const officialGpt56Build7345Result = applyOfficialGpt56PatcherForVersion("26.825.41651+7345")(
+    "app://-/assets/demo.js",
+    officialGpt56Body,
+  );
+  assertContains(officialGpt56Build7345Result.content, "GPT56_LIST_DISABLED", "expected build 7345 to use the official GPT-5.6 model list");
+  assertContains(officialGpt56Build7345Result.content, "GPT56_SELECTOR_DISABLED", "expected build 7345 to use the official GPT-5.6 selector");
+  assertContains(officialGpt56Build7345Result.content, "SPEED_ENABLED", "expected build 7345 to retain non-GPT runtime patches");
   const officialGpt56LaterResult = applyOfficialGpt56PatcherForVersion("26.708.10000+5200")(
     "app://-/assets/demo.js",
     officialGpt56Body,
