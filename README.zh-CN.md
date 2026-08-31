@@ -53,7 +53,9 @@ supports_websockets = true # 按需要选择是否开启 WebSockets
 npx codexfast launch
 ```
 
-最新完成本地验证的版本：`ChatGPT.app` / `Codex.app` `26.825.41651`（`build 7345`）。该版本改名后的 renderer 和 `.vite/build` chunk 继续兼容 Fast、`/fast`、settings schema 和按源码签名发现 updater 的路径；当前 General Settings 行形状仍由泛化的 automatic-update target 覆盖。GPT-5.6 和 Plugins 继续使用官方路径。
+最新完成本地验证的版本：`ChatGPT.app` / `Codex.app` `26.825.51511`（`build 7377`）。该版本改名后的 renderer 和 `.vite/build` chunk 继续兼容 Fast、`/fast`、settings schema 和按源码签名发现 updater 的路径；当前 General Settings 行形状仍由泛化的 automatic-update target 覆盖。GPT-5.6 和 Plugins 继续使用官方路径。
+
+另已验证支持 `ChatGPT.app` / `Codex.app` `26.825.41651`（`build 7345`），其改名后的 renderer 和 `.vite/build` chunk 保持相同兼容性。
 
 另已验证支持 `ChatGPT.app` / `Codex.app` `26.820.60940`（`build 7119`），其改名后的 renderer 和 `.vite/build` chunk 保持相同兼容性。
 

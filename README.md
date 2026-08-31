@@ -53,7 +53,9 @@ No manual edit to `~/.codex/auth.json` is needed for this mode.
 npx codexfast launch
 ```
 
-Latest verified local build: `ChatGPT.app` / `Codex.app` `26.825.41651` (`build 7345`). Its renamed renderer and `.vite/build` chunks retain the existing Fast, `/fast`, settings-schema, and source-signature updater compatibility; the current General Settings row shape is still covered by the generic automatic-update target. GPT-5.6 and Plugins remain on official app paths.
+Latest verified local build: `ChatGPT.app` / `Codex.app` `26.825.51511` (`build 7377`). Its renamed renderer and `.vite/build` chunks retain the existing Fast, `/fast`, settings-schema, and source-signature updater compatibility; the current General Settings row shape is still covered by the generic automatic-update target. GPT-5.6 and Plugins remain on official app paths.
+
+Also verified for `ChatGPT.app` / `Codex.app` `26.825.41651` (`build 7345`), whose renamed renderer and `.vite/build` chunks retain the same compatibility.
 
 Also verified for `ChatGPT.app` / `Codex.app` `26.820.60940` (`build 7119`), whose renamed renderer and `.vite/build` chunks retain the same compatibility.
 

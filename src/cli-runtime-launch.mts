@@ -137,6 +137,7 @@ const runtimePatchNoPluginsAccessRequiredVersionKeys = new Set([
   "26.818.61809+7019",
   "26.820.60940+7119",
   "26.825.41651+7345",
+  "26.825.51511+7377",
 ]);
 const runtimePatchNoPluginTargetsVersionKeys = new Set([
   "26.623.31443+4441",
@@ -178,6 +179,7 @@ const runtimePatchNoPluginTargetsVersionKeys = new Set([
   "26.818.61809+7019",
   "26.820.60940+7119",
   "26.825.41651+7345",
+  "26.825.51511+7377",
 ]);
 const runtimePatchPluginTargetIdPrefixes = [
   "plugin",
