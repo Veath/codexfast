@@ -26,7 +26,7 @@ experimental_realtime_ws_base_url = "http://127.0.0.1:8317/v1" # Codex.app voice
 
 [model_providers.custom]
 base_url = "http://127.0.0.1:8317/v1"
-experimental_bearer_token = "sk-dummy" # Replace with the API key created for Codex in CLIProxyAPI
+experimental_bearer_token = "sk-dummy" # Replace with your custom provider API key
 name = "OpenAI"
 wire_api = "responses"
 requires_openai_auth = true
