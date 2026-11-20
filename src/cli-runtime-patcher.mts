@@ -33,7 +33,7 @@ export function applyRuntimePatchesToResponseBodyWithSource(
 }
 
 export function isRuntimeJavaScriptResource(resourceUrl: string): boolean {
-  return /^app:\/\/[^?#]+\/(?:(?:webview\/)?assets|\.vite\/build)\/[^/?#]+\.js(?:[?#].*)?$/.test(
+  return /^app:\/\/[^/?#]+\/(?:(?:webview\/)?assets\/(?:async\/)?|\.vite\/build\/)[^/?#]+\.js(?:[?#].*)?$/.test(
     resourceUrl,
   );
 }
@@ -42,7 +42,10 @@ export function runRuntimeUrlSelfTest(): number {
   const acceptedUrls = [
     "app://-/assets/index-DxnGmFpS.js",
     "app://-/assets/index-DxnGmFpS.js?v=1",
+    "app://-/assets/async/486887.d08998ca6f.js",
+    "app://-/assets/async/chunk.js#hash",
     "app://-/webview/assets/index.js",
+    "app://codex.local/webview/assets/async/chunk.js?v=1",
     "app://codex.local/webview/assets/chunk.js#hash",
     "app://-/.vite/build/bootstrap.js",
     "app://-/.vite/build/src-UHYOvFd-.js",
@@ -51,7 +54,12 @@ export function runRuntimeUrlSelfTest(): number {
     "app://-/index.html",
     "app://-/assets/style.css",
     "https://example.com/assets/index.js",
+    "https://example.com/assets/async/chunk.js",
     "app://-/assets/nested/index.js",
+    "app://-/assets/async/extra/chunk.js",
+    "app://-/assets/async/chunk.css",
+    "app://-/outside/assets/async/chunk.js",
+    "app://-/.vite/build/async/chunk.js",
   ];
 
   for (const url of acceptedUrls) {
