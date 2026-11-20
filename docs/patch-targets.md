@@ -8,7 +8,7 @@ Use it before changing regexes, adding a new feature target, or adapting to a ne
 
 `launch` uses these target definitions for the public runtime path. Runtime launch applies matching replacements in memory through the local CDP session and leaves the app bundle untouched. Legacy file-patch, archive rewrite, re-sign, and restore flows have been removed.
 
-The same renderer assets may be requested with different `app://` URL shapes. Current `26.513.20950` uses `app://-/assets/*.js`; older assumptions used `app://-/webview/assets/*.js`. Runtime matchers must account for both when CDP Fetch interception changes. Newer Electron build assets can also appear as `app://-/.vite/build/*.js` when served through the app protocol.
+Renderer assets can use `app://-/assets/*.js` or `app://-/webview/assets/*.js`. Desktop build `26.1111.71704+29030` also serves lazy-loaded renderer chunks from `app://-/assets/async/*.js`. The runtime URL filter accepts the `async/` directory under either renderer asset root. Electron build assets can also appear as `app://-/.vite/build/*.js` when served through the app protocol.
 
 Source layout:
 
